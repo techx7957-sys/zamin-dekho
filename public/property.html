@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Details | Zamin Dekho</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        body { background: #f8fafc; font-family: 'Inter', sans-serif; color: #1e293b; }
+        
+        /* Navbar */
+        .navbar { box-shadow: 0 2px 15px rgba(0,0,0,0.04); padding: 15px 0; background: white !important; }
+        .navbar-brand { font-weight: 800; letter-spacing: -0.5px; color: #10b981 !important; font-size: 24px; }
+        .nav-link { font-weight: 600; color: #475569 !important; margin: 0 15px; font-size: 15px; transition: 0.3s; }
+        .nav-link:hover { color: #10b981 !important; }
+
+        /* Auth UI */
+        .auth-area { display: flex; align-items: center; gap: 12px; }
+        .user-id-btn { background: #f8fafc; border: 1px solid #cbd5e1; color: #1e293b; padding: 8px 20px; border-radius: 50px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .user-id-btn i { color: #3b82f6; font-size: 16px; }
+        .logout-btn-premium { background: white; border: 1px solid #ef4444; color: #ef4444; padding: 8px 20px; border-radius: 50px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        
+        /* Property Images */
+        .prop-main-img { width: 100%; height: 450px; object-fit: cover; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+        
+        /* Content Sections */
+        .detail-box { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; margin-bottom: 25px; }
+        .prop-title { font-weight: 800; font-size: 28px; color: #0f172a; margin-bottom: 10px; }
+        .prop-price { font-weight: 800; font-size: 32px; color: #10b981; }
+        .prop-address { color: #64748b; font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+        
+        .feature-pill { background: #f1f5f9; padding: 10px 20px; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px; font-weight: 700; color: #334155; margin-right: 10px; margin-bottom: 10px;}
+        .feature-pill i { color: #3b82f6; font-size: 18px; }
+
+        /* 🌟 THE BUY ACTION CARD (Sticky) */
+        .action-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; position: sticky; top: 100px; text-align: center;}
+        
+        .btn-buy-option { background: #007bff; color: white; border: none; width: 100%; padding: 18px; border-radius: 12px; font-size: 18px; font-weight: 800; transition: 0.3s; box-shadow: 0 10px 20px rgba(0,123,255,0.3); cursor: pointer;}
+        .btn-buy-option:hover { background: #0056b3; transform: translateY(-3px); }
+        
+        /* Contact Block (Hidden initially) */
+        .contact-block { display: none; margin-top: 20px; padding-top: 20px; border-top: 2px dashed #e2e8f0; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .broker-info { font-weight: 700; color: #1e293b; font-size: 16px; margin-bottom: 15px;}
+        .btn-call { background: #10b981; color: white; border: none; width: 100%; padding: 15px; border-radius: 12px; font-size: 18px; font-weight: 800; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 10px 20px rgba(16,185,129,0.3); transition: 0.3s;}
+        .btn-call:hover { background: #059669; color: white; transform: translateY(-3px); }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-1"></i> ZAMIN DEKHO</a>
+            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#zaminNav"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="zaminNav">
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Find Land</a></li>
+                    <li class="nav-item"><a class="nav-link" href="dashboard.html">Post Property</a></li>
+                    <li id="adminLinkArea" class="nav-item"></li>
+                </ul>
+                <div id="authArea" class="auth-area justify-content-center mt-3 mt-lg-0"></div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 mb-5" id="propertyContent">
+        <div class="text-center py-5"><div class="spinner-border text-success" style="width: 3rem; height: 3rem;"></div><h4 class="mt-3">Loading Details...</h4></div>
+    </div>
+
+    <script src="script.js"></script>
+
+    <script>
+        const API_URL = "http://localhost:5000/api";
+        const BASE_SERVER_URL = "http://localhost:5000/";
+        let propertyData = null;
+
+        // ==========================================
+        // 1. FETCH & DISPLAY PROPERTY DETAILS
+        // ==========================================
+        async function loadProperty() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const propId = urlParams.get('id');
+            const contentDiv = document.getElementById('propertyContent');
+
+            if (!propId) {
+                contentDiv.innerHTML = `<div class="text-center text-danger py-5"><h2>Property ID Missing!</h2><a href="index.html" class="btn btn-primary mt-3">Go Back to Search</a></div>`;
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/listings/${propId}`);
+                const data = await res.json();
+
+                if (data.success) {
+                    propertyData = data.listing;
+                    renderProperty(propertyData);
+                } else {
+                    contentDiv.innerHTML = `<div class="text-center text-danger py-5"><h2>Property Not Found!</h2><p>It may have been sold or removed.</p><a href="index.html" class="btn btn-primary mt-3">Go Back to Search</a></div>`;
+                }
+            } catch(e) {
+                contentDiv.innerHTML = `<div class="text-center text-danger py-5"><h2>Server Error!</h2><p>Could not connect to database.</p></div>`;
+            }
+        }
+
+        function renderProperty(item) {
+            // Image Fix Logic
+            let imgSource = item.imageUrl;
+            if(imgSource && !imgSource.startsWith('http')) {
+                imgSource = imgSource.replace(/\\/g, '/'); 
+                imgSource = BASE_SERVER_URL + (imgSource.startsWith('/') ? imgSource.substring(1) : imgSource);
+            }
+            const fallbackImg = "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1000&q=80";
+            if(!imgSource) imgSource = fallbackImg;
+
+            document.getElementById('propertyContent').innerHTML = `
+                <div class="row g-4">
+                    <div class="col-lg-8">
+                        <img src="${imgSource}" onerror="this.src='${fallbackImg}'" class="prop-main-img mb-4" alt="Property Image">
+                        
+                        <div class="detail-box">
+                            <span class="badge bg-dark px-3 py-2 rounded-pill mb-3 text-uppercase">${item.category}</span>
+                            <h1 class="prop-title">${item.landName}</h1>
+                            <p class="prop-address"><i class="fas fa-map-marker-alt text-danger"></i> ${item.address}</p>
+                            
+                            <hr class="my-4">
+                            
+                            <h4 class="fw-bold mb-3">Overview</h4>
+                            <div class="d-flex flex-wrap">
+                                <div class="feature-pill"><i class="fas fa-tag"></i> Verified Listing</div>
+                                <div class="feature-pill"><i class="fas fa-chart-line"></i> High Growth Area</div>
+                                <div class="feature-pill"><i class="fas fa-road"></i> Good Connectivity</div>
+                            </div>
+                            
+                            <h4 class="fw-bold mt-4 mb-3">Property Description</h4>
+                            <p class="text-muted" style="font-size:16px; line-height:1.8;">
+                                ${item.extraInfo || "A premium property located in a highly sought-after area. Perfect for investment or immediate use. Contact us for physical site visits and document verification."}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="action-card">
+                            <h5 class="text-muted fw-bold mb-1">Estimated Price</h5>
+                            <div class="prop-price mb-4">₹ ${Number(item.landPrice).toLocaleString('en-IN')}</div>
+                            
+                            <button id="buyBtn" class="btn-buy-option" onclick="triggerBuyFlow('${item._id}')">
+                                <i class="fas fa-bolt me-2"></i> Click for Buy Option
+                            </button>
+
+                            <div id="contactBlock" class="contact-block">
+                                <div class="broker-info">
+                                    <i class="fas fa-check-circle text-success me-1"></i> Request Sent Successfully!
+                                </div>
+                                <p class="text-muted small mb-3">Our executive has received your request. Call us directly to finalize the deal.</p>
+                                
+                                <a href="tel:+919876543210" class="btn-call">
+                                    <i class="fas fa-phone-alt"></i> Call Zamin Dekho
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // 🌟 2. THE BUY OPTION ENGINE (Lead Generation)
+        // ==========================================
+        async function triggerBuyFlow(propertyId) {
+            const token = localStorage.getItem('zamin_token');
+            const buyBtn = document.getElementById('buyBtn');
+            const contactBlock = document.getElementById('contactBlock');
+
+            // Security Check: User must be logged in
+            if (!token) {
+                alert("Please Login to express interest and view contact details.");
+                window.location.href = "login.html";
+                return;
+            }
+
+            buyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing Request...';
+            buyBtn.disabled = true;
+
+            try {
+                // Hit Backend to create Lead Notification
+                const res = await fetch(`${API_URL}/listings/buy-request/${propertyId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await res.json();
+                
+                if(data.success) {
+                    // Lead created successfully!
+                    buyBtn.style.display = 'none'; // Hide Buy button
+                    contactBlock.style.display = 'block'; // Show Call Admin button
+                    
+                    // The phone number comes from Backend (data.adminPhone)
+                    if(data.adminPhone) {
+                        document.querySelector('.btn-call').href = `tel:${data.adminPhone}`;
+                    }
+                } else {
+                    alert("Error processing request: " + data.error);
+                    buyBtn.innerHTML = '<i class="fas fa-bolt me-2"></i> Click for Buy Option';
+                    buyBtn.disabled = false;
+                }
+            } catch(e) {
+                alert("Network error while connecting to server.");
+                buyBtn.innerHTML = '<i class="fas fa-bolt me-2"></i> Click for Buy Option';
+                buyBtn.disabled = false;
+            }
+        }
+
+        // ==========================================
+        // 🌟 3. AUTH UI (Standardized)
+        // ==========================================
+        function updateNavbarUI() {
+            const token = localStorage.getItem('zamin_token');
+            const authArea = document.getElementById('authArea');
+            const adminArea = document.getElementById('adminLinkArea');
+            
+            if (token) {
+                try {
+                    const user = JSON.parse(localStorage.getItem('zamin_user'));
+                    if(user.role === 'admin') adminArea.innerHTML = `<a class="nav-link text-danger" href="admin.html"><i class="fas fa-user-shield me-1"></i> Admin</a>`;
+                    
+                    authArea.innerHTML = `
+                        <button onclick="alert('User ID: ${user._id}')" class="user-id-btn">
+                            <i class="fas fa-user-circle"></i> ${user.fullName.split(' ')[0]}
+                        </button>
+                        <button onclick="logout()" class="logout-btn-premium">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    `;
+                } catch(e) {}
+            } else {
+                authArea.innerHTML = `<a href="login.html" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm">Login to Explore</a>`;
+            }
+        }
+
+        window.onload = () => {
+            updateNavbarUI();
+            loadProperty();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Broker CRM | Zamin Dekho</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { background: #f1f5f9; font-family: 'Inter', sans-serif; color: #1e293b; }
+        
+        /* Premium Navbar */
+        .navbar { box-shadow: 0 2px 15px rgba(0,0,0,0.05); background: #0f172a !important; padding: 15px 0; }
+        .navbar-brand { font-weight: 800; color: #10b981 !important; letter-spacing: -0.5px; }
+        
+        .dashboard-header { margin: 40px 0 20px; display: flex; justify-content: space-between; align-items: center; }
+        .dashboard-title { font-weight: 800; font-size: 28px; }
+        
+        /* Stats Cards */
+        .stat-card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 20px; }
+        .stat-icon { width: 60px; height: 60px; border-radius: 50px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .stat-info h3 { font-weight: 800; font-size: 32px; margin: 0; color: #0f172a; }
+        .stat-info p { margin: 0; color: #64748b; font-weight: 600; font-size: 14px; text-transform: uppercase; }
+
+        /* Leads Table */
+        .table-container { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; overflow: hidden; margin-top: 30px; }
+        .table thead { background: #f8fafc; font-size: 13px; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
+        .table th { padding: 15px 20px; font-weight: 700; border-bottom: 2px solid #e2e8f0; }
+        .table td { padding: 20px; vertical-align: middle; font-weight: 500; font-size: 15px; border-bottom: 1px solid #f1f5f9; }
+        
+        .badge-status { padding: 6px 12px; border-radius: 50px; font-size: 12px; font-weight: 700; }
+        .bg-pending { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .bg-contacted { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+        .bg-visit { background: #f3e8ff; color: #0284c7; border: 1px solid #e0f2fe; }
+        .bg-closed { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+
+        .btn-call { background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 50px; font-weight: 700; font-size: 13px; text-decoration: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-call:hover { background: #059669; color: white; transform: scale(1.05); }
+
+        .form-select-sm { font-weight: 600; color: #475569; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer; }
+        
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 700; color: #0f172a; }
+        .user-prop { font-size: 13px; color: #64748b; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="index.html"><i class="fas fa-shield-alt me-2"></i> ZAMIN DEKHO CRM</a>
+            <div class="d-flex gap-3">
+                <a href="index.html" class="btn btn-outline-light rounded-pill px-4 fw-bold border-2">Back to Website</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mb-5">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Lead Management Dashboard</h1>
+            <button onclick="fetchLeads()" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm"><i class="fas fa-sync-alt me-2"></i> Refresh Data</button>
+        </div>
+
+        <div class="row g-4 mb-4" id="statsRow">
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-icon bg-primary text-white" style="background: rgba(59, 130, 246, 0.1) !important; color: #3b82f6 !important;"><i class="fas fa-users"></i></div>
+                    <div class="stat-info"><h3 id="totalLeads">0</h3><p>Total Inquiries</p></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;"><i class="fas fa-clock"></i></div>
+                    <div class="stat-info"><h3 id="pendingLeads">0</h3><p>Pending Calls</p></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;"><i class="fas fa-handshake"></i></div>
+                    <div class="stat-info"><h3 id="closedLeads">0</h3><p>Deals Closed</p></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Buyer Details</th>
+                        <th>Property Interested In</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="leadsTableBody">
+                    <tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:5000/api/admin";
+
+        // ==========================================
+        // 1. FETCH & RENDER LEADS
+        // ==========================================
+        async function fetchLeads() {
+            const token = localStorage.getItem('zamin_token');
+            if (!token) {
+                alert("Please login as Admin/Broker to view this page.");
+                window.location.href = "login.html";
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/leads`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    renderLeads(data.leads);
+                    updateStats(data.leads);
+                } else {
+                    document.getElementById('leadsTableBody').innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">${data.message}</td></tr>`;
+                }
+            } catch (e) {
+                document.getElementById('leadsTableBody').innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Failed to connect to server.</td></tr>`;
+            }
+        }
+
+        function updateStats(leads) {
+            document.getElementById('totalLeads').innerText = leads.length;
+            document.getElementById('pendingLeads').innerText = leads.filter(l => l.status === 'Pending').length;
+            document.getElementById('closedLeads').innerText = leads.filter(l => l.status === 'Closed').length;
+        }
+
+        function getStatusBadge(status) {
+            if(status === 'Pending') return 'bg-pending';
+            if(status === 'Contacted') return 'bg-contacted';
+            if(status === 'Site Visit Scheduled') return 'bg-visit';
+            if(status === 'Closed') return 'bg-closed';
+            return 'bg-secondary text-white';
+        }
+
+        function renderLeads(leads) {
+            const tbody = document.getElementById('leadsTableBody');
+            
+            if(leads.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted fw-bold"><i class="fas fa-inbox fs-1 mb-3 d-block"></i> No leads generated yet.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = leads.map(lead => {
+                const date = new Date(lead.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                const buyerName = lead.buyer ? lead.buyer.fullName : 'Unknown Buyer';
+                const buyerPhone = lead.buyer ? lead.buyer.phone : 'No Phone';
+                const propName = lead.property ? lead.property.landName : 'Deleted Property';
+                const propPrice = lead.property ? `₹ ${Number(lead.property.landPrice).toLocaleString('en-IN')}` : '';
+
+                return `
+                    <tr>
+                        <td class="text-muted">${date}</td>
+                        <td>
+                            <div class="user-info">
+                                <span class="user-name"><i class="fas fa-user-circle text-muted me-1"></i> ${buyerName}</span>
+                                <span class="user-prop mt-1"><i class="fas fa-phone-alt text-success me-1"></i> ${buyerPhone}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="user-info">
+                                <span class="user-name text-primary">${propName}</span>
+                                <span class="user-prop fw-bold mt-1">${propPrice}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <select class="form-select form-select-sm" style="width: 160px;" onchange="updateStatus('${lead._id}', this.value)">
+                                <option value="Pending" ${lead.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                                <option value="Contacted" ${lead.status === 'Contacted' ? 'selected' : ''}>Contacted</option>
+                                <option value="Site Visit Scheduled" ${lead.status === 'Site Visit Scheduled' ? 'selected' : ''}>Site Visit</option>
+                                <option value="Closed" ${lead.status === 'Closed' ? 'selected' : ''}>Closed (Deal Done)</option>
+                            </select>
+                        </td>
+                        <td>
+                            <a href="tel:${buyerPhone}" class="btn-call">
+                                <i class="fas fa-phone-volume"></i> Call Buyer
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ==========================================
+        // 2. UPDATE LEAD STATUS
+        // ==========================================
+        async function updateStatus(leadId, newStatus) {
+            const token = localStorage.getItem('zamin_token');
+            try {
+                const res = await fetch(`${API_URL}/leads/${leadId}`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    fetchLeads(); // Refresh table to update stats
+                } else {
+                    alert("Update failed: " + data.message);
+                }
+            } catch(e) {
+                alert("Network error.");
+            }
+        }
+
+        window.onload = fetchLeads;
+    </script>
+</body>
+</html>
