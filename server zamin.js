@@ -42,6 +42,6 @@ app.get('*', (req, res) => {
 
 // Port Binding (Process.env.PORT live server ke liye zaruri hai)
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Zamin Dekho Server is LIVE on port ${PORT}`);
 });

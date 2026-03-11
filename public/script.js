@@ -3,8 +3,8 @@
 // ==========================================
 
 // 1. GLOBAL CONSTANTS
-const API_BASE = "http://localhost:5000/api";
-const FRONTEND_URL = "http://127.0.0.1:5500"; // Live Server URL
+const API_BASE = "/api";
+const FRONTEND_URL = "";
 
 // ==========================================
 // 2. AUTHENTICATION UTILITIES

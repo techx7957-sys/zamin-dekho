@@ -23,6 +23,7 @@
   "version": "1.0.0",
   "main": "server zamin.js",
   "scripts": {
+    "start": "node \"server zamin.js\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
