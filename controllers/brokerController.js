@@ -1,32 +1,42 @@
 const Listing = require('../models/Listing');
 const Lead = require('../models/Lead');
-const User = require('../models/User');
+const Broker = require('../models/Broker'); // 🌟 NAYA: Broker's profile details
 
 // ==========================================
 // 1. GET BROKER DASHBOARD STATS
 // ==========================================
 exports.getBrokerStats = async (req, res) => {
     try {
-        // Ensure only brokers can access this
         if (req.user.role !== 'broker') {
             return res.status(403).json({ success: false, message: "Access Denied. Broker only." });
         }
 
-        const brokerId = req.user.id;
+        const brokerUserId = req.user._id;
 
-        // Count listings posted by this broker
-        const totalListings = await Listing.countDocuments({ postedBy: brokerId });
+        // 1. Properties posted by this broker (If they are acting as a seller too)
+        const totalListings = await Listing.countDocuments({ postedBy: brokerUserId });
 
-        // Find all listings posted by this broker to check leads on them
-        const brokerListings = await Listing.find({ postedBy: brokerId }).select('_id');
-        const listingIds = brokerListings.map(listing => listing._id);
+        // 🌟 NAYA LOGIC: Leads assigned to this broker by the Admin system
+        const totalAssignedLeads = await Lead.countDocuments({ assignedBroker: brokerUserId });
 
-        // Count how many buy requests (leads) came on this broker's properties
-        const totalLeads = await Lead.countDocuments({ property: { $in: listingIds } });
+        const activeLeads = await Lead.countDocuments({ 
+            assignedBroker: brokerUserId, 
+            status: { $in: ['Pending', 'Contacted', 'Site Visit Scheduled', 'Negotiation'] } 
+        });
+
+        const closedDeals = await Lead.countDocuments({ 
+            assignedBroker: brokerUserId, 
+            status: 'Closed' 
+        });
 
         res.json({ 
             success: true, 
-            stats: { totalListings, totalLeads } 
+            stats: { 
+                totalListings, 
+                totalAssignedLeads,
+                activeLeads,
+                closedDeals
+            } 
         });
     } catch (e) {
         res.status(500).json({ success: false, error: "Error fetching broker stats" });
@@ -34,13 +44,32 @@ exports.getBrokerStats = async (req, res) => {
 };
 
 // ==========================================
-// 2. GET BROKER'S OWN LISTINGS
+// 2. GET BROKER'S ASSIGNED LEADS (The Main CRM View)
+// ==========================================
+exports.getBrokerLeads = async (req, res) => {
+    try {
+        if (req.user.role !== 'broker') return res.status(403).json({ success: false, message: "Access Denied." });
+
+        // 🌟 NAYA LOGIC: Ab broker wo saari leads dekhega jo uske naam par assign hui hain (assignedBroker)
+        const leads = await Lead.find({ assignedBroker: req.user._id })
+            .populate('buyer', 'fullName email phone')
+            .populate('property', 'landName landPrice address category')
+            .sort({ nextFollowUpDate: 1, createdAt: -1 }); // Priority: Follow-ups first, then newest
+
+        res.json({ success: true, count: leads.length, leads });
+    } catch (e) {
+        res.status(500).json({ success: false, error: "Error fetching assigned leads" });
+    }
+};
+
+// ==========================================
+// 3. GET BROKER'S OWN LISTINGS (Properties they uploaded)
 // ==========================================
 exports.getBrokerListings = async (req, res) => {
     try {
         if (req.user.role !== 'broker') return res.status(403).json({ success: false, message: "Access Denied." });
 
-        const listings = await Listing.find({ postedBy: req.user.id }).sort({ createdAt: -1 });
+        const listings = await Listing.find({ postedBy: req.user._id }).sort({ createdAt: -1 });
         res.json({ success: true, listings });
     } catch (e) {
         res.status(500).json({ success: false, error: "Error fetching listings" });
@@ -48,24 +77,20 @@ exports.getBrokerListings = async (req, res) => {
 };
 
 // ==========================================
-// 3. GET LEADS GENERATED ON BROKER'S PROPERTIES
+// 4. 🌟 NAYA: GET BROKER PROFILE (For Settings/KYC View)
 // ==========================================
-exports.getBrokerLeads = async (req, res) => {
+exports.getBrokerProfile = async (req, res) => {
     try {
         if (req.user.role !== 'broker') return res.status(403).json({ success: false, message: "Access Denied." });
 
-        // Find properties owned by broker
-        const brokerListings = await Listing.find({ postedBy: req.user.id }).select('_id');
-        const listingIds = brokerListings.map(listing => listing._id);
+        const profile = await Broker.findOne({ user: req.user._id }).populate('user', 'fullName email phone');
 
-        // Fetch leads for those specific properties
-        const leads = await Lead.find({ property: { $in: listingIds } })
-            .populate('buyer', 'fullName email phone')
-            .populate('property', 'landName landPrice address')
-            .sort({ createdAt: -1 });
+        if(!profile) {
+             return res.status(404).json({ success: false, message: "Broker profile not found. Please contact admin." });
+        }
 
-        res.json({ success: true, leads });
+        res.json({ success: true, profile });
     } catch (e) {
-        res.status(500).json({ success: false, error: "Error fetching broker leads" });
+        res.status(500).json({ success: false, error: "Error fetching broker profile" });
     }
-};
+}

@@ -27,8 +27,8 @@ router.get('/google', passport.authenticate('google', { scope: ['profile', 'emai
 // Google Login Callback (Where Google sends the user back after login)
 router.get(
     '/google/callback', 
-    // 🌟 FIX: Changed failureRedirect to localhost:5000
-    passport.authenticate('google', { failureRedirect: 'http://localhost:5000/login.html' }), 
+    // 🌟 FIX: Removed localhost! Ab cloud par fail hone par dynamically sahi page par aayega.
+    passport.authenticate('google', { failureRedirect: '/login.html' }), 
     authController.socialLoginCallback
 );
 
@@ -43,8 +43,8 @@ router.get('/x', passport.authenticate('twitter', { scope: ['tweet.read', 'users
 // X (Twitter) Login Callback (Where X sends the user back)
 router.get(
     '/twitter/callback', 
-    // 🌟 FIX: Changed failureRedirect to localhost:5000
-    passport.authenticate('twitter', { failureRedirect: 'http://localhost:5000/login.html' }), 
+    // 🌟 FIX: Removed localhost! Relative path set kar diya hai.
+    passport.authenticate('twitter', { failureRedirect: '/login.html' }), 
     authController.socialLoginCallback
 );
 

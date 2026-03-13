@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zamin Dekho | India's Smartest Land Marketplace</title>
-    
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        
+
         body { background: #f8fafc; font-family: 'Inter', sans-serif; }
-        
+
         /* Navbar Styling */
         .navbar { box-shadow: 0 2px 15px rgba(0,0,0,0.04); padding: 12px 0; background: white !important; }
         .navbar-brand { font-weight: 800; letter-spacing: -0.5px; color: #10b981 !important; font-size: 24px; }
@@ -21,9 +21,9 @@
 
         /* 🌟 NEW PREMIUM AUTH UI (RIGHT SIDE DROPDOWN) */
         .auth-area { display: flex; align-items: center; gap: 12px; }
-        
+
         .user-menu-container { position: relative; display: inline-block; }
-        
+
         .user-id-btn {
             background: #f8fafc; border: 1px solid #cbd5e1; color: #1e293b;
             padding: 8px 20px; border-radius: 50px; font-weight: 700; font-size: 14px;
@@ -41,7 +41,7 @@
             animation: slideDown 0.2s ease-out;
         }
         @keyframes slideDown { from { opacity:0; transform: translateY(-10px); } to { opacity:1; transform: translateY(0); } }
-        
+
         .user-dropdown-menu .dropdown-header { background: #f8fafc; padding: 12px 16px; font-weight: 800; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0; letter-spacing: 0.5px; }
         .user-dropdown-menu .dropdown-item { padding: 12px 16px; font-size: 14px; color: #1e293b; border-bottom: 1px solid #f1f5f9; cursor: default; }
         .user-dropdown-menu .dropdown-item:last-child { border-bottom: none; }
@@ -62,27 +62,27 @@
 
         /* 🌟 THE SMART SEARCH BAR */
         .search-wrapper { max-width: 950px; margin: -35px auto 0; position: relative; z-index: 1000; }
-        
+
         .main-search-bar {
             background: #ffffff; border-radius: 12px; display: flex; align-items: center;
             padding: 8px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); border: 1px solid #e2e8f0;
         }
-        
+
         .cat-select-btn { 
             border: none; background: transparent; padding: 10px 20px; font-weight: 800; 
             color: #0f172a; border-right: 1px solid #e2e8f0; cursor: pointer; outline: none; font-size: 15px;
         }
-        
+
         .search-input-group { flex-grow: 1; display: flex; align-items: center; padding: 0 15px; }
         .search-input-group i.fa-search { color: #94a3b8; font-size: 18px; margin-right: 10px; }
         .search-input-group input { border: none; outline: none; width: 100%; font-size: 16px; color: #1e293b; padding: 10px 0; font-weight: 500;}
-        
+
         .icon-actions { display: flex; gap: 15px; padding: 0 15px; align-items: center; }
         .icon-actions i { color: #3b82f6; font-size: 19px; cursor: pointer; transition: 0.2s; }
         .icon-actions i:hover { transform: scale(1.2); color: #2563eb; }
         .mic-active { color: #ef4444 !important; animation: pulse 1s infinite; }
         .gps-active { color: #10b981 !important; }
-        
+
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
 
         .vertical-divider { width: 1px; height: 25px; background-color: #e2e8f0; margin: 0 5px; }
@@ -100,7 +100,7 @@
             display: none; position: absolute; width: 100%; text-align: left;
             animation: slideIn 0.2s ease-out;
         }
-        
+
         .panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 15px; }
         .clear-btn { color: #3b82f6; font-weight: 700; cursor: pointer; font-size: 14px; }
 
@@ -123,18 +123,18 @@
     <nav class="navbar navbar-expand-lg navbar-light sticky-top">
         <div class="container">
             <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-1"></i> ZAMIN DEKHO</a>
-            
+
             <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#zaminNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
+
             <div class="collapse navbar-collapse" id="zaminNav">
                 <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center">
                     <li class="nav-item"><a class="nav-link active" href="index.html">Find Land</a></li>
                     <li class="nav-item"><a class="nav-link" href="dashboard.html">Post Property</a></li>
                     <li id="adminLinkArea" class="nav-item"></li>
                 </ul>
-                
+
                 <div id="authArea" class="auth-area justify-content-center mt-3 mt-lg-0"></div>
             </div>
         </div>
@@ -191,8 +191,6 @@
                     <option value="2">2 BHK</option>
                     <option value="3">3+ BHK</option>
                 </select>
-                <div class="filter-pill">Construction Status <i class="fas fa-chevron-down ms-1"></i></div>
-                <div class="filter-pill">Posted By <i class="fas fa-chevron-down ms-1"></i></div>
             </div>
         </div>
     </div>
@@ -207,14 +205,14 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        const API_URL = "http://localhost:5000/api";
-        const BASE_SERVER_URL = "http://localhost:5000/"; 
+        // 🌟 FIX: Removed localhost. Ab ye dynamically cloud server route par jayega
+        const API_URL = "/api";
 
         // ==========================================
-        // 🌟 1. USER PROFILE MENU LOGIC (NEW)
+        // 🌟 1. USER PROFILE MENU LOGIC 
         // ==========================================
         function toggleUserMenu() {
             const menu = document.getElementById('userDropdownMenu');
@@ -223,11 +221,9 @@
 
         // Close dropdowns if clicked outside
         document.addEventListener('click', (e) => {
-            // Close Filter Panel
             if(!e.target.closest('.search-wrapper')) {
                 document.getElementById('filterPanel').style.display = 'none';
             }
-            // Close User Menu
             if(!e.target.closest('.user-menu-container')) {
                 const menu = document.getElementById('userDropdownMenu');
                 if(menu) menu.style.display = 'none';
@@ -289,7 +285,7 @@
         // 🌟 3. SEARCH UI CONTROLS
         // ==========================================
         function toggleFilterPanel(show) { document.getElementById('filterPanel').style.display = show ? 'block' : 'none'; }
-        
+
         function resetFilters() {
             document.getElementById('mainSearchInput').value = '';
             document.querySelectorAll('.type-chk').forEach(c => c.checked = false);
@@ -298,51 +294,40 @@
         }
 
         // ==========================================
-        // 📍 4. SUPER-FAST 2-SECOND GPS ENGINE (The Raipur Fix)
+        // 📍 4. SUPER-FAST 2-SECOND GPS ENGINE
         // ==========================================
         function detectFastGPS() {
             const input = document.getElementById('mainSearchInput');
             const icon = document.getElementById('gpsIcon');
-            
-            if (!navigator.geolocation) {
-                alert("GPS is not supported by your browser!");
-                return;
-            }
+
+            if (!navigator.geolocation) { alert("GPS is not supported by your browser!"); return; }
 
             input.value = "Detecting location...";
             icon.classList.add('fa-spin');
             icon.classList.remove('gps-active');
 
-            // Set enableHighAccuracy to false to force browser to use Wi-Fi Triangulation (Super fast and highly accurate for laptops)
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
                     try {
-                        const lat = pos.coords.latitude;
-                        const lon = pos.coords.longitude;
-                        
-                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`);
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&addressdetails=1`);
                         const data = await res.json();
                         const addr = data.address;
-
                         let district = addr.city || addr.state_district || addr.county || addr.town || addr.village || "";
                         district = district.replace(/ District/gi, '').trim(); 
                         const state = addr.state || "";
-
                         let finalLoc = (district && state) ? `${district}, ${state}` : data.display_name;
 
                         input.value = finalLoc;
                         icon.classList.remove('fa-spin');
                         icon.classList.add('gps-active'); 
                     } catch(e) {
-                        input.value = "";
-                        icon.classList.remove('fa-spin');
+                        input.value = ""; icon.classList.remove('fa-spin');
                         alert("Network error. Could not decode location.");
                     }
                 }, 
                 (err) => {
-                    input.value = "";
-                    icon.classList.remove('fa-spin');
-                    alert("Location access denied! Please turn ON device location and allow browser permissions.");
+                    input.value = ""; icon.classList.remove('fa-spin');
+                    alert("Location access denied! Please allow browser permissions.");
                 }, 
                 { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 } 
             );
@@ -354,17 +339,15 @@
         function startVoice() {
             const input = document.getElementById('mainSearchInput');
             const micIcon = document.getElementById('micIcon');
-            
+
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) return alert("Voice search needs Chrome Browser.");
 
             const recognition = new SpeechRecognition();
-            recognition.lang = 'en-IN'; 
-            recognition.interimResults = true; 
+            recognition.lang = 'en-IN'; recognition.interimResults = true; 
 
             recognition.onstart = function() {
-                input.value = "";
-                input.placeholder = "Listening... Speak clearly 🎙️";
+                input.value = ""; input.placeholder = "Listening... Speak clearly 🎙️";
                 micIcon.classList.add('mic-active');
             };
 
@@ -377,34 +360,32 @@
             };
 
             recognition.onend = function() {
-                updateCategoryUI(); 
-                micIcon.classList.remove('mic-active');
+                updateCategoryUI(); micIcon.classList.remove('mic-active');
                 if(input.value.trim() !== "") executeAdvancedSearch(); 
             };
 
             recognition.onerror = function() {
-                micIcon.classList.remove('mic-active');
-                updateCategoryUI();
+                micIcon.classList.remove('mic-active'); updateCategoryUI();
             };
 
             recognition.start();
         }
 
         // ==========================================
-        // 🚀 6. FETCH & DISPLAY
+        // 🚀 6. FETCH & DISPLAY PROPERTIES (Linked to Naya Backend)
         // ==========================================
         async function executeAdvancedSearch() {
             const keyword = document.getElementById('mainSearchInput').value;
             const cat = document.getElementById('mainCategory').value;
             const budget = document.getElementById('budgetFilter').value;
             const bedroom = document.getElementById('bedroomFilter').value;
-            
+
             let types = [];
             document.querySelectorAll('.type-chk:checked').forEach(c => types.push(c.value));
-            
+
             toggleFilterPanel(false);
             document.getElementById('resultsHeading').innerText = "Search Results";
-            
+
             let query = `keyword=${encodeURIComponent(keyword)}&category=${cat.toLowerCase()}&maxPrice=${budget}&types=${types.join(',')}`;
             if(bedroom) query += `&bedroom=${bedroom}`;
 
@@ -414,33 +395,33 @@
         async function fetchAll(url = `${API_URL}/listings/all`) {
             const grid = document.getElementById('listingsGrid');
             const resCount = document.getElementById('resultCount');
-            
+
             grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-border text-success"></div></div>';
-            
+
             try {
                 const res = await fetch(url);
                 const data = await res.json();
+
                 if (data.success && data.listings.length > 0) {
                     resCount.innerText = `${data.listings.length} Results Found`;
-                    
+
                     grid.innerHTML = data.listings.map(item => {
-                        let imgSource = item.imageUrl;
-                        if(imgSource && !imgSource.startsWith('http')) {
-                            imgSource = imgSource.replace(/\\/g, '/'); 
-                            imgSource = BASE_SERVER_URL + (imgSource.startsWith('/') ? imgSource.substring(1) : imgSource);
-                        }
-                        const fallbackImg = "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80";
-                        if(!imgSource) imgSource = fallbackImg;
+                        let imgSource = item.imageUrl || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80";
 
                         return `
                         <div class="col-lg-4 col-md-6">
                             <div class="property-card" onclick="window.location.href='property.html?id=${item._id}'">
                                 <div class="position-relative">
-                                    <img src="${imgSource}" onerror="this.src='${fallbackImg}'" class="property-img" alt="Land">
-                                    <span class="badge bg-dark px-3 py-2 rounded-pill position-absolute shadow" style="top:15px; left:15px; font-weight:800;">${item.category.toUpperCase()}</span>
+                                    <img src="${imgSource}" class="property-img" alt="Land">
+                                    <span class="badge bg-dark px-3 py-2 rounded-pill position-absolute shadow" style="top:15px; left:15px; font-weight:800; text-transform: uppercase;">
+                                        ${item.category || 'PROPERTY'}
+                                    </span>
                                 </div>
                                 <div class="card-body p-4">
-                                    <h3 class="fw-bold text-success mb-2">₹ ${Number(item.landPrice).toLocaleString('en-IN')}</h3>
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h3 class="fw-bold text-success m-0">₹ ${Number(item.landPrice).toLocaleString('en-IN')}</h3>
+                                        ${item.landSize && item.landSize !== 'Not Specified' ? `<span class="badge bg-light text-dark border">${item.landSize}</span>` : ''}
+                                    </div>
                                     <h5 class="fw-bold text-dark text-truncate">${item.landName}</h5>
                                     <p class="text-muted small mb-0"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address}</p>
                                 </div>
@@ -456,31 +437,31 @@
         }
 
         // ==========================================
-        // 🌟 7. FIX: RIGHT-SIDE CUSTOM USER MENU
+        // 🌟 7. AUTH & UI STATE
         // ==========================================
         function updateNavbarUI() {
             const token = localStorage.getItem('zamin_token');
             const authArea = document.getElementById('authArea');
             const adminArea = document.getElementById('adminLinkArea');
-            
+
             if (token) {
                 try {
                     const user = JSON.parse(localStorage.getItem('zamin_user'));
-                    if(user.role === 'admin') adminArea.innerHTML = `<a class="nav-link text-danger" href="admin.html"><i class="fas fa-user-shield me-1"></i> Admin</a>`;
-                    
-                    // FIX: Safe Name Parsing
-                    const firstName = user.fullName ? user.fullName.split(' ')[0] : (user.name ? user.name.split(' ')[0] : 'User');
-                    const fullName = user.fullName || user.name || "User";
+                    if(user.role === 'admin' || user.role === 'broker') {
+                        adminArea.innerHTML = `<a class="nav-link text-danger" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
+                    }
+
+                    const firstName = user.fullName ? user.fullName.split(' ')[0] : 'User';
+                    const fullName = user.fullName || "User";
                     const role = user.role ? user.role.toUpperCase() : "BUYER";
                     const uid = user._id || "000000000000";
 
-                    // The Custom Right-Side Menu Structure
                     authArea.innerHTML = `
                         <div class="user-menu-container">
                             <button onclick="toggleUserMenu()" class="user-id-btn">
                                 <i class="fas fa-user-circle"></i> ${firstName}
                             </button>
-                            
+
                             <div id="userDropdownMenu" class="user-dropdown-menu">
                                 <div class="dropdown-header">USER PROFILE DETAILS</div>
                                 <div class="dropdown-item"><strong>Name:</strong> ${fullName}</div>
@@ -500,6 +481,12 @@
             } else {
                 authArea.innerHTML = `<a href="login.html" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm">Login to Explore</a>`;
             }
+        }
+
+        function logout() {
+            localStorage.removeItem('zamin_token');
+            localStorage.removeItem('zamin_user');
+            window.location.reload();
         }
 
         window.onload = () => {

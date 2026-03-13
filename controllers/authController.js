@@ -2,6 +2,7 @@ const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Broker = require('../models/Broker'); // 🌟 NAYA: Broker model import kiya taaki auto-profile ban sake
 
 // Temporary Memory for OTP
 let otpStore = {}; 
@@ -11,23 +12,38 @@ let otpStore = {};
 // ==========================================
 exports.sendOtp = async (req, res) => {
     const { email } = req.body;
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otpStore[email] = otp;
-
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: { 
-            user: process.env.EMAIL_USER, 
-            pass: process.env.EMAIL_PASS 
-        }
-    });
 
     try {
+        // 🌟 NAYA: OTP bhejne se pehle check karo ki user pehle se toh nahi hai! (Spam rokne ke liye)
+        const exists = await User.findOne({ email });
+        if (exists) {
+            return res.status(400).json({ success: false, message: "Email pehle se register hai! Kripya Login karein." });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        otpStore[email] = otp;
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: { 
+                user: process.env.EMAIL_USER, 
+                pass: process.env.EMAIL_PASS 
+            }
+        });
+
         await transporter.sendMail({
             from: `"Zamin Dekho" <${process.env.EMAIL_USER}>`,
             to: email,
-            subject: "Your Account Verification OTP",
-            text: `Welcome to Zamin Dekho! Aapka 6-digit verification code hai: ${otp}`
+            subject: "Zamin Dekho - Account Verification OTP",
+            // 🌟 NAYA: Professional HTML format me OTP jayega!
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Welcome to Zamin Dekho! 🏠</h2>
+                    <p>Aapka 6-digit verification code hai:</p>
+                    <h1 style="color: #10b981; letter-spacing: 5px; font-size: 32px;">${otp}</h1>
+                    <p>Yeh code kisi ke sath share na karein.</p>
+                </div>
+            `
         });
         res.json({ success: true, message: "OTP Email par bhej diya gaya!" });
     } catch (e) { 
@@ -42,25 +58,30 @@ exports.sendOtp = async (req, res) => {
 exports.register = async (req, res) => {
     try {
         const { fullName, email, phone, password, role, otp } = req.body;
-        
+
         // OTP Match Check
         if (otpStore[email] !== otp) {
-            return res.status(400).json({ success: false, message: "Galat OTP!" });
-        }
-
-        // Existing User Check
-        const exists = await User.findOne({ email });
-        if (exists) {
-            return res.status(400).json({ success: false, message: "Email pehle se register hai!" });
+            return res.status(400).json({ success: false, message: "Galat OTP! Kripya dobara check karein." });
         }
 
         // Hash Password & Create User
         const hashed = await bcrypt.hash(password, 10);
-        await User.create({ fullName, email, phone, password: hashed, role });
-        
+        const newUser = await User.create({ 
+            fullName, 
+            email, 
+            phone, 
+            password: hashed, 
+            role: role || 'buyer' 
+        });
+
+        // 🌟 NAYA: Agar naya user 'Broker' ban raha hai, toh automatically uska Broker Profile bhi bana do!
+        if (newUser.role === 'broker') {
+            await Broker.create({ user: newUser._id });
+        }
+
         // Clean up OTP memory
         delete otpStore[email]; 
-        res.status(201).json({ success: true, message: "Account successfully created!" });
+        res.status(201).json({ success: true, message: "Account successfully created! Ab aap login kar sakte hain." });
     } catch (e) { 
         res.status(500).json({ success: false, error: e.message }); 
     }
@@ -73,11 +94,16 @@ exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email });
-        
+
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(400).json({ success: false, message: "Invalid Email or Password" });
         }
-        
+
+        // 🌟 NAYA: Admin Control - Agar user block/ban hai toh login rok do (isActive flag from User.js)
+        if (!user.isActive) {
+            return res.status(403).json({ success: false, message: "Aapka account admin dwara block kar diya gaya hai." });
+        }
+
         // Generate Secure JWT Token
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
         res.json({ success: true, token, user });
@@ -89,12 +115,11 @@ exports.login = async (req, res) => {
 // ==========================================
 // 4. SOCIAL LOGIN CALLBACK (Google & Twitter)
 // ==========================================
-exports.socialLoginCallback = (req, res) => {
+exports.socialLoginCallback = async (req, res) => {
     // Generate token for social login user
     const token = jwt.sign({ id: req.user._id, role: req.user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    
-    // 🌟 FIX: URL updated to Localhost:5000. Ab Live Server (5500) ki zaroorat nahi hai!
-    const FRONTEND_URL = "http://localhost:5000";
+
+    // 🌟 FIX: Localhost hata diya! Ab seedha '/index.html' par redirect hoga taaki Replit live link par kaam kare!
     const userData = encodeURIComponent(JSON.stringify(req.user));
-    res.redirect(`${FRONTEND_URL}/index.html?token=${token}&user=${userData}`);
+    res.redirect(`/index.html?token=${token}&user=${userData}`);
 };

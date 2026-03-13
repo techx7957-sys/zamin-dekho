@@ -1,10 +1,11 @@
 // ==========================================
-// ZAMIN DEKHO - GLOBAL SCRIPT
+// ZAMIN DEKHO - GLOBAL SCRIPT (PRO VERSION)
 // ==========================================
 
-// 1. GLOBAL CONSTANTS
+// 🌟 FIX: Removed Hardcoded Localhost URLs
+// Ab ye automatically ussi server ko call karega jahan par website host hui hai.
 const API_BASE = "/api";
-const FRONTEND_URL = "";
+const FRONTEND_URL = window.location.origin; 
 
 // ==========================================
 // 2. AUTHENTICATION UTILITIES
@@ -34,9 +35,8 @@ function logout() {
     // Clear all local storage data
     localStorage.removeItem('zamin_token');
     localStorage.removeItem('zamin_user');
-    
-    // Show quick alert and redirect
-    alert("You have been logged out successfully.");
+
+    // Redirect gracefully
     window.location.href = 'login.html';
 }
 
@@ -55,7 +55,7 @@ function requireAuth() {
 function showToast(message, type = 'success') {
     // Check if toast container exists, if not, create it
     let toastContainer = document.getElementById('global-toast');
-    
+
     if (!toastContainer) {
         toastContainer = document.createElement('div');
         toastContainer.id = 'global-toast';
@@ -87,8 +87,11 @@ function showToast(message, type = 'success') {
 
     // Show and Hide Logic
     toastContainer.style.display = 'block';
-    toastContainer.style.opacity = '1';
-    toastContainer.style.transform = 'translateY(0)';
+    // Small delay to allow CSS transition to trigger
+    setTimeout(() => {
+        toastContainer.style.opacity = '1';
+        toastContainer.style.transform = 'translateY(0)';
+    }, 10);
 
     // Hide after 4 seconds
     setTimeout(() => {
@@ -121,17 +124,24 @@ function formatDate(dateString) {
 // ==========================================
 // Yeh function automatically check karega ki URL mein Token aaya hai ya nahi
 function handleSocialLoginCallback() {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    const user = params.get('user');
+    // Sirf tabhi chalega agar URL mein search params honge
+    if(window.location.search) {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const user = params.get('user');
 
-    if (token && user) {
-        localStorage.setItem('zamin_token', token);
-        localStorage.setItem('zamin_user', decodeURIComponent(user));
-        
-        // Remove token from URL for security
-        window.history.replaceState({}, document.title, window.location.pathname);
-        showToast("Login Successful!", "success");
+        if (token && user) {
+            localStorage.setItem('zamin_token', token);
+            localStorage.setItem('zamin_user', decodeURIComponent(user));
+
+            // Remove token from URL for security
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            // Wait for DOM to load before showing toast
+            setTimeout(() => {
+                showToast("Social Login Successful!", "success");
+            }, 500);
+        }
     }
 }
 

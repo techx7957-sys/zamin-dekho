@@ -1,7 +1,10 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const protect = async (req, res, next) => {
+// ==========================================
+// 1. VERIFY JWT TOKEN (Protect Routes)
+// ==========================================
+exports.protect = async (req, res, next) => {
     let token;
 
     // 1. Check if Authorization header exists and starts with 'Bearer'
@@ -13,14 +16,31 @@ const protect = async (req, res, next) => {
             // 3. Verify the token using JWT_SECRET
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-            // 4. Fetch the user from the database and attach to request object (excluding password)
-            req.user = await User.findById(decoded.id).select('-password');
+            // 4. Fetch the user from the database
+            const currentUser = await User.findById(decoded.id).select('-password');
 
-            // 5. Move to the next middleware or route controller
+            // 🌟 FIX 1: Zombie Token - Agar user database mein nahi hai, toh turant bahar nikalo
+            if (!currentUser) {
+                return res.status(401).json({ 
+                    success: false, 
+                    message: "The user belonging to this token no longer exists. Please register again." 
+                });
+            }
+
+            // 🌟 FIX 2: Banned User - Agar Admin ne is user ko block kar diya hai, toh access rok do!
+            if (!currentUser.isActive) {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: "Aapka account admin dwara block kar diya gaya hai. Kripya support se sampark karein." 
+                });
+            }
+
+            // 5. Attach safe user object to request and move forward
+            req.user = currentUser;
             next();
         } catch (error) {
             console.error("Token Verification Failed:", error.message);
-            res.status(401).json({ 
+            return res.status(401).json({ 
                 success: false, 
                 message: "Aapka session expire ho gaya hai ya token galat hai. Kripya dobara login karein." 
             });
@@ -29,11 +49,27 @@ const protect = async (req, res, next) => {
 
     // 6. If no token is found at all
     if (!token) {
-        res.status(401).json({ 
+        return res.status(401).json({ 
             success: false, 
             message: "Access Denied! Aap is action ke liye authorized nahi hain. Pehle login karein." 
         });
     }
 };
 
-module.exports = protect;
+// ==========================================
+// 🌟 2. ROLE AUTHORIZATION ENGINE (Naya Jaadu!)
+// ==========================================
+// Is function se hum routes ko asani se lock kar sakte hain. 
+// Example: router.get('/admin-stats', protect, authorizeRoles('admin', 'broker'), getStats)
+exports.authorizeRoles = (...roles) => {
+    return (req, res, next) => {
+        // Agar user ka role permitted roles list mein nahi hai
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({ 
+                success: false, 
+                message: `Access Denied! Aapka role (${req.user.role}) is area mein aane ke liye allowed nahi hai.` 
+            });
+        }
+        next();
+    };
+};
