@@ -33,7 +33,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node \"server zamin.js\""
+args = "sh start.sh"
 waitForPort = 5000
 
 [[ports]]

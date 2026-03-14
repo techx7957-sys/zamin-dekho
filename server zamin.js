@@ -38,6 +38,33 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Uploads folder public
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+
+// ==========================================
+// 🐦 TWITTER (X) LOGIN ROUTES (THE FIX)
+// ==========================================
+// 1. Twitter ko batana ki humein kya access chahiye (Scope)
+app.get('/api/auth/twitter', passport.authenticate('twitter', {
+    scope: ['tweet.read', 'users.read', 'offline.access'] 
+}));
+
+// 2. Callback Route: Jab Twitter user ko wapas bheje
+app.get('/api/auth/twitter/callback', 
+    passport.authenticate('twitter', { failureRedirect: '/login.html' }),
+    (req, res) => {
+        const token = req.user._id; 
+        const userData = encodeURIComponent(JSON.stringify({
+            _id: req.user._id,
+            fullName: req.user.fullName,
+            role: req.user.role
+        }));
+
+        // Frontend par wapas bhej do token ke sath
+        res.redirect(`/?token=${token}&user=${userData}`);
+    }
+);
+// ==========================================
+
+
 // Database Connection
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,

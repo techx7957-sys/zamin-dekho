@@ -13,31 +13,27 @@ router.post('/login', authController.login);
 // ==========================================
 // 2. GOOGLE OAUTH 2.0 ROUTES
 // ==========================================
-if (process.env.GOOGLE_CLIENT_ID) {
-    router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-    router.get(
-        '/google/callback',
-        passport.authenticate('google', { failureRedirect: '/login.html' }),
-        authController.socialLoginCallback
-    );
-} else {
-    router.get('/google', (req, res) => res.redirect('/login.html?error=google_not_configured'));
-    router.get('/google/callback', (req, res) => res.redirect('/login.html?error=google_not_configured'));
-}
+// 🌟 FIX: Removed 'if' checks so routes never silently fail
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+router.get(
+    '/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login.html' }),
+    authController.socialLoginCallback
+);
 
 // ==========================================
 // 3. X (TWITTER) OAUTH 2.0 ROUTES
 // ==========================================
-if (process.env.TWITTER_CLIENT_ID) {
-    router.get('/x', passport.authenticate('twitter', { scope: ['tweet.read', 'users.read', 'offline.access'] }));
-    router.get(
-        '/twitter/callback',
-        passport.authenticate('twitter', { failureRedirect: '/login.html' }),
-        authController.socialLoginCallback
-    );
-} else {
-    router.get('/x', (req, res) => res.redirect('/login.html?error=twitter_not_configured'));
-    router.get('/twitter/callback', (req, res) => res.redirect('/login.html?error=twitter_not_configured'));
-}
+// 🌟 FIX: Removed 'if' checks & added support for BOTH '/x' and '/twitter' paths
+router.get(['/twitter', '/x'], passport.authenticate('twitter', { 
+    scope: ['tweet.read', 'users.read', 'offline.access'] 
+}));
+
+router.get(
+    '/twitter/callback',
+    passport.authenticate('twitter', { failureRedirect: '/login.html' }),
+    authController.socialLoginCallback
+);
 
 module.exports = router;
