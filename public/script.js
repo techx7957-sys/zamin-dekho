@@ -2,6 +2,24 @@
 // ZAMIN DEKHO - GLOBAL SCRIPT (PRO VERSION)
 // ==========================================
 
+// ====== SOCIAL LOGIN TOKEN HANDLER ======
+window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    // Agar URL mein token hai (Google/Twitter se wapas aane par)
+    if (token) {
+        // Token ko browser ki memory mein save kar lo
+        localStorage.setItem('token', token);
+
+        // URL ko saaf kar do taaki lamba token user ko na dikhe
+        window.history.replaceState({}, document.title, window.location.pathname);
+
+        // Page ko ek baar refresh kar do taaki buttons update ho jayein
+        window.location.reload();
+    }
+});
+
 // 🌟 FIX: Removed Hardcoded Localhost URLs
 // Ab ye automatically ussi server ko call karega jahan par website host hui hai.
 const API_BASE = "/api";
