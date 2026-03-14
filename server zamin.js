@@ -2,12 +2,17 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const session = require('express-session');
+const passport = require('passport');
 require('dotenv').config();
+
+// Load Passport strategies BEFORE routes
+require('./config/passport-setup');
 
 // Route Imports
 const authRoutes = require('./routes/authRoutes');
 const listingRoutes = require('./routes/listingRoutes');
-const adminRoutes = require('./routes/adminRoutes'); 
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
@@ -16,10 +21,21 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🌟 PRODUCTION FIX: Serving static Frontend files from 'public' folder
+// Session middleware (required for Passport)
+app.use(session({
+    secret: process.env.JWT_SECRET || 'zamin-dekho-secret',
+    resave: false,
+    saveUninitialized: false
+}));
+
+// Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Serving static Frontend files from 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Uploads folder ko public banana (Taki images live server par dikhein)
+// Uploads folder public
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Database Connection
@@ -34,13 +50,12 @@ app.use('/api/auth', authRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/admin', adminRoutes);
 
-// 🌟 PRODUCTION FIX: Catch-all route to serve Frontend
-// Agar koi galat URL daale, toh use wapas index.html par bhej do
+// Catch-all route to serve Frontend
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Port Binding (Process.env.PORT live server ke liye zaruri hai)
+// Port Binding
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Zamin Dekho Server is LIVE on port ${PORT}`);

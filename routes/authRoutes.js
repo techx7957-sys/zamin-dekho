@@ -6,46 +6,38 @@ const authController = require('../controllers/authController');
 // ==========================================
 // 1. STANDARD EMAIL & OTP ROUTES
 // ==========================================
-
-// Route to send 6-digit OTP to user's email
 router.post('/send-otp', authController.sendOtp);
-
-// Route to verify OTP and Register the new user
 router.post('/register', authController.register);
-
-// Route for secure Login with Email & Password
 router.post('/login', authController.login);
-
 
 // ==========================================
 // 2. GOOGLE OAUTH 2.0 ROUTES
 // ==========================================
-
-// Initiate Google Login (Prompts user to select Google account)
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-
-// Google Login Callback (Where Google sends the user back after login)
-router.get(
-    '/google/callback', 
-    // 🌟 FIX: Removed localhost! Ab cloud par fail hone par dynamically sahi page par aayega.
-    passport.authenticate('google', { failureRedirect: '/login.html' }), 
-    authController.socialLoginCallback
-);
-
+if (process.env.GOOGLE_CLIENT_ID) {
+    router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+    router.get(
+        '/google/callback',
+        passport.authenticate('google', { failureRedirect: '/login.html' }),
+        authController.socialLoginCallback
+    );
+} else {
+    router.get('/google', (req, res) => res.redirect('/login.html?error=google_not_configured'));
+    router.get('/google/callback', (req, res) => res.redirect('/login.html?error=google_not_configured'));
+}
 
 // ==========================================
 // 3. X (TWITTER) OAUTH 2.0 ROUTES
 // ==========================================
-
-// Initiate X (Twitter) Login
-router.get('/x', passport.authenticate('twitter', { scope: ['tweet.read', 'users.read', 'offline.access'] }));
-
-// X (Twitter) Login Callback (Where X sends the user back)
-router.get(
-    '/twitter/callback', 
-    // 🌟 FIX: Removed localhost! Relative path set kar diya hai.
-    passport.authenticate('twitter', { failureRedirect: '/login.html' }), 
-    authController.socialLoginCallback
-);
+if (process.env.TWITTER_CLIENT_ID) {
+    router.get('/x', passport.authenticate('twitter', { scope: ['tweet.read', 'users.read', 'offline.access'] }));
+    router.get(
+        '/twitter/callback',
+        passport.authenticate('twitter', { failureRedirect: '/login.html' }),
+        authController.socialLoginCallback
+    );
+} else {
+    router.get('/x', (req, res) => res.redirect('/login.html?error=twitter_not_configured'));
+    router.get('/twitter/callback', (req, res) => res.redirect('/login.html?error=twitter_not_configured'));
+}
 
 module.exports = router;
