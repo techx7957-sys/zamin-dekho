@@ -54,13 +54,14 @@ passport.use(new GoogleStrategy({
 passport.use(new TwitterStrategy({
     clientID: process.env.TWITTER_CLIENT_ID || 'dummy_twitter_id',
     clientSecret: process.env.TWITTER_CLIENT_SECRET || 'dummy_twitter_secret',
-    callbackURL: "/api/auth/twitter/callback", 
-    clientType: 'confidential',
 
-    // 🌟 THE ULTIMATE FIX: Twitter ki strict security pass karne ke liye yeh dono zaroori hain!
+    // 🌟 THE FINAL FIX: Yahan humne aapka POORA URL daal diya hai!
+    // Ab Replit URL ke sath koi ched-chad nahi kar payega aur Twitter isko 100% accept karega.
+    callbackURL: process.env.TWITTER_CALLBACK_URL || "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev/api/auth/twitter/callback", 
+
+    clientType: 'confidential',
     pkce: true,  
     state: true, 
-
     proxy: true, 
 
     // Strict OAuth 2.0 Endpoints
