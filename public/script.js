@@ -148,3 +148,26 @@ function formatDate(dateString) {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-IN', options);
 }
+
+// ==========================================
+// 6. UI UPDATE LOGIC (THE MISSING PIECE)
+// ==========================================
+function updateNavbar() {
+    const token = getToken(); // Check if user is logged in
+
+    if (token) {
+        // Website par jahan bhi 'login.html' ka link hai, usko pakdo
+        const loginLinks = document.querySelectorAll('a[href="login.html"]');
+
+        loginLinks.forEach(link => {
+            link.href = "dashboard.html"; // Rasta badal do
+            link.innerHTML = "My Dashboard"; // Naam badal do
+            // Thoda style change karne ke liye (Optional)
+            link.style.backgroundColor = "#166534"; 
+            link.style.color = "white";
+        });
+    }
+}
+
+// Jaise hi page load ho, Navbar ko update karo
+window.addEventListener('DOMContentLoaded', updateNavbar);

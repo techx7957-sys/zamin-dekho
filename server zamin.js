@@ -4,7 +4,14 @@ const cors = require('cors');
 const path = require('path');
 const session = require('express-session');
 const passport = require('passport');
+const { execSync } = require('child_process');
 require('dotenv').config();
+
+// Kill any stale process holding our port before starting
+try {
+    execSync('fuser -k 5000/tcp 2>/dev/null || true');
+    execSync('sleep 1');
+} catch (e) { /* ignore */ }
 
 // Load Passport strategies BEFORE routes
 require('./config/passport-setup');
