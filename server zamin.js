@@ -57,6 +57,14 @@ app.get('*', (req, res) => {
 
 // Port Binding
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Zamin Dekho Server is LIVE on port ${PORT}`);
+});
+
+// Graceful shutdown so port is freed immediately on restart
+process.on('SIGTERM', () => {
+    server.close(() => process.exit(0));
+});
+process.on('SIGINT', () => {
+    server.close(() => process.exit(0));
 });
