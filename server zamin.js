@@ -4,14 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const session = require('express-session');
 const passport = require('passport');
-const { execSync } = require('child_process');
 require('dotenv').config();
-
-// Kill any stale process holding our port before starting
-try {
-    execSync('fuser -k 5000/tcp 2>/dev/null || true');
-    execSync('sleep 1');
-} catch (e) { /* ignore */ }
 
 // Load Passport strategies BEFORE routes
 require('./config/passport-setup');
@@ -62,7 +55,7 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Port Binding
+// Port Binding with auto-retry on EADDRINUSE
 const PORT = process.env.PORT || 5000;
 
 function startServer() {
@@ -73,23 +66,15 @@ function startServer() {
     server.on('error', (err) => {
         if (err.code === 'EADDRINUSE') {
             console.log(`⚠️ Port ${PORT} in use, retrying in 3 seconds...`);
-            setTimeout(() => {
-                server.close();
-                startServer();
-            }, 3000);
+            setTimeout(startServer, 3000);
         } else {
             console.error('Server error:', err);
             process.exit(1);
         }
     });
 
-    // Graceful shutdown so port is freed immediately on restart
-    process.on('SIGTERM', () => {
-        server.close(() => process.exit(0));
-    });
-    process.on('SIGINT', () => {
-        server.close(() => process.exit(0));
-    });
+    process.on('SIGTERM', () => server.close(() => process.exit(0)));
+    process.on('SIGINT', () => server.close(() => process.exit(0)));
 }
 
 startServer();
