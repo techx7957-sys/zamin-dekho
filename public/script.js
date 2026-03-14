@@ -2,21 +2,33 @@
 // ZAMIN DEKHO - GLOBAL SCRIPT (PRO VERSION)
 // ==========================================
 
-// ====== SOCIAL LOGIN TOKEN HANDLER ======
+// 🌟 THE MASTER SOCIAL LOGIN HANDLER 🌟
+// Yeh function automatically URL se token aur user data nikalega aur save karega
 window.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
+    // Humara backend user ka data URL mein encode karke bhejta hai
+    const user = urlParams.get('user');
 
-    // Agar URL mein token hai (Google/Twitter se wapas aane par)
     if (token) {
-        // Token ko browser ki memory mein save kar lo
-        localStorage.setItem('token', token);
+        // 1. Save Token
+        localStorage.setItem('zamin_token', token);
 
-        // URL ko saaf kar do taaki lamba token user ko na dikhe
+        // 2. Save User Data (agar aaya hai toh decode karke save karo)
+        if (user) {
+            localStorage.setItem('zamin_user', decodeURIComponent(user));
+        }
+
+        // 3. Clean the URL (Security ke liye token hata do screen se)
         window.history.replaceState({}, document.title, window.location.pathname);
 
-        // Page ko ek baar refresh kar do taaki buttons update ho jayein
-        window.location.reload();
+        // 4. Show Success Toast
+        showToast("Social Login Successful!", "success");
+
+        // 5. Short Delay ke baad page reload karo taaki "Login" button gayab hoke "Dashboard" aa jaye
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500); // 1.5 second ka delay taaki toast dikh sake
     }
 });
 
@@ -136,32 +148,3 @@ function formatDate(dateString) {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-IN', options);
 }
-
-// ==========================================
-// 5. SOCIAL LOGIN URL CATCHER (For index.html)
-// ==========================================
-// Yeh function automatically check karega ki URL mein Token aaya hai ya nahi
-function handleSocialLoginCallback() {
-    // Sirf tabhi chalega agar URL mein search params honge
-    if(window.location.search) {
-        const params = new URLSearchParams(window.location.search);
-        const token = params.get('token');
-        const user = params.get('user');
-
-        if (token && user) {
-            localStorage.setItem('zamin_token', token);
-            localStorage.setItem('zamin_user', decodeURIComponent(user));
-
-            // Remove token from URL for security
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            // Wait for DOM to load before showing toast
-            setTimeout(() => {
-                showToast("Social Login Successful!", "success");
-            }, 500);
-        }
-    }
-}
-
-// Run this automatically on page load
-handleSocialLoginCallback();
