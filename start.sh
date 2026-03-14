@@ -1,5 +1,5 @@
 #!/bin/sh
-# Wait for port 5000 to be free, killing any stale process holding it
+# Kill any stale process on port 5000
 MAX_ATTEMPTS=10
 ATTEMPT=0
 while fuser 5000/tcp > /dev/null 2>&1; do
@@ -14,4 +14,13 @@ while fuser 5000/tcp > /dev/null 2>&1; do
 done
 
 echo "Port 5000 is free, starting server..."
-exec node "server zamin.js"
+
+# Run node in background so this shell can trap signals and kill node cleanly
+node "server zamin.js" &
+NODE_PID=$!
+
+# Forward SIGTERM and SIGINT to node so it shuts down cleanly
+trap "kill $NODE_PID 2>/dev/null; exit 0" TERM INT
+
+# Wait for node to exit
+wait $NODE_PID
