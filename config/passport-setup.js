@@ -52,12 +52,15 @@ passport.use(new GoogleStrategy({
 // 2. TWITTER (X) OAUTH 2.0 ENGINE
 // ==========================================
 passport.use(new TwitterStrategy({
-    clientID: process.env.TWITTER_CLIENT_ID || 'dummy_twitter_id',
-    clientSecret: process.env.TWITTER_CLIENT_SECRET || 'dummy_twitter_secret',
+    // 🚨 DIRECT KEYS PASTE KI HAIN (Replit ka jhanjhat khatam) 🚨
 
-    // 🌟 THE FINAL FIX: Yahan humne aapka POORA URL daal diya hai!
-    // Ab Replit URL ke sath koi ched-chad nahi kar payega aur Twitter isko 100% accept karega.
-    callbackURL: process.env.TWITTER_CALLBACK_URL || "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev/api/auth/twitter/callback", 
+    // Aapki asli Client ID (Screenshot se uthayi hai):
+    clientID: 'aGhWeWdEWFhuMFpYa21tM3BHM1I6MTpjYQ', 
+
+    // 👇 YAHAN APNA ASLI SECRET CODE DALIYE (Jo Twitter portal pe regenerate kiya tha) 👇
+    clientSecret: 'YAHAN_APNA_ASLI_SECRET_PASTE_KIJIYE', 
+
+    callbackURL: "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev/api/auth/twitter/callback", 
 
     clientType: 'confidential',
     pkce: true,  
