@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const Broker = require('../models/Broker'); // 🌟 NAYA: Broker model import kiya taaki auto-profile ban sake
+const Broker = require('../models/Broker'); // Broker model import kiya taaki auto-profile ban sake
 
 // Temporary Memory for OTP
 let otpStore = {}; 
@@ -14,7 +14,7 @@ exports.sendOtp = async (req, res) => {
     const { email } = req.body;
 
     try {
-        // 🌟 NAYA: OTP bhejne se pehle check karo ki user pehle se toh nahi hai! (Spam rokne ke liye)
+        // OTP bhejne se pehle check karo ki user pehle se toh nahi hai!
         const exists = await User.findOne({ email });
         if (exists) {
             return res.status(400).json({ success: false, message: "Email pehle se register hai! Kripya Login karein." });
@@ -35,7 +35,6 @@ exports.sendOtp = async (req, res) => {
             from: `"Zamin Dekho" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: "Zamin Dekho - Account Verification OTP",
-            // 🌟 NAYA: Professional HTML format me OTP jayega!
             html: `
                 <div style="font-family: Arial, sans-serif; padding: 20px;">
                     <h2>Welcome to Zamin Dekho! 🏠</h2>
@@ -74,7 +73,7 @@ exports.register = async (req, res) => {
             role: role || 'buyer' 
         });
 
-        // 🌟 NAYA: Agar naya user 'Broker' ban raha hai, toh automatically uska Broker Profile bhi bana do!
+        // Agar naya user 'Broker' ban raha hai, toh automatically uska Broker Profile bhi bana do!
         if (newUser.role === 'broker') {
             await Broker.create({ user: newUser._id });
         }
@@ -99,7 +98,7 @@ exports.login = async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid Email or Password" });
         }
 
-        // 🌟 NAYA: Admin Control - Agar user block/ban hai toh login rok do (isActive flag from User.js)
+        // Admin Control - Agar user block/ban hai toh login rok do
         if (!user.isActive) {
             return res.status(403).json({ success: false, message: "Aapka account admin dwara block kar diya gaya hai." });
         }
@@ -119,7 +118,43 @@ exports.socialLoginCallback = async (req, res) => {
     // Generate token for social login user
     const token = jwt.sign({ id: req.user._id, role: req.user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    // 🌟 FIX: Localhost hata diya! Ab seedha '/index.html' par redirect hoga taaki Replit live link par kaam kare!
+    // Seedha '/index.html' par redirect hoga taaki Replit live link par kaam kare!
     const userData = encodeURIComponent(JSON.stringify(req.user));
     res.redirect(`/index.html?token=${token}&user=${userData}`);
+};
+
+// ==========================================
+// 🌟 5. NAYA: PROFILE MANAGEMENT (For Checkout & Missing Phone Numbers)
+// ==========================================
+
+// A. Get current logged-in user details
+exports.getMe = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password'); // Password nahi bhejna!
+        if (!user) return res.status(404).json({ success: false, message: "User nahi mila" });
+
+        res.json({ success: true, user });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+};
+
+// B. Update User Profile (Specifically Phone Number during checkout)
+exports.updateProfile = async (req, res) => {
+    try {
+        const { phone } = req.body;
+
+        // Find user and update phone number
+        const updatedUser = await User.findByIdAndUpdate(
+            req.user.id,
+            { phone },
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        if (!updatedUser) return res.status(404).json({ success: false, message: "User nahi mila" });
+
+        res.json({ success: true, message: "Profile update ho gayi!", user: updatedUser });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
 };

@@ -18,15 +18,16 @@
     "passport-google-oauth20": "^2.0.0",
     "passport-twitter": "^1.0.4",
     "passport-twitter-oauth2": "^2.1.1",
+    "razorpay": "^2.9.6",
     "twitter-api-v2": "^1.29.0"
   },
   "name": "zamin-dekho",
   "version": "1.0.0",
   "main": "server zamin.js",
   "scripts": {
-    "start": "sh start.sh",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  }
   "keywords": [],
   "author": "",
   "license": "ISC",

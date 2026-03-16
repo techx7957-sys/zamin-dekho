@@ -1,518 +1,599 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zamin Dekho | India's Smartest Land Marketplace</title>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Zamin Dekho | India's Smartest Land Marketplace</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        <style>
+            @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+            body { background: #f8fafc; font-family: 'Inter', sans-serif; }
 
-        body { background: #f8fafc; font-family: 'Inter', sans-serif; }
+            /* Navbar Styling */
+            .navbar { box-shadow: 0 2px 15px rgba(0,0,0,0.04); padding: 12px 0; background: white !important; }
+            .navbar-brand { font-weight: 800; letter-spacing: -0.5px; color: #10b981 !important; font-size: 24px; }
 
-        /* Navbar Styling */
-        .navbar { box-shadow: 0 2px 15px rgba(0,0,0,0.04); padding: 12px 0; background: white !important; }
-        .navbar-brand { font-weight: 800; letter-spacing: -0.5px; color: #10b981 !important; font-size: 24px; }
-        .nav-link { font-weight: 600; color: #475569 !important; margin: 0 15px; font-size: 15px; transition: 0.3s; }
-        .nav-link:hover, .nav-link.active { color: #10b981 !important; }
+            /* Nav Links Styling */
+            .nav-link { font-weight: 700; color: #475569 !important; font-size: 15px; transition: 0.3s; border-radius: 8px; padding: 8px 16px !important;}
+            .nav-link:hover, .nav-link.active { color: #10b981 !important; background: #ecfdf5; }
 
-        /* 🌟 NEW PREMIUM AUTH UI (RIGHT SIDE DROPDOWN) */
-        .auth-area { display: flex; align-items: center; gap: 12px; }
+            /* NEW PREMIUM AUTH UI */
+            .auth-area { display: flex; align-items: center; gap: 12px; }
 
-        .user-menu-container { position: relative; display: inline-block; }
-
-        .user-id-btn {
-            background: #f8fafc; border: 1px solid #cbd5e1; color: #1e293b;
-            padding: 8px 20px; border-radius: 50px; font-weight: 700; font-size: 14px;
-            transition: 0.2s; cursor: pointer; display: flex; align-items: center; gap: 8px;
-        }
-        .user-id-btn i { color: #3b82f6; font-size: 16px; }
-        .user-id-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
-
-        /* 🌟 RIGHT-SIDE POPUP MENU CSS */
-        .user-dropdown-menu {
-            position: absolute; top: 115%; right: 0; background: white; 
-            border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); 
-            border: 1px solid #e2e8f0; width: 260px; display: none; 
-            flex-direction: column; overflow: hidden; z-index: 2000;
-            animation: slideDown 0.2s ease-out;
-        }
-        @keyframes slideDown { from { opacity:0; transform: translateY(-10px); } to { opacity:1; transform: translateY(0); } }
-
-        .user-dropdown-menu .dropdown-header { background: #f8fafc; padding: 12px 16px; font-weight: 800; font-size: 12px; color: #64748b; border-bottom: 1px solid #e2e8f0; letter-spacing: 0.5px; }
-        .user-dropdown-menu .dropdown-item { padding: 12px 16px; font-size: 14px; color: #1e293b; border-bottom: 1px solid #f1f5f9; cursor: default; }
-        .user-dropdown-menu .dropdown-item:last-child { border-bottom: none; }
-        .id-badge { background: #e2e8f0; padding: 3px 8px; border-radius: 6px; font-family: monospace; font-size: 12px; font-weight: 600; color: #0f172a; word-break: break-all; display: block; margin-top: 5px; }
-
-        .logout-btn-premium {
-            background: white; border: 1px solid #ef4444; color: #ef4444;
-            padding: 8px 20px; border-radius: 50px; font-weight: 700; font-size: 14px;
-            transition: 0.2s; cursor: pointer; display: flex; align-items: center; gap: 6px;
-        }
-        .logout-btn-premium:hover { background: #fee2e2; }
-
-        /* Hero Section */
-        .hero { 
-            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat; 
-            padding: 120px 0 160px 0; color: white; text-align: center; 
-        }
-
-        /* 🌟 THE SMART SEARCH BAR */
-        .search-wrapper { max-width: 950px; margin: -35px auto 0; position: relative; z-index: 1000; }
-
-        .main-search-bar {
-            background: #ffffff; border-radius: 12px; display: flex; align-items: center;
-            padding: 8px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); border: 1px solid #e2e8f0;
-        }
-
-        .cat-select-btn { 
-            border: none; background: transparent; padding: 10px 20px; font-weight: 800; 
-            color: #0f172a; border-right: 1px solid #e2e8f0; cursor: pointer; outline: none; font-size: 15px;
-        }
-
-        .search-input-group { flex-grow: 1; display: flex; align-items: center; padding: 0 15px; }
-        .search-input-group i.fa-search { color: #94a3b8; font-size: 18px; margin-right: 10px; }
-        .search-input-group input { border: none; outline: none; width: 100%; font-size: 16px; color: #1e293b; padding: 10px 0; font-weight: 500;}
-
-        .icon-actions { display: flex; gap: 15px; padding: 0 15px; align-items: center; }
-        .icon-actions i { color: #3b82f6; font-size: 19px; cursor: pointer; transition: 0.2s; }
-        .icon-actions i:hover { transform: scale(1.2); color: #2563eb; }
-        .mic-active { color: #ef4444 !important; animation: pulse 1s infinite; }
-        .gps-active { color: #10b981 !important; }
-
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
-
-        .vertical-divider { width: 1px; height: 25px; background-color: #e2e8f0; margin: 0 5px; }
-
-        .btn-search-main { 
-            background: #007bff; color: white; border: none; padding: 12px 35px; 
-            border-radius: 8px; font-weight: 800; font-size: 16px; transition: 0.3s; margin-left: 5px;
-        }
-        .btn-search-main:hover { background: #0056b3; box-shadow: 0 4px 15px rgba(0,123,255,0.4); }
-
-        /* Floating Filter Panel */
-        .filter-panel {
-            background: #ffffff; border-radius: 12px; padding: 25px; margin-top: 10px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.15); border: 1px solid #e2e8f0;
-            display: none; position: absolute; width: 100%; text-align: left;
-            animation: slideIn 0.2s ease-out;
-        }
-
-        .panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 15px; }
-        .clear-btn { color: #3b82f6; font-weight: 700; cursor: pointer; font-size: 14px; }
-
-        .checkbox-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-        .form-check-label { font-size: 14px; font-weight: 600; color: #334155; cursor: pointer; }
-        .form-check-input:checked { background-color: #3b82f6; border-color: #3b82f6; }
-
-        .filter-pills-row { display: flex; gap: 12px; margin-top: 25px; padding-top: 20px; border-top: 1px solid #f1f5f9; flex-wrap: wrap; }
-        .filter-pill { border: 1px solid #e5e7eb; padding: 8px 18px; border-radius: 50px; font-size: 13px; font-weight: 600; color: #4b5563; background: #f8fafc; cursor: pointer; outline: none; }
-        .filter-pill:hover { background: #edf2f7; }
-
-        /* Property Cards */
-        .property-card { border-radius: 16px; overflow: hidden; border: 1px solid #f1f5f9; box-shadow: 0 4px 20px rgba(0,0,0,0.04); transition: 0.3s; cursor: pointer; background: white; height: 100%; }
-        .property-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
-        .property-img { height: 210px; object-fit: cover; width: 100%; background: #e2e8f0; }
-    </style>
-</head>
-<body>
-
-    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
-        <div class="container">
-            <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-1"></i> ZAMIN DEKHO</a>
-
-            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#zaminNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="zaminNav">
-                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center">
-                    <li class="nav-item"><a class="nav-link active" href="index.html">Find Land</a></li>
-                    <li class="nav-item"><a class="nav-link" href="dashboard.html">Post Property</a></li>
-                    <li id="adminLinkArea" class="nav-item"></li>
-                </ul>
-
-                <div id="authArea" class="auth-area justify-content-center mt-3 mt-lg-0"></div>
-            </div>
-        </div>
-    </nav>
-
-    <div class="hero">
-        <div class="container">
-            <h1 class="display-3 fw-bold mb-3">Find Your Perfect Land</h1>
-            <p class="fs-5 opacity-80 mb-0">India's most trusted platform for verified property listings</p>
-        </div>
-    </div>
-
-    <div class="container search-wrapper">
-        <div class="main-search-bar" id="searchBarContainer">
-            <select class="cat-select-btn" id="mainCategory" onchange="updateCategoryUI()">
-                <option value="Residential">Residential</option>
-                <option value="Commercial">Commercial</option>
-                <option value="Agricultural">Agricultural</option>
-                <option value="Industrial">Industrial</option>
-            </select>
-
-            <div class="search-input-group">
-                <i class="fas fa-search"></i>
-                <input type="text" id="mainSearchInput" placeholder="Search residential properties..." onclick="toggleFilterPanel(true)">
-            </div>
-
-            <div class="icon-actions">
-                <i class="fas fa-crosshairs" id="gpsIcon" title="Detect Exact Location" onclick="detectFastGPS()"></i>
-                <i class="fas fa-microphone" id="micIcon" title="Voice Command" onclick="startVoice()"></i>
-            </div>
-
-            <div class="vertical-divider"></div>
-
-            <button class="btn-search-main" onclick="executeAdvancedSearch()">Search</button>
-        </div>
-
-        <div class="filter-panel" id="filterPanel">
-            <div class="panel-header">
-                <h6 class="fw-bold m-0 text-dark">Property Types</h6>
-                <span class="clear-btn" onclick="resetFilters()">Clear All</span>
-            </div>
-            <div class="checkbox-grid" id="propertyTypeGrid"></div>
-
-            <div class="filter-pills-row">
-                <select id="budgetFilter" class="filter-pill border-0">
-                    <option value="0">Budget</option>
-                    <option value="5000000">Below 50L</option>
-                    <option value="10000000">Below 1 Cr</option>
-                    <option value="50000000">Below 5 Cr</option>
-                </select>
-                <select id="bedroomFilter" class="filter-pill border-0">
-                    <option value="">Bedroom</option>
-                    <option value="1">1 BHK</option>
-                    <option value="2">2 BHK</option>
-                    <option value="3">3+ BHK</option>
-                </select>
-            </div>
-        </div>
-    </div>
-
-    <div class="container mt-5 mb-5">
-        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-            <h3 class="fw-bold m-0 text-dark" id="resultsHeading">Trending Properties</h3>
-            <span class="text-muted small fw-bold" id="resultCount">Searching...</span>
-        </div>
-        <div class="row g-4" id="listingsGrid">
-            <div class="text-center w-100 py-5"><div class="spinner-border text-success"></div></div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        const API_URL = "/api";
-
-        // ==========================================
-        // 🌟 0. CATCH SOCIAL LOGIN TOKEN (NEW FIX!)
-        // ==========================================
-        function catchSocialLogin() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
-            const user = urlParams.get('user');
-
-            if (token) {
-                // Token aur user data jeb (localStorage) mein daalo
-                localStorage.setItem('zamin_token', token);
-                if (user) {
-                    localStorage.setItem('zamin_user', decodeURIComponent(user));
-                }
-                // URL saaf karo (token chupao)
-                window.history.replaceState({}, document.title, window.location.pathname);
+            .user-id-btn {
+                background: #f8fafc; border: 1px solid #cbd5e1; color: #1e293b;
+                padding: 8px 18px; border-radius: 50px; font-weight: 700; font-size: 14px;
+                display: flex; align-items: center; gap: 8px; cursor: pointer; text-decoration: none; transition: 0.2s;
             }
-        }
+            .user-id-btn:hover { background: #e2e8f0; }
+            .user-id-btn i { color: #3b82f6; font-size: 16px; }
 
-        // ==========================================
-        // 🌟 1. USER PROFILE MENU LOGIC 
-        // ==========================================
-        function toggleUserMenu() {
-            const menu = document.getElementById('userDropdownMenu');
-            menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
-        }
-
-        document.addEventListener('click', (e) => {
-            if(!e.target.closest('.search-wrapper')) {
-                document.getElementById('filterPanel').style.display = 'none';
+            .logout-btn-premium {
+                background: white; border: 1px solid #ef4444; color: #ef4444;
+                padding: 8px 18px; border-radius: 50px; font-weight: 700; font-size: 14px;
+                transition: 0.2s; cursor: pointer; display: flex; align-items: center; gap: 6px;
             }
-            if(!e.target.closest('.user-menu-container')) {
-                const menu = document.getElementById('userDropdownMenu');
-                if(menu) menu.style.display = 'none';
+            .logout-btn-premium:hover { background: #fee2e2; }
+
+            /* Hero Section */
+            .hero { 
+                background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat; 
+                padding: 120px 0 160px 0; color: white; text-align: center; 
             }
-        });
 
+            /* THE SMART SEARCH BAR */
+            .search-wrapper { max-width: 950px; margin: -35px auto 0; position: relative; z-index: 1000; }
 
-        // ==========================================
-        // 🌟 2. DYNAMIC CATEGORY ENGINE
-        // ==========================================
-        const propertyTypesData = {
-            "Residential": [
-                { id: "r1", val: "Flat", label: "Flat/Apartment" },
-                { id: "r2", val: "Floor", label: "Independent / Builder Floor" },
-                { id: "r3", val: "House", label: "Independent House/Villa" },
-                { id: "r4", val: "Land", label: "Residential Land" },
-                { id: "r5", val: "Studio", label: "1 RK/ Studio Apartment" },
-                { id: "r6", val: "Farm", label: "Farm House" }
-            ],
-            "Commercial": [
-                { id: "c1", val: "Office", label: "Office Space" },
-                { id: "c2", val: "Shop", label: "Shop/Showroom" },
-                { id: "c3", val: "Commercial Land", label: "Commercial Land" },
-                { id: "c5", val: "Warehouse", label: "Warehouse/Godown" }
-            ],
-            "Agricultural": [
-                { id: "a1", val: "Agricultural Land", label: "Agricultural Land" },
-                { id: "a2", val: "Farm", label: "Farm House" },
-                { id: "a4", val: "Orchard", label: "Orchard" }
-            ],
-            "Industrial": [
-                { id: "i1", val: "Industrial Land", label: "Industrial Land" },
-                { id: "i2", val: "Factory", label: "Factory" },
-                { id: "i3", val: "Shed", label: "Industrial Shed" }
-            ]
-        };
+            .main-search-bar {
+                background: #ffffff; border-radius: 12px; display: flex; align-items: center;
+                padding: 8px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); border: 1px solid #e2e8f0;
+            }
 
-        function updateCategoryUI() {
-            const cat = document.getElementById('mainCategory').value;
-            const grid = document.getElementById('propertyTypeGrid');
-            const input = document.getElementById('mainSearchInput');
-            const bedFilter = document.getElementById('bedroomFilter');
+            .cat-select-btn { 
+                border: none; background: transparent; padding: 10px 20px; font-weight: 800; 
+                color: #0f172a; border-right: 1px solid #e2e8f0; cursor: pointer; outline: none; font-size: 15px;
+            }
 
-            if (cat === "Residential") input.placeholder = "Search 'Farm house in Punjab below 1 cr'";
-            else if (cat === "Commercial") input.placeholder = "Search 'Shop in Mumbai or Office space'";
-            else input.placeholder = `Search ${cat.toLowerCase()} properties...`;
+            .search-input-group { flex-grow: 1; display: flex; align-items: center; padding: 0 15px; }
+            .search-input-group i.fa-search { color: #94a3b8; font-size: 18px; margin-right: 10px; }
+            .search-input-group input { border: none; outline: none; width: 100%; font-size: 16px; color: #1e293b; padding: 10px 0; font-weight: 500;}
 
-            grid.innerHTML = propertyTypesData[cat].map(t => `
-                <div class="form-check">
-                    <input class="form-check-input type-chk" type="checkbox" value="${t.val}" id="${t.id}" checked>
-                    <label class="form-check-label" for="${t.id}">${t.label}</label>
+            .icon-actions { display: flex; gap: 15px; padding: 0 15px; align-items: center; }
+            .icon-actions i { color: #3b82f6; font-size: 19px; cursor: pointer; transition: 0.2s; }
+            .icon-actions i:hover { transform: scale(1.2); color: #2563eb; }
+            .mic-active { color: #ef4444 !important; animation: pulse 1s infinite; }
+            .gps-active { color: #10b981 !important; }
+
+            @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+            .vertical-divider { width: 1px; height: 25px; background-color: #e2e8f0; margin: 0 5px; }
+
+            .btn-search-main { 
+                background: #007bff; color: white; border: none; padding: 12px 35px; 
+                border-radius: 8px; font-weight: 800; font-size: 16px; transition: 0.3s; margin-left: 5px;
+            }
+            .btn-search-main:hover { background: #0056b3; box-shadow: 0 4px 15px rgba(0,123,255,0.4); }
+
+            /* Floating Filter Panel */
+            .filter-panel {
+                background: #ffffff; border-radius: 12px; padding: 25px; margin-top: 10px;
+                box-shadow: 0 20px 50px rgba(0,0,0,0.15); border: 1px solid #e2e8f0;
+                display: none; position: absolute; width: 100%; text-align: left;
+                animation: slideIn 0.2s ease-out;
+            }
+
+            .panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 15px; }
+            .clear-btn { color: #3b82f6; font-weight: 700; cursor: pointer; font-size: 14px; }
+
+            .checkbox-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+            .form-check-label { font-size: 14px; font-weight: 600; color: #334155; cursor: pointer; }
+            .form-check-input:checked { background-color: #3b82f6; border-color: #3b82f6; }
+
+            .filter-pills-row { display: flex; gap: 12px; margin-top: 25px; padding-top: 20px; border-top: 1px solid #f1f5f9; flex-wrap: wrap; }
+            .filter-pill { border: 1px solid #e5e7eb; padding: 8px 18px; border-radius: 50px; font-size: 13px; font-weight: 600; color: #4b5563; background: #f8fafc; cursor: pointer; outline: none; }
+            .filter-pill:hover { background: #edf2f7; }
+
+            /* Featured Row Styling */
+            .featured-row { display: flex; overflow-x: auto; gap: 20px; padding-bottom: 20px; scrollbar-width: none; }
+            .featured-row::-webkit-scrollbar { display: none; }
+
+            /* Property Cards */
+            .property-card { border-radius: 16px; overflow: hidden; border: 1px solid #f1f5f9; box-shadow: 0 4px 20px rgba(0,0,0,0.04); transition: 0.3s; cursor: pointer; background: white; height: 100%; position: relative; }
+            .property-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+            .property-img { height: 210px; object-fit: cover; width: 100%; background: #e2e8f0; }
+            .badge-promoted { position: absolute; top: 15px; left: 15px; background: #f59e0b; color: white; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 50px; text-transform: uppercase; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); z-index: 10; }
+        </style>
+    </head>
+    <body>
+
+        <nav class="navbar navbar-expand-lg sticky-top">
+            <div class="container-fluid px-lg-4">
+                <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-1"></i> ZAMIN DEKHO</a>
+
+                <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#zaminNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="zaminNav">
+                    <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center align-items-center gap-lg-2">
+                        <li class="nav-item"><a class="nav-link active" href="index.html">Find Land</a></li>
+                        <li class="nav-item">
+                            <a class="nav-link text-primary fw-bold" href="reels.html" onclick="window.location.href='reels.html'; return false;">
+                                <i class="fas fa-play-circle me-1"></i> Reels
+                            </a>
+                        </li>
+                        <li class="nav-item"><a class="nav-link" href="dashboard.html#postTab">Post Property</a></li>
+
+                        <li class="nav-item auth-required-link d-none"><a class="nav-link" href="dashboard.html#myListingsTab">My Listings</a></li>
+                        <li class="nav-item auth-required-link d-none"><a class="nav-link" href="dashboard.html#savedTab">Favorites</a></li>
+                        <li class="nav-item auth-required-link d-none"><a class="nav-link" href="dashboard.html#bookingsTab">My Bookings</a></li>
+
+                        <li id="adminLinkArea" class="nav-item"></li>
+                    </ul>
+
+                    <div id="authArea" class="auth-area justify-content-center mt-3 mt-lg-0"></div>
                 </div>
-            `).join('');
+            </div>
+        </nav>
 
-            bedFilter.style.display = (cat === "Residential") ? "inline-block" : "none";
-        }
+        <div class="hero">
+            <div class="container">
+                <h1 class="display-3 fw-bold mb-3">Find Your Perfect Land</h1>
+                <p class="fs-5 opacity-80 mb-0">India's most trusted platform for verified property listings</p>
+            </div>
+        </div>
 
-        // ==========================================
-        // 🌟 3. SEARCH UI CONTROLS
-        // ==========================================
-        function toggleFilterPanel(show) { document.getElementById('filterPanel').style.display = show ? 'block' : 'none'; }
+        <div class="container search-wrapper">
+            <div class="main-search-bar" id="searchBarContainer">
+                <select class="cat-select-btn" id="mainCategory" onchange="updateCategoryUI()">
+                    <option value="Residential">Residential</option>
+                    <option value="Commercial">Commercial</option>
+                    <option value="Agricultural">Agricultural</option>
+                    <option value="Industrial">Industrial</option>
+                </select>
 
-        function resetFilters() {
-            document.getElementById('mainSearchInput').value = '';
-            document.querySelectorAll('.type-chk').forEach(c => c.checked = false);
-            document.getElementById('budgetFilter').value = "0";
-            document.getElementById('bedroomFilter').value = "";
-        }
+                <div class="search-input-group">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="mainSearchInput" placeholder="Search residential properties..." onclick="toggleFilterPanel(true)">
+                </div>
 
-        // ==========================================
-        // 📍 4. SUPER-FAST 2-SECOND GPS ENGINE
-        // ==========================================
-        function detectFastGPS() {
-            const input = document.getElementById('mainSearchInput');
-            const icon = document.getElementById('gpsIcon');
+                <div class="icon-actions">
+                    <i class="fas fa-crosshairs" id="gpsIcon" title="Detect Exact Location" onclick="detectFastGPS()"></i>
+                    <i class="fas fa-microphone" id="micIcon" title="Voice Command" onclick="startVoice()"></i>
+                </div>
 
-            if (!navigator.geolocation) { alert("GPS is not supported by your browser!"); return; }
+                <div class="vertical-divider"></div>
 
-            input.value = "Detecting location...";
-            icon.classList.add('fa-spin');
-            icon.classList.remove('gps-active');
+                <button class="btn-search-main" onclick="executeAdvancedSearch()">Search</button>
+            </div>
 
-            navigator.geolocation.getCurrentPosition(
-                async (pos) => {
-                    try {
-                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&addressdetails=1`);
-                        const data = await res.json();
-                        const addr = data.address;
-                        let district = addr.city || addr.state_district || addr.county || addr.town || addr.village || "";
-                        district = district.replace(/ District/gi, '').trim(); 
-                        const state = addr.state || "";
-                        let finalLoc = (district && state) ? `${district}, ${state}` : data.display_name;
+            <div class="filter-panel" id="filterPanel">
+                <div class="panel-header">
+                    <h6 class="fw-bold m-0 text-dark">Property Types</h6>
+                    <span class="clear-btn" onclick="resetFilters()">Clear All</span>
+                </div>
+                <div class="checkbox-grid" id="propertyTypeGrid"></div>
 
-                        input.value = finalLoc;
-                        icon.classList.remove('fa-spin');
-                        icon.classList.add('gps-active'); 
-                    } catch(e) {
-                        input.value = ""; icon.classList.remove('fa-spin');
-                        alert("Network error. Could not decode location.");
-                    }
-                }, 
-                (err) => {
-                    input.value = ""; icon.classList.remove('fa-spin');
-                    alert("Location access denied! Please allow browser permissions.");
-                }, 
-                { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 } 
-            );
-        }
+                <div class="filter-pills-row">
+                    <select id="budgetFilter" class="filter-pill border-0">
+                        <option value="0">Budget</option>
+                        <option value="5000000">Below 50L</option>
+                        <option value="10000000">Below 1 Cr</option>
+                        <option value="50000000">Below 5 Cr</option>
+                    </select>
+                    <select id="bedroomFilter" class="filter-pill border-0">
+                        <option value="">Bedroom</option>
+                        <option value="1">1 BHK</option>
+                        <option value="2">2 BHK</option>
+                        <option value="3">3+ BHK</option>
+                    </select>
+                </div>
+            </div>
+        </div>
 
-        // ==========================================
-        // 🎤 5. ADVANCED LIVE VOICE COMMAND
-        // ==========================================
-        function startVoice() {
-            const input = document.getElementById('mainSearchInput');
-            const micIcon = document.getElementById('micIcon');
+        <div class="container mt-5 mb-5">
 
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) return alert("Voice search needs Chrome Browser.");
+            <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
+                <h4 class="fw-bold m-0 text-dark"><i class="fas fa-star text-warning me-2"></i> Featured Premium Lands</h4>
+            </div>
+            <div class="featured-row mb-5" id="featuredGrid">
+                <div class="text-center w-100 py-3 text-muted"><i class="fas fa-spinner fa-spin me-2"></i> Loading Ads...</div>
+            </div>
 
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'en-IN'; recognition.interimResults = true; 
+            <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                <h4 class="fw-bold m-0 text-dark" id="resultsHeading"><i class="fas fa-compass text-primary me-2"></i> Newly Added Properties</h4>
+                <span class="text-muted small fw-bold" id="resultCount">Searching...</span>
+            </div>
 
-            recognition.onstart = function() {
-                input.value = ""; input.placeholder = "Listening... Speak clearly 🎙️";
-                micIcon.classList.add('mic-active');
-            };
+            <div class="row g-4" id="listingsGrid">
+                <div class="text-center w-100 py-5"><div class="spinner-border text-success"></div></div>
+            </div>
+        </div>
 
-            recognition.onresult = function(event) {
-                let finalTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    finalTranscript += event.results[i][0].transcript;
-                }
-                input.value = finalTranscript;
-            };
+        <div class="modal fade" id="userProfileModal" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+              <div class="modal-header border-0 pb-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="cancelProfileEdit()"></button>
+              </div>
+              <div class="modal-body text-center pb-5 px-4">
 
-            recognition.onend = function() {
-                updateCategoryUI(); micIcon.classList.remove('mic-active');
-                if(input.value.trim() !== "") executeAdvancedSearch(); 
-            };
+                <div class="position-relative d-inline-block mb-3">
+                  <img src="" id="modalUserAvatar" class="rounded-circle shadow-sm" style="width: 100px; height: 100px; border: 4px solid #ecfdf5; object-fit: cover;">
+                  <label for="avatarUpload" id="avatarEditBtn" class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-2 shadow-sm d-none" style="cursor: pointer; width: 32px; height: 32px; line-height: 14px; right: -5px;">
+                      <i class="fas fa-camera" style="font-size: 14px;"></i>
+                  </label>
+                  <input type="file" id="avatarUpload" accept="image/*" class="d-none" onchange="previewAvatar(event)">
+                </div>
 
-            recognition.onerror = function() {
-                micIcon.classList.remove('mic-active'); updateCategoryUI();
-            };
+                <div id="nameDisplayContainer">
+                    <h3 class="fw-bold mb-0 text-dark" id="modalUserName">User Name</h3>
+                    <button class="btn btn-link text-primary fw-bold p-0 mb-3 text-decoration-none" style="font-size: 13px;" onclick="enableProfileEdit()">
+                        <i class="fas fa-pencil-alt me-1"></i> Edit Profile
+                    </button>
+                </div>
 
-            recognition.start();
-        }
+                <div id="nameEditContainer" class="d-none mb-3 px-3">
+                    <input type="text" id="editNameInput" class="form-control text-center fw-bold mb-2" placeholder="Enter Full Name">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-light btn-sm w-50 fw-bold" onclick="cancelProfileEdit()">Cancel</button>
+                        <button class="btn btn-success btn-sm w-50 fw-bold" onclick="saveProfile()" id="saveProfileBtn"><i class="fas fa-save me-1"></i> Save</button>
+                    </div>
+                </div>
 
-        // ==========================================
-        // 🚀 6. FETCH & DISPLAY PROPERTIES
-        // ==========================================
-        async function executeAdvancedSearch() {
-            const keyword = document.getElementById('mainSearchInput').value;
-            const cat = document.getElementById('mainCategory').value;
-            const budget = document.getElementById('budgetFilter').value;
-            const bedroom = document.getElementById('bedroomFilter').value;
+                <p class="text-muted mb-3" id="modalUserEmail">user@email.com</p>
 
-            let types = [];
-            document.querySelectorAll('.type-chk:checked').forEach(c => types.push(c.value));
+                <div class="d-inline-block px-3 py-2 bg-light rounded-pill mb-4 border">
+                    <span class="fw-bold text-dark">Role:</span>
+                    <span class="badge ms-2 px-3 py-2" id="modalUserRole" style="font-size:12px; text-transform:uppercase; letter-spacing: 0.5px;">Buyer</span>
+                </div>
 
-            toggleFilterPanel(false);
-            document.getElementById('resultsHeading').innerText = "Search Results";
-
-            let query = `keyword=${encodeURIComponent(keyword)}&category=${cat.toLowerCase()}&maxPrice=${budget}&types=${types.join(',')}`;
-            if(bedroom) query += `&bedroom=${bedroom}`;
-
-            fetchAll(`${API_URL}/listings/search?${query}`);
-        }
-
-        async function fetchAll(url = `${API_URL}/listings/all`) {
-            const grid = document.getElementById('listingsGrid');
-            const resCount = document.getElementById('resultCount');
-
-            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-border text-success"></div></div>';
-
-            try {
-                const res = await fetch(url);
-                const data = await res.json();
-
-                if (data.success && data.listings.length > 0) {
-                    resCount.innerText = `${data.listings.length} Results Found`;
-
-                    grid.innerHTML = data.listings.map(item => {
-                        let imgSource = item.imageUrl || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80";
-
-                        return `
-                        <div class="col-lg-4 col-md-6">
-                            <div class="property-card" onclick="window.location.href='property.html?id=${item._id}'">
-                                <div class="position-relative">
-                                    <img src="${imgSource}" class="property-img" alt="Land">
-                                    <span class="badge bg-dark px-3 py-2 rounded-pill position-absolute shadow" style="top:15px; left:15px; font-weight:800; text-transform: uppercase;">
-                                        ${item.category || 'PROPERTY'}
-                                    </span>
-                                </div>
-                                <div class="card-body p-4">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h3 class="fw-bold text-success m-0">₹ ${Number(item.landPrice).toLocaleString('en-IN')}</h3>
-                                        ${item.landSize && item.landSize !== 'Not Specified' ? `<span class="badge bg-light text-dark border">${item.landSize}</span>` : ''}
-                                    </div>
-                                    <h5 class="fw-bold text-dark text-truncate">${item.landName}</h5>
-                                    <p class="text-muted small mb-0"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address}</p>
-                                </div>
-                            </div>
+                <div class="text-start bg-light p-3 rounded-3 mb-4 border border-light shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted fw-bold text-uppercase" style="font-size: 11px;"><i class="fas fa-id-card me-1"></i> Account ID</small>
+                            <div class="fw-bold text-dark mt-1 fs-5" id="modalUserId" style="font-family: monospace;">#12345</div>
                         </div>
-                        `;
-                    }).join('');
-                } else {
-                    resCount.innerText = "0 Results";
-                    grid.innerHTML = `<div class="text-center w-100 py-5"><h4 class="text-muted fw-bold">No properties found matching your criteria!</h4></div>`;
+                        <i class="fas fa-check-circle text-success fs-3"></i>
+                    </div>
+                </div>
+
+                <a href="dashboard.html" class="btn btn-primary w-100 rounded-pill fw-bold py-3 mb-2 shadow-sm"><i class="fas fa-columns me-2"></i> Go to Dashboard</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+        <script>
+            const API_URL = "/api";
+            const BASE_SERVER_URL = "/";
+
+            function catchSocialLogin() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token');
+                const user = urlParams.get('user');
+
+                if (token) {
+                    localStorage.setItem('zamin_token', token);
+                    if (user) localStorage.setItem('zamin_user', decodeURIComponent(user));
+                    window.history.replaceState({}, document.title, window.location.pathname);
                 }
-            } catch(e) { grid.innerHTML = `<div class="text-center w-100 py-5 text-danger fw-bold">Server Offline</div>`; }
-        }
-
-        // ==========================================
-        // 🌟 7. AUTH & UI STATE
-        // ==========================================
-        function updateNavbarUI() {
-            const token = localStorage.getItem('zamin_token');
-            const authArea = document.getElementById('authArea');
-            const adminArea = document.getElementById('adminLinkArea');
-
-            if (token) {
-                try {
-                    const user = JSON.parse(localStorage.getItem('zamin_user'));
-                    if(user.role === 'admin' || user.role === 'broker') {
-                        adminArea.innerHTML = `<a class="nav-link text-danger" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
-                    }
-
-                    const firstName = user.fullName ? user.fullName.split(' ')[0] : 'User';
-                    const fullName = user.fullName || "User";
-                    const role = user.role ? user.role.toUpperCase() : "BUYER";
-                    const uid = user._id || "000000000000";
-
-                    authArea.innerHTML = `
-                        <div class="user-menu-container">
-                            <button onclick="toggleUserMenu()" class="user-id-btn">
-                                <i class="fas fa-user-circle"></i> ${firstName}
-                            </button>
-
-                            <div id="userDropdownMenu" class="user-dropdown-menu">
-                                <div class="dropdown-header">USER PROFILE DETAILS</div>
-                                <div class="dropdown-item"><strong>Name:</strong> ${fullName}</div>
-                                <div class="dropdown-item"><strong>Role:</strong> ${role}</div>
-                                <div class="dropdown-item">
-                                    <strong>Unique ID:</strong>
-                                    <span class="id-badge">${uid}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button onclick="logout()" class="logout-btn-premium">
-                            <i class="fas fa-sign-out-alt"></i> Logout
-                        </button>
-                    `;
-                } catch(e) {}
-            } else {
-                authArea.innerHTML = `<a href="login.html" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm">Login to Explore</a>`;
             }
-        }
 
-        function logout() {
-            localStorage.removeItem('zamin_token');
-            localStorage.removeItem('zamin_user');
-            window.location.reload();
-        }
+            document.addEventListener('click', (e) => {
+                if(!e.target.closest('.search-wrapper')) {
+                    document.getElementById('filterPanel').style.display = 'none';
+                }
+            });
 
-        // 🌟 FIX: Page Load sequence fixed!
-        window.onload = () => {
-            catchSocialLogin(); // 1. Pehle URL se token pakdo
-            updateNavbarUI();   // 2. Phir check karke Navbar update karo
-            updateCategoryUI(); // 3. Baaki kaam
-            fetchAll();
-        }
-    </script>
-</body>
+            const propertyTypesData = {
+                "Residential": [
+                    { id: "r1", val: "Flat", label: "Flat/Apartment" },
+                    { id: "r2", val: "Floor", label: "Independent / Builder Floor" },
+                    { id: "r3", val: "House", label: "Independent House/Villa" },
+                    { id: "r4", val: "Land", label: "Residential Land" },
+                    { id: "r5", val: "Studio", label: "1 RK/ Studio Apartment" },
+                    { id: "r6", val: "Farm", label: "Farm House" }
+                ],
+                "Commercial": [
+                    { id: "c1", val: "Office", label: "Office Space" },
+                    { id: "c2", val: "Shop", label: "Shop/Showroom" },
+                    { id: "c3", val: "Commercial Land", label: "Commercial Land" },
+                    { id: "c5", val: "Warehouse", label: "Warehouse/Godown" }
+                ],
+                "Agricultural": [
+                    { id: "a1", val: "Agricultural Land", label: "Agricultural Land" },
+                    { id: "a2", val: "Farm", label: "Farm House" },
+                    { id: "a4", val: "Orchard", label: "Orchard" }
+                ],
+                "Industrial": [
+                    { id: "i1", val: "Industrial Land", label: "Industrial Land" },
+                    { id: "i2", val: "Factory", label: "Factory" },
+                    { id: "i3", val: "Shed", label: "Industrial Shed" }
+                ]
+            };
+
+            function updateCategoryUI() {
+                const cat = document.getElementById('mainCategory').value;
+                const grid = document.getElementById('propertyTypeGrid');
+                const input = document.getElementById('mainSearchInput');
+                const bedFilter = document.getElementById('bedroomFilter');
+
+                if (cat === "Residential") input.placeholder = "Search 'Farm house in Punjab below 1 cr'";
+                else if (cat === "Commercial") input.placeholder = "Search 'Shop in Mumbai or Office space'";
+                else input.placeholder = `Search ${cat.toLowerCase()} properties...`;
+
+                grid.innerHTML = propertyTypesData[cat].map(t => `
+                    <div class="form-check">
+                        <input class="form-check-input type-chk" type="checkbox" value="${t.val}" id="${t.id}" checked>
+                        <label class="form-check-label" for="${t.id}">${t.label}</label>
+                    </div>
+                `).join('');
+
+                bedFilter.style.display = (cat === "Residential") ? "inline-block" : "none";
+            }
+
+            function toggleFilterPanel(show) { document.getElementById('filterPanel').style.display = show ? 'block' : 'none'; }
+
+            function resetFilters() {
+                document.getElementById('mainSearchInput').value = '';
+                document.querySelectorAll('.type-chk').forEach(c => c.checked = false);
+                document.getElementById('budgetFilter').value = "0";
+                document.getElementById('bedroomFilter').value = "";
+            }
+
+            function detectFastGPS() {
+                const input = document.getElementById('mainSearchInput');
+                const icon = document.getElementById('gpsIcon');
+                if (!navigator.geolocation) { alert("GPS is not supported by your browser!"); return; }
+                input.value = "Detecting location...";
+                icon.classList.add('fa-spin');
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        try {
+                            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&addressdetails=1`);
+                            const data = await res.json();
+                            const addr = data.address;
+                            let district = addr.city || addr.state_district || addr.county || addr.town || addr.village || "";
+                            district = district.replace(/ District/gi, '').trim(); 
+                            const state = addr.state || "";
+                            input.value = (district && state) ? `${district}, ${state}` : data.display_name;
+                            icon.classList.remove('fa-spin');
+                            icon.classList.add('gps-active'); 
+                        } catch(e) { input.value = ""; icon.classList.remove('fa-spin'); }
+                    }, 
+                    (err) => { input.value = ""; icon.classList.remove('fa-spin'); }, 
+                    { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 } 
+                );
+            }
+
+            function startVoice() {
+                const input = document.getElementById('mainSearchInput');
+                const micIcon = document.getElementById('micIcon');
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) return alert("Voice search needs Chrome Browser.");
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'en-IN'; recognition.interimResults = true; 
+                recognition.onstart = function() {
+                    input.value = ""; input.placeholder = "Listening... Speak clearly 🎙️";
+                    micIcon.classList.add('mic-active');
+                };
+                recognition.onresult = function(event) {
+                    let finalTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        finalTranscript += event.results[i][0].transcript;
+                    }
+                    input.value = finalTranscript;
+                };
+                recognition.onend = function() {
+                    updateCategoryUI(); micIcon.classList.remove('mic-active');
+                    if(input.value.trim() !== "") executeAdvancedSearch(); 
+                };
+                recognition.onerror = function() { micIcon.classList.remove('mic-active'); updateCategoryUI(); };
+                recognition.start();
+            }
+
+            async function executeAdvancedSearch() {
+                const keyword = document.getElementById('mainSearchInput').value;
+                const cat = document.getElementById('mainCategory').value;
+                const budget = document.getElementById('budgetFilter').value;
+                const bedroom = document.getElementById('bedroomFilter').value;
+                let types = [];
+                document.querySelectorAll('.type-chk:checked').forEach(c => types.push(c.value));
+                toggleFilterPanel(false);
+                document.getElementById('resultsHeading').innerHTML = `<i class="fas fa-search text-primary me-2"></i> Search Results`;
+                let query = `keyword=${encodeURIComponent(keyword)}&category=${cat.toLowerCase()}&maxPrice=${budget}&types=${types.join(',')}`;
+                if(bedroom) query += `&bedroom=${bedroom}`;
+                fetchAll(`${API_URL}/listings/search?${query}`);
+            }
+
+            async function fetchAll(url = `${API_URL}/listings/all`) {
+                const grid = document.getElementById('listingsGrid');
+                const fGrid = document.getElementById('featuredGrid');
+                const resCount = document.getElementById('resultCount');
+                grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-border text-success"></div></div>';
+                fGrid.innerHTML = '';
+                try {
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    if (data.success && data.listings.length > 0) {
+                        resCount.innerText = `${data.listings.length} Results Found`;
+                        let featuredCount = 0;
+                        grid.innerHTML = ''; 
+                        data.listings.forEach(item => {
+                            let imgSource = item.imageUrl;
+                            if(imgSource && !imgSource.startsWith('http')) {
+                                imgSource = imgSource.replace(/\\/g, '/'); 
+                                imgSource = BASE_SERVER_URL + (imgSource.startsWith('/') ? imgSource.substring(1) : imgSource);
+                            }
+
+                            // 🌟 UPDATE: FALLBACK IMAGE TO SATELLITE/PLOT VIEW 🌟
+                            const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
+
+                            if(!imgSource) imgSource = fallbackImg;
+
+                            let dimBadge = '';
+                            if (item.length || item.breadth) dimBadge = `<span class="badge bg-light text-dark border ms-1"><i class="fas fa-ruler-combined text-primary me-1"></i> ${item.length || '-'} x ${item.breadth || '-'}</span>`;
+
+                            const isFeatured = Math.random() > 0.7;
+                            const cardInnerHTML = `
+                                <div class="property-card h-100" onclick="window.location.href='property.html?id=${item._id}'">
+                                    <div class="position-relative">
+                                        ${isFeatured ? '<div class="badge-promoted"><i class="fas fa-bolt"></i> Promoted</div>' : ''}
+                                        ${!isFeatured ? `<span class="badge bg-dark px-3 py-2 rounded-pill position-absolute shadow" style="top:15px; left:15px; font-weight:800; text-transform: uppercase;">${item.category || 'PROPERTY'}</span>` : ''}
+                                        <img src="${imgSource}" onerror="this.src='${fallbackImg}'" class="property-img" alt="Land">
+                                    </div>
+                                    <div class="card-body p-4">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h3 class="fw-bold text-success m-0">₹ ${Number(item.landPrice).toLocaleString('en-IN')}</h3>
+                                        </div>
+                                        <div class="d-flex flex-wrap align-items-center mb-2">
+                                            ${item.landSize && item.landSize !== 'Not Specified' ? `<span class="badge bg-light text-dark border"><i class="fas fa-vector-square text-primary me-1"></i> ${item.landSize}</span>` : ''}
+                                            ${dimBadge}
+                                        </div>
+                                        <h5 class="fw-bold text-dark text-truncate">${item.landName}</h5>
+                                        <p class="text-muted small mb-0"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address}</p>
+                                    </div>
+                                </div>
+                            `;
+                            grid.innerHTML += `<div class="col-lg-4 col-md-6">${cardInnerHTML}</div>`;
+                            if(isFeatured) {
+                                fGrid.innerHTML += `<div style="min-width: 320px; flex: 0 0 auto;">${cardInnerHTML}</div>`;
+                                featuredCount++;
+                            }
+                        });
+                        if(featuredCount === 0) fGrid.innerHTML = `<div class="text-muted small ps-2">New featured properties updating soon...</div>`;
+                    } else {
+                        resCount.innerText = "0 Results";
+                        grid.innerHTML = `<div class="text-center w-100 py-5"><h4 class="text-muted fw-bold">No properties found!</h4></div>`;
+                        fGrid.innerHTML = `<div class="text-muted small ps-2">No active ads.</div>`;
+                    }
+                } catch(e) { grid.innerHTML = `<div class="text-center w-100 py-5 text-danger fw-bold">Server Offline</div>`; }
+            }
+
+            // ==========================================
+            // 🌟 EDIT PROFILE LOGIC 🌟
+            // ==========================================
+            let tempAvatarBase64 = null;
+
+            function enableProfileEdit() {
+                document.getElementById('nameDisplayContainer').classList.add('d-none');
+                document.getElementById('nameEditContainer').classList.remove('d-none');
+                document.getElementById('avatarEditBtn').classList.remove('d-none'); 
+
+                const currentName = document.getElementById('modalUserName').innerText;
+                document.getElementById('editNameInput').value = currentName === 'User' ? '' : currentName;
+            }
+
+            function cancelProfileEdit() {
+                document.getElementById('nameDisplayContainer').classList.remove('d-none');
+                document.getElementById('nameEditContainer').classList.add('d-none');
+                document.getElementById('avatarEditBtn').classList.add('d-none'); 
+
+                const user = JSON.parse(localStorage.getItem('zamin_user'));
+                const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'User')}&background=10b981&color=fff&size=100`;
+                document.getElementById('modalUserAvatar').src = avatarUrl;
+                tempAvatarBase64 = null;
+            }
+
+            function previewAvatar(event) {
+                const file = event.target.files[0];
+                if(file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        tempAvatarBase64 = e.target.result;
+                        document.getElementById('modalUserAvatar').src = tempAvatarBase64;
+                    }
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            async function saveProfile() {
+                const newName = document.getElementById('editNameInput').value.trim();
+                if(!newName) return alert("Name cannot be empty");
+
+                const btn = document.getElementById('saveProfileBtn');
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                btn.disabled = true;
+
+                const token = localStorage.getItem('zamin_token');
+                let user = JSON.parse(localStorage.getItem('zamin_user'));
+
+                try {
+                    const response = await fetch(`${API_URL}/auth/update-profile`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                        body: JSON.stringify({ fullName: newName, avatar: tempAvatarBase64 || user.avatar })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        user.fullName = newName;
+                        if(tempAvatarBase64) user.avatar = tempAvatarBase64;
+                        localStorage.setItem('zamin_user', JSON.stringify(user));
+
+                        updateNavbarUI();
+                        cancelProfileEdit(); 
+                    } else {
+                         alert("Failed to update profile: " + data.message);
+                    }
+
+                } catch (error) {
+                    alert("Error saving profile. Please check server.");
+                } finally {
+                    btn.innerHTML = '<i class="fas fa-save me-1"></i> Save';
+                    btn.disabled = false;
+                }
+            }
+
+            function updateNavbarUI() {
+                const token = localStorage.getItem('zamin_token');
+                const authArea = document.getElementById('authArea');
+                const adminArea = document.getElementById('adminLinkArea');
+                if (token) {
+                    document.querySelectorAll('.auth-required-link').forEach(el => el.classList.remove('d-none'));
+                    try {
+                        const user = JSON.parse(localStorage.getItem('zamin_user'));
+                        if(user.role === 'admin' || user.role === 'broker') {
+                            adminArea.innerHTML = `<a class="nav-link text-danger fw-bold" style="background: #fee2e2; padding: 8px 16px !important;" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
+                        }
+                        const firstName = user.fullName ? user.fullName.split(' ')[0] : 'User';
+
+                        document.getElementById('modalUserName').innerText = user.fullName || 'User';
+                        document.getElementById('modalUserEmail').innerText = user.email || 'No email';
+
+                        const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'User')}&background=10b981&color=fff&size=100`;
+                        document.getElementById('modalUserAvatar').src = avatarUrl;
+
+                        const roleBadge = document.getElementById('modalUserRole');
+                        roleBadge.innerText = user.role || 'Buyer';
+                        if(user.role === 'admin') { roleBadge.className = 'badge bg-danger ms-2 px-3 py-2'; }
+                        else if(user.role === 'broker') { roleBadge.className = 'badge bg-warning text-dark ms-2 px-3 py-2'; }
+                        else if(user.role === 'seller') { roleBadge.className = 'badge bg-success ms-2 px-3 py-2'; }
+                        else { roleBadge.className = 'badge bg-primary ms-2 px-3 py-2'; }
+
+                        document.getElementById('modalUserId').innerText = user._id ? `#${user._id}` : 'N/A';
+
+                        authArea.innerHTML = `
+                            <button data-bs-toggle="modal" data-bs-target="#userProfileModal" class="user-id-btn me-2 border-0 bg-light"><img src="${avatarUrl}" style="width:20px; height:20px; border-radius:50%; object-fit:cover;" class="me-1"> ${firstName}</button>
+                            <button onclick="logout()" class="logout-btn-premium"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                        `;
+                    } catch(e) {}
+                } else { 
+                    authArea.innerHTML = `<a href="login.html" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm">Login to Explore</a>`; 
+                }
+            }
+
+            function logout() { localStorage.removeItem('zamin_token'); localStorage.removeItem('zamin_user'); window.location.reload(); }
+
+            window.onload = () => { catchSocialLogin(); updateNavbarUI(); updateCategoryUI(); fetchAll(); }
+        </script>
+    </body>
 </html>

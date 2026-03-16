@@ -1,228 +1,848 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Broker CRM | Zamin Dekho</title>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Master Command Center | Zamin Dekho</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        />
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        body { background: #f1f5f9; font-family: 'Inter', sans-serif; color: #1e293b; }
-
-        /* Premium Navbar */
-        .navbar { box-shadow: 0 2px 15px rgba(0,0,0,0.05); background: #0f172a !important; padding: 15px 0; }
-        .navbar-brand { font-weight: 800; color: #10b981 !important; letter-spacing: -0.5px; }
-
-        .dashboard-header { margin: 40px 0 20px; display: flex; justify-content: space-between; align-items: center; }
-        .dashboard-title { font-weight: 800; font-size: 28px; }
-
-        /* Stats Cards */
-        .stat-card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 20px; }
-        .stat-icon { width: 60px; height: 60px; border-radius: 50px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-        .stat-info h3 { font-weight: 800; font-size: 32px; margin: 0; color: #0f172a; }
-        .stat-info p { margin: 0; color: #64748b; font-weight: 600; font-size: 14px; text-transform: uppercase; }
-
-        /* Leads Table */
-        .table-container { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; overflow: hidden; margin-top: 30px; }
-        .table thead { background: #f8fafc; font-size: 13px; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
-        .table th { padding: 15px 20px; font-weight: 700; border-bottom: 2px solid #e2e8f0; }
-        .table td { padding: 20px; vertical-align: middle; font-weight: 500; font-size: 15px; border-bottom: 1px solid #f1f5f9; }
-
-        .badge-status { padding: 6px 12px; border-radius: 50px; font-size: 12px; font-weight: 700; }
-        .bg-pending { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
-        .bg-contacted { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
-        .bg-visit { background: #f3e8ff; color: #0284c7; border: 1px solid #e0f2fe; }
-        .bg-closed { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-        .bg-negotiation { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
-        .bg-rejected { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
-
-        .btn-call { background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 50px; font-weight: 700; font-size: 13px; text-decoration: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; }
-        .btn-call:hover { background: #059669; color: white; transform: scale(1.05); }
-
-        .form-select-sm { font-weight: 600; color: #475569; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer; }
-
-        .user-info { display: flex; flex-direction: column; }
-        .user-name { font-weight: 700; color: #0f172a; }
-        .user-prop { font-size: 13px; color: #64748b; margin-top: 4px; }
-
-        .cat-badge { font-size: 11px; padding: 3px 8px; background: #e2e8f0; color: #475569; border-radius: 4px; margin-left: 8px; text-transform: capitalize; }
-    </style>
-</head>
-<body>
-
-    <nav class="navbar navbar-expand-lg">
-        <div class="container">
-            <a class="navbar-brand" href="index.html"><i class="fas fa-shield-alt me-2"></i> ZAMIN DEKHO CRM</a>
-            <div class="d-flex gap-3">
-                <a href="index.html" class="btn btn-outline-light rounded-pill px-4 fw-bold border-2">Back to Website</a>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mb-5">
-        <div class="dashboard-header">
-            <h1 class="dashboard-title">Lead Management Dashboard</h1>
-            <button onclick="fetchLeads()" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm"><i class="fas fa-sync-alt me-2"></i> Refresh Data</button>
-        </div>
-
-        <div class="row g-4 mb-4" id="statsRow">
-            <div class="col-md-4">
-                <div class="stat-card">
-                    <div class="stat-icon bg-primary text-white" style="background: rgba(59, 130, 246, 0.1) !important; color: #3b82f6 !important;"><i class="fas fa-users"></i></div>
-                    <div class="stat-info"><h3 id="totalLeads">0</h3><p>Total Inquiries</p></div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;"><i class="fas fa-clock"></i></div>
-                    <div class="stat-info"><h3 id="pendingLeads">0</h3><p>Pending Calls</p></div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;"><i class="fas fa-handshake"></i></div>
-                    <div class="stat-info"><h3 id="closedLeads">0</h3><p>Deals Closed</p></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="table-container">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Buyer Details</th>
-                        <th>Property Interested In</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="leadsTableBody">
-                    <tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <script>
-        // 🌟 FIX: Removed http://localhost:5000 taaki Live Server par kaam kare
-        const API_URL = "/api/admin";
-
-        // ==========================================
-        // 1. FETCH & RENDER LEADS
-        // ==========================================
-        async function fetchLeads() {
-            const token = localStorage.getItem('zamin_token');
-            if (!token) {
-                alert("Please login as Admin/Broker to view this page.");
-                window.location.href = "login.html";
-                return;
+        <style>
+            @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+            body {
+                background: #f8fafc;
+                font-family: "Inter", sans-serif;
+                color: #1e293b;
             }
 
-            try {
-                const res = await fetch(`${API_URL}/leads`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await res.json();
+            /* Premium Navbar */
+            .navbar {
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+                background: #0f172a !important;
+                padding: 15px 0;
+            }
+            .navbar-brand {
+                font-weight: 800;
+                color: #10b981 !important;
+                letter-spacing: -0.5px;
+            }
 
-                if (data.success) {
-                    renderLeads(data.leads);
-                    updateStats(data.leads);
-                } else {
-                    document.getElementById('leadsTableBody').innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">${data.message}</td></tr>`;
+            .dashboard-header {
+                margin: 40px 0 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .dashboard-title {
+                font-weight: 800;
+                font-size: 28px;
+            }
+
+            /* Tabs */
+            .nav-pills .nav-link {
+                font-weight: 700;
+                color: #64748b;
+                padding: 10px 20px;
+                border-radius: 50px;
+                margin-right: 10px;
+                background: white;
+                border: 1px solid #cbd5e1;
+                transition: 0.3s;
+            }
+            .nav-pills .nav-link.active {
+                background-color: #10b981;
+                color: white;
+                border-color: #10b981;
+                box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            }
+
+            /* Stats Cards */
+            .stat-card {
+                background: white;
+                padding: 25px;
+                border-radius: 16px;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+                border: 1px solid #e2e8f0;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                transition: 0.3s;
+            }
+            .stat-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            }
+            .stat-icon {
+                width: 60px;
+                height: 60px;
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                color: white;
+            }
+            .stat-info h3 {
+                font-weight: 800;
+                font-size: 28px;
+                margin: 0;
+                color: #0f172a;
+            }
+            .stat-info p {
+                margin: 0;
+                color: #64748b;
+                font-weight: 700;
+                font-size: 13px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            /* Tables */
+            .table-container {
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+                border: 1px solid #e2e8f0;
+                overflow: hidden;
+                margin-top: 20px;
+                padding: 20px;
+            }
+            .table-title {
+                font-weight: 800;
+                font-size: 18px;
+                border-bottom: 2px solid #f1f5f9;
+                padding-bottom: 15px;
+                margin-bottom: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .table thead {
+                background: #f8fafc;
+                font-size: 13px;
+                text-transform: uppercase;
+                color: #64748b;
+                letter-spacing: 0.5px;
+            }
+            .table th {
+                padding: 15px;
+                font-weight: 700;
+                border-bottom: 2px solid #e2e8f0;
+            }
+            .table td {
+                padding: 15px;
+                vertical-align: middle;
+                font-weight: 500;
+                font-size: 14px;
+                border-bottom: 1px solid #f1f5f9;
+            }
+
+            /* Action Buttons */
+            .btn-call {
+                background: #10b981;
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                border-radius: 10px;
+                font-weight: 700;
+                font-size: 12px;
+                text-decoration: none;
+                transition: 0.2s;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                gap: 6px;
+                box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+            }
+            .btn-call:hover {
+                background: #059669;
+                color: white;
+                transform: translateY(-2px);
+            }
+            .btn-save-note {
+                background: #3b82f6;
+                color: white;
+                font-weight: 700;
+                border-radius: 8px;
+                width: 100%;
+                transition: 0.2s;
+                font-size: 12px;
+                padding: 8px;
+            }
+            .btn-save-note:hover {
+                background: #2563eb;
+                color: white;
+            }
+            .btn-feature {
+                background: #fef3c7;
+                color: #d97706;
+                border: 1px solid #fde047;
+                padding: 6px 15px;
+                border-radius: 50px;
+                font-size: 12px;
+                font-weight: 700;
+                transition: 0.2s;
+                width: 100%;
+            }
+            .btn-feature:hover {
+                background: #f59e0b;
+                color: white;
+            }
+            .btn-feature.active {
+                background: #f59e0b;
+                color: white;
+                border-color: #d97706;
+            }
+
+            /* Form Elements */
+            .form-select-sm {
+                font-weight: 600;
+                color: #475569;
+                border-radius: 8px;
+                border: 1px solid #cbd5e1;
+                cursor: pointer;
+            }
+            .form-control-sm {
+                border-radius: 8px;
+                border: 1px solid #cbd5e1;
+                font-size: 13px;
+                resize: none;
+            }
+            .form-control-sm:focus {
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            }
+
+            /* Approval Card */
+            .approve-card {
+                background: white;
+                border-radius: 16px;
+                overflow: hidden;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+            }
+            .approve-img {
+                width: 100%;
+                height: 180px;
+                object-fit: cover;
+            }
+            .approve-actions {
+                display: flex;
+                gap: 10px;
+                padding: 15px;
+                background: #f8fafc;
+                border-top: 1px solid #e2e8f0;
+            }
+            .btn-approve {
+                flex: 1;
+                background: #10b981;
+                color: white;
+                border: none;
+                padding: 10px;
+                border-radius: 8px;
+                font-weight: 700;
+            }
+            .btn-reject {
+                flex: 1;
+                background: #ef4444;
+                color: white;
+                border: none;
+                padding: 10px;
+                border-radius: 8px;
+                font-weight: 700;
+            }
+        </style>
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-lg">
+            <div class="container">
+                <a class="navbar-brand" href="index.html"
+                    ><i class="fas fa-shield-alt me-2"></i> ZAMIN DEKHO ADMIN</a
+                >
+                <div class="d-flex gap-3">
+                    <a
+                        href="index.html"
+                        class="btn btn-outline-light rounded-pill px-4 fw-bold border-2"
+                        ><i class="fas fa-home me-1"></i> Exit Admin</a
+                    >
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mb-5">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title" id="pageTitle">
+                    Overview & Revenue
+                </h1>
+                <button
+                    onclick="refreshData()"
+                    class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm"
+                >
+                    <i class="fas fa-sync-alt me-2"></i> Refresh Data
+                </button>
+            </div>
+
+            <ul class="nav nav-pills mb-4" id="adminTabs">
+                <li class="nav-item">
+                    <button
+                        class="nav-link active"
+                        data-bs-toggle="pill"
+                        data-bs-target="#dashboardTab"
+                        onclick="switchTitle('Overview & Revenue')"
+                    >
+                        <i class="fas fa-chart-pie me-1"></i> Dashboard
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button
+                        class="nav-link"
+                        data-bs-toggle="pill"
+                        data-bs-target="#leadsTab"
+                        onclick="switchTitle('CRM Lead Management')"
+                    >
+                        <i class="fas fa-headset me-1"></i> CRM Leads
+                    </button>
+                </li>
+                <li class="nav-item" id="approvalTabNav">
+                    <button
+                        class="nav-link"
+                        data-bs-toggle="pill"
+                        data-bs-target="#approvalsTab"
+                        onclick="switchTitle('Pending Approvals')"
+                    >
+                        <i class="fas fa-check-circle me-1"></i> Approvals
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button
+                        class="nav-link"
+                        data-bs-toggle="pill"
+                        data-bs-target="#adsTab"
+                        onclick="switchTitle('Featured Ads Manager')"
+                    >
+                        <i class="fas fa-bullhorn me-1"></i> Ad Manager
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="dashboardTab">
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div
+                                    class="stat-icon"
+                                    style="
+                                        background: linear-gradient(
+                                            45deg,
+                                            #10b981,
+                                            #059669
+                                        );
+                                    "
+                                >
+                                    <i class="fas fa-rupee-sign"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <p>Total Revenue</p>
+                                    <h3 id="totalRevenue">₹ 0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div
+                                    class="stat-icon"
+                                    style="
+                                        background: linear-gradient(
+                                            45deg,
+                                            #3b82f6,
+                                            #2563eb
+                                        );
+                                    "
+                                >
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <p>Total Leads</p>
+                                    <h3 id="totalLeadsStat">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div
+                                    class="stat-icon"
+                                    style="
+                                        background: linear-gradient(
+                                            45deg,
+                                            #f59e0b,
+                                            #d97706
+                                        );
+                                    "
+                                >
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <p>Pending Follow-ups</p>
+                                    <h3 id="pendingLeadsStat">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-container table-responsive">
+                        <div class="table-title">
+                            <span
+                                ><i
+                                    class="fas fa-credit-card text-success me-2"
+                                ></i>
+                                Razorpay Token Transactions</span
+                            >
+                        </div>
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Buyer Name</th>
+                                    <th>Property</th>
+                                    <th>Amount</th>
+                                    <th>TXN ID</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTableBody">
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">
+                                        <div
+                                            class="spinner-border text-success"
+                                        ></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="leadsTab">
+                    <div class="table-container table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 15%">Date</th>
+                                    <th style="width: 25%">Buyer Info</th>
+                                    <th style="width: 25%">Property</th>
+                                    <th style="width: 25%">CRM Action</th>
+                                    <th style="width: 10%; text-align: center">
+                                        Contact
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="leadsTableBody">
+                                <tr>
+                                    <td colspan="5" class="text-center py-5">
+                                        <div
+                                            class="spinner-border text-primary"
+                                        ></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="approvalsTab">
+                    <div class="row g-4" id="approvalsContainer">
+                        <div class="text-center w-100 py-5">
+                            <div class="spinner-border text-info"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="adsTab">
+                    <div class="table-container table-responsive">
+                        <div class="table-title">
+                            <span
+                                ><i class="fas fa-star text-warning me-2"></i>
+                                Control Homepage Ads</span
+                            >
+                        </div>
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Property Name</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>Location</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adsTableBody">
+                                <tr>
+                                    <td colspan="5" class="text-center py-5">
+                                        <div
+                                            class="spinner-border text-warning"
+                                        ></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="toast-container position-fixed bottom-0 end-0 p-3">
+            <div
+                id="saveToast"
+                class="toast align-items-center text-bg-success border-0"
+                role="alert"
+                aria-live="assertive"
+                aria-atomic="true"
+            >
+                <div class="d-flex">
+                    <div class="toast-body fw-bold">
+                        <i class="fas fa-check-circle me-2"></i> Action
+                        Successful!
+                    </div>
+                    <button
+                        type="button"
+                        class="btn-close btn-close-white me-2 m-auto"
+                        data-bs-dismiss="toast"
+                        aria-label="Close"
+                    ></button>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            const API_BASE = "/api";
+            const ADMIN_API = "/api/admin";
+
+            window.onload = function () {
+                const token = localStorage.getItem("zamin_token");
+                if (!token) {
+                    alert("Please login as Admin/Broker.");
+                    window.location.href = "login.html";
+                    return;
                 }
-            } catch (e) {
-                document.getElementById('leadsTableBody').innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Failed to connect to server. Ensure backend is running.</td></tr>`;
+                try {
+                    const user = JSON.parse(localStorage.getItem("zamin_user"));
+                    if (user.role !== "admin" && user.role !== "broker") {
+                        alert("Unauthorized Access.");
+                        window.location.href = "index.html";
+                        return;
+                    }
+                    if (user.role === "broker") {
+                        document.getElementById(
+                            "approvalTabNav",
+                        ).style.display = "none"; // Hide approvals for broker
+                    }
+                    refreshData(); // Fetch everything
+                } catch (e) {
+                    window.location.href = "login.html";
+                }
+            };
+
+            function switchTitle(title) {
+                document.getElementById("pageTitle").innerText = title;
             }
-        }
-
-        function updateStats(leads) {
-            document.getElementById('totalLeads').innerText = leads.length;
-            document.getElementById('pendingLeads').innerText = leads.filter(l => l.status === 'Pending').length;
-            document.getElementById('closedLeads').innerText = leads.filter(l => l.status === 'Closed').length;
-        }
-
-        function renderLeads(leads) {
-            const tbody = document.getElementById('leadsTableBody');
-
-            if(leads.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted fw-bold"><i class="fas fa-inbox fs-1 mb-3 d-block"></i> No leads generated yet.</td></tr>`;
-                return;
+            function refreshData() {
+                fetchLeadsData();
+                loadPendingProperties();
+                loadAdManager();
+            }
+            function showToast() {
+                const toast = new bootstrap.Toast(
+                    document.getElementById("saveToast"),
+                    { delay: 3000 },
+                );
+                toast.show();
             }
 
-            tbody.innerHTML = leads.map(lead => {
-                const date = new Date(lead.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-                const buyerName = lead.buyer ? lead.buyer.fullName : 'Unknown Buyer';
-                const buyerPhone = lead.buyer ? lead.buyer.phone : 'No Phone';
-                const propName = lead.property ? lead.property.landName : 'Deleted Property';
-                const propPrice = lead.property ? `₹ ${Number(lead.property.landPrice).toLocaleString('en-IN')}` : '';
-                const propCategory = lead.property && lead.property.category ? lead.property.category : '';
+            // ==========================================
+            // 🚀 1. FETCH LEADS (Populates Tab 1 & Tab 2)
+            // ==========================================
+            async function fetchLeadsData() {
+                try {
+                    const res = await fetch(`${ADMIN_API}/leads`, {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem("zamin_token")}`,
+                        },
+                    });
+                    const data = await res.json();
 
-                // 🌟 FIX: Updated dropdown to include 'Negotiation' and 'Rejected'
-                return `
+                    if (data.success) {
+                        renderDashboard(data.leads); // Tab 1
+                        renderCRMLeads(data.leads); // Tab 2
+                    } else {
+                        document.getElementById("leadsTableBody").innerHTML =
+                            `<tr><td colspan="5" class="text-center text-danger py-4">${data.message}</td></tr>`;
+                        document.getElementById(
+                            "transactionsTableBody",
+                        ).innerHTML =
+                            `<tr><td colspan="6" class="text-center text-danger py-4">${data.message}</td></tr>`;
+                    }
+                } catch (e) {
+                    console.log(e);
+                }
+            }
+
+            function renderDashboard(leads) {
+                document.getElementById("totalLeadsStat").innerText =
+                    leads.length;
+                document.getElementById("pendingLeadsStat").innerText =
+                    leads.filter(
+                        (l) =>
+                            l.status === "Pending" || l.status === "Contacted",
+                    ).length;
+
+                let totalRev = 0;
+                const txnTbody = document.getElementById(
+                    "transactionsTableBody",
+                );
+
+                // Filter leads that have a transaction ID (Razorpay payments)
+                const payments = leads.filter((l) => l.transactionId);
+
+                if (payments.length === 0) {
+                    txnTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 fw-bold text-muted">No Razorpay transactions yet.</td></tr>`;
+                } else {
+                    txnTbody.innerHTML = payments
+                        .map((p) => {
+                            const amt = p.tokenAmount || 100000;
+                            totalRev += amt;
+                            const date = new Date(
+                                p.createdAt,
+                            ).toLocaleDateString("en-IN");
+                            return `
+                        <tr>
+                            <td>${date}</td>
+                            <td class="fw-bold text-dark">${p.buyer ? p.buyer.fullName : "Unknown"}</td>
+                            <td><a href="property.html?id=${p.property ? p.property._id : ""}" target="_blank" class="text-decoration-none fw-bold">View Prop <i class="fas fa-external-link-alt small"></i></a></td>
+                            <td class="text-success fw-bold">₹ ${amt.toLocaleString("en-IN")}</td>
+                            <td><code class="text-dark bg-light px-2 py-1 rounded">${p.transactionId}</code></td>
+                            <td><span class="badge bg-success"><i class="fas fa-check-circle"></i> Paid</span></td>
+                        </tr>
+                    `;
+                        })
+                        .join("");
+                }
+                document.getElementById("totalRevenue").innerText =
+                    `₹ ${totalRev.toLocaleString("en-IN")}`;
+            }
+
+            function renderCRMLeads(leads) {
+                const tbody = document.getElementById("leadsTableBody");
+                if (leads.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted fw-bold">No leads available.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = leads
+                    .map((lead) => {
+                        const date = new Date(
+                            lead.createdAt,
+                        ).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                        });
+                        const buyerName = lead.buyer
+                            ? lead.buyer.fullName
+                            : "Unknown";
+                        const buyerPhone = lead.buyer
+                            ? lead.buyer.phone
+                            : "No Phone";
+                        const propName = lead.property
+                            ? lead.property.landName
+                            : "Deleted";
+                        const currentNote =
+                            lead.notes || lead.brokerNotes || "";
+
+                        return `
                     <tr>
-                        <td class="text-muted">${date}</td>
+                        <td class="text-muted fw-bold">${date}</td>
                         <td>
-                            <div class="user-info">
-                                <span class="user-name"><i class="fas fa-user-circle text-muted me-1"></i> ${buyerName}</span>
-                                <span class="user-prop mt-1"><i class="fas fa-phone-alt text-success me-1"></i> ${buyerPhone}</span>
-                            </div>
+                            <div class="fw-bold text-dark">${buyerName}</div>
+                            <div class="small text-muted mt-1">${lead.buyer ? lead.buyer.email : "N/A"}</div>
                         </td>
                         <td>
-                            <div class="user-info">
-                                <span class="user-name text-primary">${propName} ${propCategory ? `<span class="cat-badge">${propCategory}</span>` : ''}</span>
-                                <span class="user-prop fw-bold mt-1">${propPrice}</span>
-                            </div>
+                            <div class="fw-bold text-primary">${propName}</div>
+                            <div class="small fw-bold text-success mt-1">Lead ID: #${lead._id.substring(lead._id.length - 6)}</div>
                         </td>
                         <td>
-                            <select class="form-select form-select-sm" style="width: 170px;" onchange="updateStatus('${lead._id}', this.value)">
-                                <option value="Pending" ${lead.status === 'Pending' ? 'selected' : ''}>Pending</option>
-                                <option value="Contacted" ${lead.status === 'Contacted' ? 'selected' : ''}>Contacted</option>
-                                <option value="Negotiation" ${lead.status === 'Negotiation' ? 'selected' : ''}>Negotiation</option>
-                                <option value="Site Visit Scheduled" ${lead.status === 'Site Visit Scheduled' ? 'selected' : ''}>Site Visit</option>
-                                <option value="Closed" ${lead.status === 'Closed' ? 'selected' : ''}>Closed (Deal Done)</option>
-                                <option value="Rejected" ${lead.status === 'Rejected' ? 'selected' : ''}>Rejected</option>
+                            <select class="form-select form-select-sm mb-2" id="status-${lead._id}">
+                                <option value="Pending" ${lead.status === "Pending" ? "selected" : ""}>⏳ Pending</option>
+                                <option value="Contacted" ${lead.status === "Contacted" ? "selected" : ""}>📞 Contacted</option>
+                                <option value="Site Visit Scheduled" ${lead.status === "Site Visit Scheduled" ? "selected" : ""}>🚗 Site Visit</option>
+                                <option value="Negotiation" ${lead.status === "Negotiation" ? "selected" : ""}>💬 Negotiation</option>
+                                <option value="Token Paid" ${lead.status === "Token Paid" ? "selected" : ""}>💰 Token Paid</option>
+                                <option value="Closed" ${lead.status === "Closed" ? "selected" : ""}>✅ Closed</option>
+                                <option value="Rejected" ${lead.status === "Rejected" ? "selected" : ""}>❌ Rejected</option>
                             </select>
+                            <textarea class="form-control form-control-sm mb-2" id="note-${lead._id}" rows="2" placeholder="Add notes...">${currentNote}</textarea>
+                            <button class="btn btn-save-note" onclick="updateLeadDetails('${lead._id}')"><i class="fas fa-save"></i> Save</button>
                         </td>
-                        <td>
-                            <a href="tel:${buyerPhone}" class="btn-call">
-                                <i class="fas fa-phone-volume"></i> Call Buyer
-                            </a>
+                        <td class="text-center">
+                            <a href="tel:${buyerPhone}" class="btn-call mb-2"><i class="fas fa-phone-volume"></i> Call</a>
+                            ${buyerPhone !== "No Phone" ? `<a href="https://wa.me/91${buyerPhone.replace(/\D/g, "")}" target="_blank" class="btn-call" style="background:#25D366;"><i class="fab fa-whatsapp"></i> Chat</a>` : ""}
                         </td>
                     </tr>
                 `;
-            }).join('');
-        }
-
-        // ==========================================
-        // 2. UPDATE LEAD STATUS
-        // ==========================================
-        async function updateStatus(leadId, newStatus) {
-            const token = localStorage.getItem('zamin_token');
-            try {
-                const res = await fetch(`${API_URL}/leads/${leadId}`, {
-                    method: 'PUT',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}` 
-                    },
-                    body: JSON.stringify({ status: newStatus })
-                });
-                const data = await res.json();
-                if(data.success) {
-                    fetchLeads(); // Refresh table to update stats
-                } else {
-                    alert("Update failed: " + data.message);
-                }
-            } catch(e) {
-                alert("Network error.");
+                    })
+                    .join("");
             }
-        }
 
-        window.onload = fetchLeads;
-    </script>
-</body>
+            async function updateLeadDetails(leadId) {
+                const status = document.getElementById(
+                    `status-${leadId}`,
+                ).value;
+                const notes = document.getElementById(`note-${leadId}`).value;
+                try {
+                    const res = await fetch(
+                        `${ADMIN_API}/lead-status/${leadId}`,
+                        {
+                            method: "PUT",
+                            headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${localStorage.getItem("zamin_token")}`,
+                            },
+                            body: JSON.stringify({ status, notes }),
+                        },
+                    );
+                    const data = await res.json();
+                    if (data.success) {
+                        showToast();
+                        fetchLeadsData();
+                    } else alert("Update failed: " + data.message);
+                } catch (e) {
+                    alert("Network error");
+                }
+            }
+
+            // ==========================================
+            // 🚀 2. FETCH PENDING APPROVALS (Tab 3)
+            // ==========================================
+            async function loadPendingProperties() {
+                const container = document.getElementById("approvalsContainer");
+                try {
+                    const res = await fetch(`${ADMIN_API}/pending-properties`, {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem("zamin_token")}`,
+                        },
+                    });
+                    const data = await res.json();
+
+                    if (data.success && data.properties.length > 0) {
+                        container.innerHTML = data.properties
+                            .map(
+                                (prop) => `
+                        <div class="col-md-4">
+                            <div class="approve-card">
+                                <img src="${prop.imageUrl || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600"}" class="approve-img">
+                                <div class="p-3">
+                                    <h6 class="fw-bold text-truncate">${prop.landName}</h6>
+                                    <p class="text-muted small mb-2"><i class="fas fa-user me-1"></i> Posted by: ${prop.postedBy ? prop.postedBy.fullName : "Unknown"}</p>
+                                    <h5 class="fw-bold text-success mb-0">₹ ${Number(prop.landPrice).toLocaleString("en-IN")}</h5>
+                                </div>
+                                <div class="approve-actions">
+                                    <button class="btn-approve" onclick="updatePropertyStatus('${prop._id}', 'Approved')"><i class="fas fa-check"></i> Approve</button>
+                                    <button class="btn-reject" onclick="updatePropertyStatus('${prop._id}', 'Rejected')"><i class="fas fa-times"></i> Reject</button>
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                            )
+                            .join("");
+                    } else {
+                        container.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-check-double fs-1 d-block mb-3"></i> All Caught Up! No pending properties.</div>`;
+                    }
+                } catch (e) {
+                    container.innerHTML = `<div class="text-center text-danger">Error loading properties.</div>`;
+                }
+            }
+
+            async function updatePropertyStatus(id, status) {
+                if (!confirm(`Mark this property as ${status}?`)) return;
+                try {
+                    const res = await fetch(
+                        `${ADMIN_API}/property-status/${id}`,
+                        {
+                            method: "PUT",
+                            headers: {
+                                Authorization: `Bearer ${localStorage.getItem("zamin_token")}`,
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({ status }),
+                        },
+                    );
+                    const data = await res.json();
+                    if (data.success) {
+                        showToast();
+                        loadPendingProperties();
+                        loadAdManager();
+                    }
+                } catch (e) {
+                    alert("Server Error");
+                }
+            }
+
+            // ==========================================
+            // 🚀 3. FETCH AD MANAGER (Tab 4)
+            // ==========================================
+            async function loadAdManager() {
+                const tbody = document.getElementById("adsTableBody");
+                try {
+                    const res = await fetch(`${API_BASE}/listings/all`);
+                    const data = await res.json();
+
+                    if (data.success && data.listings.length > 0) {
+                        tbody.innerHTML = data.listings
+                            .map((item) => {
+                                // Note: For now, this is a UI toggle. Actual DB connection for Ads will happen in next backend step.
+                                const isFeatured = Math.random() > 0.8;
+
+                                return `
+                            <tr>
+                                <td class="fw-bold text-dark">${item.landName}</td>
+                                <td><span class="badge bg-light text-dark border">${item.category}</span></td>
+                                <td class="fw-bold text-success">₹ ${Number(item.landPrice).toLocaleString("en-IN")}</td>
+                                <td class="small text-muted">${item.address}</td>
+                                <td>
+                                    <button class="btn-feature ${isFeatured ? "active" : ""}" onclick="toggleFeature(this)">
+                                        <i class="fas ${isFeatured ? "fa-star" : "fa-arrow-up"} me-1"></i> ${isFeatured ? "Promoted" : "Boost to Homepage"}
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                            })
+                            .join("");
+                    } else {
+                        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 fw-bold text-muted">No properties available to promote.</td></tr>`;
+                    }
+                } catch (e) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger fw-bold">Server Offline</td></tr>`;
+                }
+            }
+
+            function toggleFeature(btn) {
+                if (btn.classList.contains("active")) {
+                    btn.classList.remove("active");
+                    btn.innerHTML = `<i class="fas fa-arrow-up me-1"></i> Boost to Homepage`;
+                } else {
+                    btn.classList.add("active");
+                    btn.innerHTML = `<i class="fas fa-star me-1"></i> Promoted`;
+                }
+                showToast();
+            }
+        </script>
+    </body>
 </html>

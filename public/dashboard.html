@@ -1,328 +1,607 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Dashboard | Zamin Dekho</title>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>User Dashboard | Zamin Dekho</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background-color: #f1f5f9; color: #1e293b; }
+        <style>
+            @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+            * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Inter", sans-serif; }
+            body { background-color: #f1f5f9; color: #1e293b; }
 
-        /* Navbar */
-        .navbar { background: white !important; box-shadow: 0 2px 15px rgba(0,0,0,0.04); padding: 15px 0; }
-        .navbar-brand { font-weight: 800; color: #10b981 !important; font-size: 24px; }
+            /* 🌟 PERFECTED NAVBAR STYLING */
+            .navbar { background: white !important; box-shadow: 0 2px 15px rgba(0, 0, 0, 0.04); padding: 12px 0; }
+            .navbar-brand { font-weight: 800; color: #10b981 !important; font-size: 24px; letter-spacing: -0.5px;}
 
-        /* User UI */
-        .user-pill { background: #f8fafc; border: 1px solid #cbd5e1; padding: 8px 20px; border-radius: 50px; font-weight: 700; font-size: 14px; }
-        .logout-btn-premium { background: white; border: 1px solid #ef4444; color: #ef4444; padding: 8px 20px; border-radius: 50px; font-weight: 700; transition: 0.2s; cursor: pointer;}
-        .logout-btn-premium:hover { background: #fee2e2; }
+            .navbar-nav .nav-link { font-weight: 700; color: #475569 !important; font-size: 15px; transition: 0.3s; border-radius: 8px; padding: 8px 16px !important;}
+            .navbar-nav .nav-link:hover, .navbar-nav .nav-link.active { color: #10b981 !important; background: #ecfdf5; }
 
-        /* 🌟 TAB STYLING */
-        .nav-pills .nav-link { font-weight: 700; color: #64748b; padding: 12px 25px; border-radius: 50px; margin-bottom: 20px;}
-        .nav-pills .nav-link.active { background-color: #10b981; color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
+            /* 🌟 NEW PREMIUM AUTH UI */
+            .auth-area { display: flex; align-items: center; justify-content: center; gap: 12px; }
 
-        /* Form Area */
-        .container-form { max-width: 700px; margin: 0 auto; }
-        .form-box { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); margin-bottom: 25px; border: 1px solid #e2e8f0; }
-        .box-title { font-size: 15px; font-weight: 800; color: #6366f1; margin-bottom: 25px; text-transform: uppercase; }
+            .user-id-btn {
+                background: #f8fafc; border: 1px solid #cbd5e1; color: #1e293b;
+                padding: 8px 18px; border-radius: 50px; font-weight: 700; font-size: 14px;
+                display: flex; align-items: center; gap: 8px; cursor: default;
+            }
+            .user-id-btn i { color: #3b82f6; font-size: 16px; }
 
-        label { font-size: 12px; font-weight: 800; color: #64748b; margin-bottom: 8px; display: block; text-transform: uppercase; }
-        input, select, textarea { width: 100%; padding: 14px; border: 1px solid #cbd5e1; border-radius: 12px; margin-bottom: 20px; font-size: 15px; background: #f8fafc; }
-        input:focus, textarea:focus, select:focus { border-color: #6366f1; outline: none; background: white; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); }
+            .logout-btn-premium {
+                background: white; border: 1px solid #ef4444; color: #ef4444;
+                padding: 8px 18px; border-radius: 50px; font-weight: 700; font-size: 14px;
+                transition: 0.2s; cursor: pointer; display: flex; align-items: center; gap: 6px;
+            }
+            .logout-btn-premium:hover { background: #fee2e2; }
 
-        .submit-btn { background: #10b981; color: white; border: none; width: 100%; padding: 18px; border-radius: 15px; font-size: 18px; font-weight: 800; cursor: pointer; transition: 0.3s; }
-        .submit-btn:hover { background: #059669; transform: translateY(-3px); }
-        .detect-btn { background: #6366f1; color: white; border: none; padding: 7px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+            /* 🌟 TAB (PILLS) STYLING */
+            .nav-pills .nav-link { font-weight: 700; color: #64748b; padding: 12px 20px; border-radius: 50px; margin: 0 5px 20px; transition: 0.3s;}
+            .nav-pills .nav-link.active { background-color: #10b981; color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
 
-        /* Property Cards for Dashboard */
-        .property-card { border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; background: white; height: 100%; transition: 0.3s; position: relative;}
-        .property-img { height: 200px; object-fit: cover; width: 100%; background: #f1f5f9; }
-        .card-actions { border-top: 1px solid #f1f5f9; padding-top: 15px; display: flex; justify-content: space-between;}
+            /* Form Area */
+            .container-form { max-width: 700px; margin: 0 auto; }
+            .form-box { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03); margin-bottom: 25px; border: 1px solid #e2e8f0; }
+            .box-title { font-size: 15px; font-weight: 800; color: #6366f1; margin-bottom: 25px; text-transform: uppercase; }
 
-        /* 🌟 NAYA: Approval Status Badge Styling */
-        .status-badge { position: absolute; top: 15px; right: 15px; padding: 5px 12px; border-radius: 50px; font-size: 11px; font-weight: 800; text-transform: uppercase; z-index: 10; backdrop-filter: blur(4px);}
-        .status-pending { background: rgba(245, 158, 11, 0.9); color: white; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); }
-        .status-approved { background: rgba(16, 185, 129, 0.9); color: white; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
-        .status-rejected { background: rgba(239, 68, 68, 0.9); color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); }
-    </style>
-</head>
-<body>
+            label { font-size: 12px; font-weight: 800; color: #64748b; margin-bottom: 8px; display: block; text-transform: uppercase; }
+            input, select, textarea { width: 100%; padding: 14px; border: 1px solid #cbd5e1; border-radius: 12px; margin-bottom: 20px; font-size: 15px; background: #f8fafc; }
+            input:focus, textarea:focus, select:focus { border-color: #6366f1; outline: none; background: white; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); }
 
-    <nav class="navbar navbar-expand-lg sticky-top">
-        <div class="container d-flex justify-content-between align-items-center">
-            <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-1"></i> ZAMIN DEKHO</a>
-            <div class="d-flex align-items-center gap-3">
-                <a href="index.html" class="btn btn-outline-primary rounded-pill fw-bold btn-sm"><i class="fas fa-search"></i> Search</a>
-                <div id="authArea" class="d-flex gap-2"></div>
+            .submit-btn { background: #10b981; color: white; border: none; width: 100%; padding: 18px; border-radius: 15px; font-size: 18px; font-weight: 800; cursor: pointer; transition: 0.3s; }
+            .submit-btn:hover { background: #059669; transform: translateY(-3px); }
+            .detect-btn { background: #6366f1; color: white; border: none; padding: 7px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+
+            /* Property Cards for Dashboard */
+            .property-card { border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; background: white; height: 100%; transition: 0.3s; position: relative; }
+            .property-img { height: 200px; object-fit: cover; width: 100%; background: #f1f5f9; }
+            .card-actions { border-top: 1px solid #f1f5f9; padding-top: 15px; display: flex; justify-content: space-between; }
+
+            /* Approval Status Badge Styling */
+            .status-badge { position: absolute; top: 15px; right: 15px; padding: 5px 12px; border-radius: 50px; font-size: 11px; font-weight: 800; text-transform: uppercase; z-index: 10; backdrop-filter: blur(4px); }
+            .status-pending { background: rgba(245, 158, 11, 0.9); color: white; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); }
+            .status-approved { background: rgba(16, 185, 129, 0.9); color: white; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+            .status-rejected { background: rgba(239, 68, 68, 0.9); color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); }
+        </style>
+    </head>
+    <body>
+
+        <nav class="navbar navbar-expand-lg sticky-top">
+            <div class="container-fluid px-lg-4">
+                <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-1"></i> ZAMIN DEKHO</a>
+
+                <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#zaminNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="zaminNav">
+                    <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center align-items-center gap-lg-2">
+                        <li class="nav-item"><a class="nav-link" href="index.html">Find Land</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="#postTab" onclick="switchTab('#postTab')">Post Property</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#myListingsTab" onclick="switchTab('#myListingsTab')">My Listings</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#savedTab" onclick="switchTab('#savedTab')">Favorites</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#bookingsTab" onclick="switchTab('#bookingsTab')">My Bookings</a></li>
+                        <li id="adminLinkArea" class="nav-item"></li>
+                    </ul>
+
+                    <div id="authArea" class="auth-area justify-content-center mt-3 mt-lg-0"></div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mt-5 mb-5">
+            <h2 class="fw-bold mb-4 text-center">User Dashboard</h2>
+
+            <ul class="nav nav-pills justify-content-center mb-4" id="dashboardTabs">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#postTab" onclick="initPostForm()">
+                        <i class="fas fa-plus-circle me-2"></i> Post Property
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#myListingsTab" onclick="loadMyListings()">
+                        <i class="fas fa-home me-2"></i> My Listings
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#savedTab" onclick="loadSavedListings()">
+                        <i class="fas fa-heart me-2"></i> Favorites
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#bookingsTab" onclick="loadMyBookings()">
+                        <i class="fas fa-file-invoice-dollar me-2"></i> My Bookings
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="postTab">
+                    <div class="container-form">
+                        <div class="form-box">
+                            <div class="box-title"><i class="fas fa-mountain me-2"></i> Property Details</div>
+                            <label>Land Title / Name</label>
+                            <input type="text" id="land-name" placeholder="eg: 5 Acre Farm in Punjab" />
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label>Estimated Price (₹)</label>
+                                    <input type="number" id="land-price" placeholder="eg: 5000000" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label>Land Size</label>
+                                    <input type="text" id="land-size" placeholder="eg: 5 Acre, 2000 SqFt" />
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label>Land Length</label>
+                                    <input type="text" id="land-length" placeholder="eg: 50 Feet / 15 Meter" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label>Land Breadth (Width)</label>
+                                    <input type="text" id="land-length" placeholder="eg: 100 Feet / 30 Meter" />
+                                </div>
+                            </div>
+                            <label>Property Category</label>
+                            <select id="category">
+                                <option value="residential">Residential Land</option>
+                                <option value="commercial">Commercial Plot</option>
+                                <option value="agricultural">Agricultural Farm</option>
+                                <option value="industrial">Industrial Land</option>
+                            </select>
+
+                            <label class="mt-3">Property Photo (Live Capture Only)</label>
+
+                            <div id="camera-container" class="mb-3" style="display:none; position:relative;">
+                                <video id="video" width="100%" autoplay playsinline style="border-radius:15px; border:2px solid #10b981; background:#000;"></video>
+                                <canvas id="canvas" style="display:none;"></canvas>
+                                <div id="watermark-preview" style="position:absolute; bottom:15px; right:15px; color:white; font-size:12px; background:rgba(0,0,0,0.6); padding:5px 10px; border-radius:5px; pointer-events:none;">
+                                    Zamin Dekho Verified
+                                </div>
+                            </div>
+
+                            <div id="photo-preview-container" class="mb-3" style="display:none;">
+                                <img id="captured-photo" src="" style="width:100%; border-radius:15px; border:2px solid #6366f1;">
+                                <p class="text-success small fw-bold mt-2"><i class="fas fa-check-circle"></i> Photo Verified with Time & Location</p>
+                            </div>
+
+                            <button type="button" id="start-camera" class="btn btn-outline-primary w-100 mb-3 fw-bold py-3" style="border-radius: 12px;">
+                                <i class="fas fa-camera me-2"></i> Open Real-Time Camera
+                            </button>
+
+                            <button type="button" id="capture-btn" class="btn btn-success w-100 mb-3 fw-bold py-3" style="display:none; border-radius: 12px;">
+                                <i class="fas fa-dot-circle me-2"></i> Capture & Verify Photo
+                            </button>
+
+                            <input type="file" id="land-image" accept="image/*" style="display:none;" />
+                            </div>
+
+                        <div class="form-box">
+                            <div class="box-title"><i class="fas fa-id-card me-2"></i> Location & Info</div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="m-0">Location / Address</label>
+                                <button type="button" class="detect-btn" onclick="detectLocation()"><i class="fas fa-location-arrow"></i> Detect</button>
+                            </div>
+                            <textarea id="address" placeholder="Full address with city..." rows="2"></textarea>
+                            <label>Road Connectivity</label>
+                            <select id="road-connectivity">
+                                <option value="Highway Attached">Highway Attached</option>
+                                <option value="Tar Road">Tar Road</option>
+                                <option value="Mud Road">Mud Road</option>
+                                <option value="No Road Access">No Road Access</option>
+                            </select>
+                            <label>Description / Features</label>
+                            <textarea id="extra-info" placeholder="Add more details about water supply, electricity, etc." rows="3"></textarea>
+                        </div>
+                        <button class="submit-btn" id="submit-btn" onclick="submitProperty()">POST PROPERTY NOW 🚀</button>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="myListingsTab">
+                    <div class="row g-4" id="myListingsGrid"></div>
+                </div>
+
+                <div class="tab-pane fade" id="savedTab">
+                    <div class="row g-4" id="savedGrid"></div>
+                </div>
+
+                <div class="tab-pane fade" id="bookingsTab">
+                    <div class="row g-4" id="bookingsGrid"></div>
+                </div>
             </div>
         </div>
-    </nav>
 
-    <div class="container mt-5 mb-5">
-        <h2 class="fw-bold mb-4 text-center">User Dashboard</h2>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-        <ul class="nav nav-pills justify-content-center mb-4" id="dashboardTabs">
-            <li class="nav-item">
-                <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#postTab" onclick="initPostForm()"><i class="fas fa-plus-circle me-2"></i> Post Property</button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#myListingsTab" onclick="loadMyListings()"><i class="fas fa-home me-2"></i> My Listings</button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#savedTab" onclick="loadSavedListings()"><i class="fas fa-heart me-2"></i> Favorites</button>
-            </li>
-        </ul>
+        <script>
+            const API_URL = "/api";
+            const BASE_SERVER_URL = "/";
 
-        <div class="tab-content">
+            // 🌟 CAMERA & WATERMARK VARIABLES
+            let stream = null;
+            let finalImageBlob = null;
 
-            <div class="tab-pane fade show active" id="postTab">
-                <div class="container-form">
-                    <div class="form-box">
-                        <div class="box-title"><i class="fas fa-mountain me-2"></i> Property Details</div>
+            // ==========================================
+            // 🌟 1. INIT & AUTH LOGIC
+            // ==========================================
+            window.onload = function () {
+                const token = localStorage.getItem("zamin_token");
+                if (!token) { window.location.href = "login.html"; return; }
 
-                        <label>Land Title / Name</label>
-                        <input type="text" id="land-name" placeholder="eg: 5 Acre Farm in Punjab">
+                updateNavbarUI();
+                initCameraSystem(); // 🌟 Initialize Smart Camera
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label>Estimated Price (₹)</label>
-                                <input type="number" id="land-price" placeholder="eg: 5000000">
-                            </div>
-                            <div class="col-md-6">
-                                <label>Land Size</label>
-                                <input type="text" id="land-size" placeholder="eg: 5 Acre, 2000 SqFt">
-                            </div>
-                        </div>
+                // Hash (URL) check karke sahi tab open karein
+                const hash = window.location.hash;
+                if (hash) switchTab(hash);
+                else switchTab('#postTab');
+            };
 
-                        <label>Property Category</label>
-                        <select id="category">
-                            <option value="residential">Residential Land</option>
-                            <option value="commercial">Commercial Plot</option>
-                            <option value="agricultural">Agricultural Farm</option>
-                            <option value="industrial">Industrial Land</option>
-                        </select>
-
-                        <label>Upload HD Photo</label>
-                        <input type="file" id="land-image" accept="image/*" style="border:2px dashed #cbd5e1; padding:15px; cursor: pointer;">
-                    </div>
-
-                    <div class="form-box">
-                        <div class="box-title"><i class="fas fa-id-card me-2"></i> Location & Info</div>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="m-0">Location / Address</label>
-                            <button type="button" class="detect-btn" onclick="detectLocation()"><i class="fas fa-location-arrow"></i> Detect</button>
-                        </div>
-                        <textarea id="address" placeholder="Full address with city..." rows="2"></textarea>
-
-                        <label>Road Connectivity</label>
-                        <select id="road-connectivity">
-                            <option value="Highway Attached">Highway Attached</option>
-                            <option value="Tar Road">Tar Road</option>
-                            <option value="Mud Road">Mud Road</option>
-                            <option value="No Road Access">No Road Access</option>
-                        </select>
-
-                        <label>Description / Features</label>
-                        <textarea id="extra-info" placeholder="Add more details about water supply, electricity, etc." rows="3"></textarea>
-                    </div>
-                    <button class="submit-btn" id="submit-btn" onclick="submitProperty()">POST PROPERTY NOW 🚀</button>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="myListingsTab">
-                <div class="row g-4" id="myListingsGrid">
-                    <div class="text-center py-5"><div class="spinner-border text-success"></div></div>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="savedTab">
-                <div class="row g-4" id="savedGrid">
-                    <div class="text-center py-5"><div class="spinner-border text-danger"></div></div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // 🌟 FIX: Removed localhost. Ab ye dynamically cloud server route par jayega
-        const API_URL = "/api"; 
-
-        window.onload = function() {
-            const token = localStorage.getItem('zamin_token');
-            if (!token) { window.location.href = 'login.html'; return; }
-
-            try {
-                const user = JSON.parse(localStorage.getItem('zamin_user'));
-                document.getElementById('authArea').innerHTML = `
-                    <div class="user-pill d-none d-md-flex align-items-center gap-2">
-                        <i class="fas fa-user-circle text-primary fs-5"></i> ${user.fullName.split(' ')[0]}
-                    </div>
-                    <button onclick="logout()" class="logout-btn-premium"><i class="fas fa-power-off"></i></button>
-                `;
-            } catch(e) {}
-        };
-
-        function logout() {
-            localStorage.removeItem('zamin_token');
-            localStorage.removeItem('zamin_user');
-            window.location.href = 'login.html';
-        }
-
-        function initPostForm() {
-            // Keep it blank for now, triggers when post tab opens
-        }
-
-        // 🌟 LOCATION DETECT LOGIC
-        async function detectLocation() {
-            if (!navigator.geolocation) {
-                alert("Geolocation is not supported by your browser");
-                return;
-            }
-            const addrInput = document.getElementById('address');
-            addrInput.value = "Detecting location...";
-            navigator.geolocation.getCurrentPosition(async (pos) => {
+            function updateNavbarUI() {
                 try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
-                    const data = await res.json();
-                    addrInput.value = data.display_name;
-                } catch(e) {
-                    addrInput.value = "Failed to detect. Please type manually.";
-                }
-            }, () => {
-                addrInput.value = "Location access denied. Please type manually.";
-            });
-        }
+                    const user = JSON.parse(localStorage.getItem("zamin_user"));
+                    const adminArea = document.getElementById('adminLinkArea');
+                    const authArea = document.getElementById('authArea');
 
-        // 🌟 POST PROPERTY LOGIC (Updated to send new fields)
-        async function submitProperty() {
-            const btn = document.getElementById('submit-btn');
-
-            // Basic validation
-            if(!document.getElementById('land-name').value || !document.getElementById('land-price').value) {
-                alert("Please fill at least the Title and Price!");
-                return;
-            }
-
-            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
-
-            const formData = new FormData();
-            formData.append('landName', document.getElementById('land-name').value);
-            formData.append('landPrice', document.getElementById('land-price').value || 0);
-            formData.append('landSize', document.getElementById('land-size').value || 'Not Specified'); // 🌟 NAYA
-            formData.append('category', document.getElementById('category').value); // 🌟 NAYA
-            formData.append('address', document.getElementById('address').value);
-            formData.append('roadConnectivity', document.getElementById('road-connectivity').value); // 🌟 NAYA
-            formData.append('extraInfo', document.getElementById('extra-info').value);
-
-            // Note: Cloudinary backend automatically handles the image upload
-            const img = document.getElementById('land-image').files[0];
-            if(img) formData.append('image', img);
-
-            try {
-                const res = await fetch(`${API_URL}/listings/create`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('zamin_token')}` },
-                    body: formData
-                });
-                const data = await res.json();
-
-                if(data.success) {
-                    // 🌟 NAYA: Dikhaye ki property admin approval ke liye gayi hai
-                    alert(data.message || "Property submitted successfully! ✅");
-
-                    // Clear form
-                    document.getElementById('land-name').value = '';
-                    document.getElementById('land-price').value = '';
-                    document.getElementById('land-size').value = '';
-                    document.getElementById('address').value = '';
-                    document.getElementById('extra-info').value = '';
-
-                    // Switch to My Listings Tab
-                    document.querySelector('[data-bs-target="#myListingsTab"]').click();
-                    loadMyListings();
-                } else alert("Error: " + data.message);
-            } catch(e) { alert("Server Error or File too large (Max 5MB)."); }
-
-            btn.disabled = false; btn.innerText = "POST PROPERTY NOW 🚀";
-        }
-
-        // 🌟 LOAD MY LISTINGS
-        async function loadMyListings() {
-            const grid = document.getElementById('myListingsGrid');
-            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-border text-success"></div></div>';
-            try {
-                const res = await fetch(`${API_URL}/listings/my-listings`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('zamin_token')}` }});
-                const data = await res.json();
-                if(data.listings && data.listings.length > 0) {
-                    grid.innerHTML = data.listings.map(item => generateCardHTML(item, true)).join('');
-                } else {
-                    grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-folder-open fs-1 d-block mb-3"></i> You haven't posted any properties yet.</div>`;
-                }
-            } catch(e) { grid.innerHTML = `<div class="text-center text-danger">Error loading data. Make sure server is running.</div>`; }
-        }
-
-        // 🌟 LOAD FAVORITES
-        async function loadSavedListings() {
-            const grid = document.getElementById('savedGrid');
-            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-border text-danger"></div></div>';
-            try {
-                const res = await fetch(`${API_URL}/listings/saved-listings`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('zamin_token')}` }});
-                const data = await res.json();
-                if(data.listings && data.listings.length > 0) {
-                    grid.innerHTML = data.listings.map(item => generateCardHTML(item, false)).join('');
-                } else {
-                    grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-heart-broken fs-1 d-block mb-3"></i> No favorite properties saved yet.</div>`;
-                }
-            } catch(e) { grid.innerHTML = `<div class="text-center text-danger">Error loading data.</div>`; }
-        }
-
-        // 🌟 DELETE PROPERTY
-        async function deleteListing(id) {
-            if(confirm("Are you sure you want to permanently delete this property?")) {
-                try {
-                    const res = await fetch(`${API_URL}/listings/delete/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('zamin_token')}` }});
-                    const data = await res.json();
-                    if(data.success) {
-                         loadMyListings(); // Refresh UI
-                    } else {
-                         alert(data.message);
+                    // Show CRM link for admin/broker
+                    if(user.role === 'admin' || user.role === 'broker') {
+                        adminArea.innerHTML = `<a class="nav-link text-danger fw-bold" style="background: #fee2e2; padding: 8px 16px !important;" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
                     }
-                } catch(e) { alert("Failed to delete. Network error."); }
-            }
-        }
 
-        // 🌟 REUSABLE CARD GENERATOR
-        function generateCardHTML(item, isMyListing) {
-            // Cloudinary direct URL
-            const imgSource = item.imageUrl || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80";
-
-            // 🌟 NAYA: Status Badge Logic
-            let badgeHTML = '';
-            if(isMyListing) {
-                const status = item.approvalStatus || 'Pending';
-                let statusClass = 'status-pending';
-                if(status === 'Approved') statusClass = 'status-approved';
-                if(status === 'Rejected') statusClass = 'status-rejected';
-
-                badgeHTML = `<div class="status-badge ${statusClass}"><i class="fas ${status === 'Approved' ? 'fa-check-circle' : 'fa-clock'} me-1"></i> ${status}</div>`;
+                    const firstName = user.fullName ? user.fullName.split(" ")[0] : "User";
+                    authArea.innerHTML = `
+                        <div class="user-id-btn me-2">
+                            <i class="fas fa-user-circle"></i> ${firstName}
+                        </div>
+                        <button onclick="logout()" class="logout-btn-premium">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    `;
+                } catch(e) {}
             }
 
-            return `
+            function logout() {
+                localStorage.removeItem("zamin_token");
+                localStorage.removeItem("zamin_user");
+                window.location.href = "login.html";
+            }
+
+            // ==========================================
+            // 🌟 2. SMART TAB SWITCHER
+            // ==========================================
+            function switchTab(tabId) {
+                const targetBtn = document.querySelector(`button[data-bs-target="${tabId}"]`);
+                if (targetBtn) targetBtn.click();
+
+                document.querySelectorAll('#zaminNav .nav-link').forEach(link => link.classList.remove('active'));
+                const activeNav = document.querySelector(`#zaminNav .nav-link[href="${tabId}"]`);
+                if(activeNav) activeNav.classList.add('active');
+
+                window.location.hash = tabId;
+            }
+
+            // ==========================================
+            // 🌟 3. CAMERA & WATERMARK LOGIC
+            // ==========================================
+            function initCameraSystem() {
+                const video = document.getElementById('video');
+                const canvas = document.getElementById('canvas');
+                const startBtn = document.getElementById('start-camera');
+                const captureBtn = document.getElementById('capture-btn');
+                const camContainer = document.getElementById('camera-container');
+                const photoPreview = document.getElementById('photo-preview-container');
+                const capturedImg = document.getElementById('captured-photo');
+                const fallbackInput = document.getElementById('land-image');
+
+                // Start Camera
+                startBtn.onclick = async () => {
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+                        video.srcObject = stream;
+                        camContainer.style.display = 'block';
+                        captureBtn.style.display = 'block';
+                        startBtn.style.display = 'none';
+                        photoPreview.style.display = 'none';
+                        fallbackInput.style.display = 'none';
+                    } catch (err) {
+                        alert("Camera access denied! Fallback to manual upload.");
+                        fallbackInput.style.display = 'block'; // Show manual upload if camera fails
+                    }
+                };
+
+                // Capture & Draw Watermark
+                captureBtn.onclick = () => {
+                    const context = canvas.getContext('2d');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+
+                    // Draw Video Frame
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // Add Anti-Fraud Watermark (Time & Verified Text)
+                    const now = new Date();
+                    const timeStr = now.toLocaleString('en-IN');
+
+                    context.font = "bold 25px Arial";
+                    context.fillStyle = "rgba(255, 255, 255, 0.9)";
+                    context.shadowColor = "black";
+                    context.shadowBlur = 5;
+
+                    context.fillText("ZAMIN DEKHO VERIFIED", 30, canvas.height - 60);
+                    context.font = "20px Arial";
+                    context.fillText(timeStr, 30, canvas.height - 30);
+
+                    // Convert to Blob for upload
+                    canvas.toBlob((blob) => {
+                        finalImageBlob = blob;
+                        const url = URL.createObjectURL(blob);
+                        capturedImg.src = url;
+
+                        photoPreview.style.display = 'block';
+                        camContainer.style.display = 'none';
+                        captureBtn.style.display = 'none';
+                        startBtn.innerHTML = '<i class="fas fa-redo me-2"></i> Retake Photo';
+                        startBtn.style.display = 'block';
+
+                        // Stop Camera tracks
+                        stream.getTracks().forEach(track => track.stop());
+                    }, 'image/jpeg', 0.85);
+                };
+            }
+
+            // ==========================================
+            // 🌟 4. PROPERTY POSTING LOGIC
+            // ==========================================
+            function initPostForm() {}
+
+            async function detectLocation() {
+                if (!navigator.geolocation) {
+                    alert("Geolocation is not supported by your browser"); return;
+                }
+                const addrInput = document.getElementById("address");
+                addrInput.value = "Detecting location...";
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        try {
+                            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+                            const data = await res.json();
+                            addrInput.value = data.display_name;
+                        } catch (e) { addrInput.value = "Failed to detect. Please type manually."; }
+                    },
+                    () => { addrInput.value = "Location access denied. Please type manually."; }
+                );
+            }
+
+            async function submitProperty() {
+                const btn = document.getElementById("submit-btn");
+
+                if (!document.getElementById("land-name").value || !document.getElementById("land-price").value) {
+                    alert("Please fill at least the Title and Price!"); return;
+                }
+
+                // 🌟 Image Validation: Dono mein se ek cheez honi chahiye
+                const fallbackImg = document.getElementById("land-image").files[0];
+                if (!finalImageBlob && !fallbackImg) {
+                    alert("Please capture a live photo to verify the property!"); return;
+                }
+
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+
+                const formData = new FormData();
+                formData.append("landName", document.getElementById("land-name").value);
+                formData.append("landPrice", document.getElementById("land-price").value || 0);
+                formData.append("landSize", document.getElementById("land-size").value || "Not Specified");
+                formData.append("length", document.getElementById("land-length").value || "");
+                formData.append("breadth", document.getElementById("land-breadth").value || "");
+                formData.append("category", document.getElementById("category").value);
+                formData.append("address", document.getElementById("address").value);
+                formData.append("roadConnectivity", document.getElementById("road-connectivity").value);
+                formData.append("extraInfo", document.getElementById("extra-info").value);
+
+                // 🌟 Append captured Blob or fallback Image
+                if (finalImageBlob) {
+                    formData.append("image", finalImageBlob, "verified_property.jpg");
+                } else if (fallbackImg) {
+                    formData.append("image", fallbackImg);
+                }
+
+                try {
+                    const res = await fetch(`${API_URL}/listings/create`, {
+                        method: "POST",
+                        headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` },
+                        body: formData,
+                    });
+                    const data = await res.json();
+
+                    // ==========================================
+                    // 🚨 AI FRAUD ALERTS UI (STEP 32) 🚨
+                    // ==========================================
+                    if (data.success) {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: data.message || "Property submitted successfully! ✅",
+                            icon: 'success',
+                            confirmButtonColor: '#10b981'
+                        });
+
+                        // Reset Form & UI
+                        document.getElementById("land-name").value = "";
+                        document.getElementById("land-price").value = "";
+                        document.getElementById("land-size").value = "";
+                        document.getElementById("land-length").value = "";
+                        document.getElementById("land-breadth").value = "";
+                        document.getElementById("address").value = "";
+                        document.getElementById("extra-info").value = "";
+
+                        // Reset Camera
+                        finalImageBlob = null;
+                        document.getElementById('photo-preview-container').style.display = 'none';
+                        document.getElementById('start-camera').innerHTML = '<i class="fas fa-camera me-2"></i> Open Real-Time Camera';
+
+                        switchTab('#myListingsTab');
+
+                    } else if (data.isFraud) {
+                        // 🚨🚨 DANGEROUS FRAUD POPUP 🚨🚨
+                        Swal.fire({
+                            title: '🚨 FRAUD DETECTED',
+                            text: data.message,
+                            icon: 'error',
+                            background: '#fee2e2', // Light red background
+                            color: '#991b1b', // Dark red text
+                            confirmButtonColor: '#dc2626',
+                            confirmButtonText: 'I Understand',
+                            imageUrl: 'https://cdn-icons-png.flaticon.com/512/564/564276.png', // Siren Icon
+                            imageWidth: 80,
+                            imageHeight: 80,
+                        });
+                    } else {
+                         Swal.fire({ title: 'Oops!', text: data.message, icon: 'warning' });
+                    }
+                } catch (e) { alert("Server Error or File too large (Max 5MB)."); }
+
+                btn.disabled = false; btn.innerText = "POST PROPERTY NOW 🚀";
+            }
+
+            // ==========================================
+            // 🌟 5. FETCH DATA FUNCTIONS
+            // ==========================================
+            async function loadMyListings() {
+                const grid = document.getElementById("myListingsGrid");
+                grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-border text-success"></div></div>';
+                try {
+                    const res = await fetch(`${API_URL}/listings/my-listings`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
+                    const data = await res.json();
+                    if (data.listings && data.listings.length > 0) {
+                        grid.innerHTML = data.listings.map((item) => generateCardHTML(item, true)).join("");
+                    } else {
+                        grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-folder-open fs-1 d-block mb-3"></i> You haven't posted any properties yet.</div>`;
+                    }
+                } catch (e) { grid.innerHTML = `<div class="text-center text-danger">Error loading data. Make sure server is running.</div>`; }
+            }
+
+            async function loadSavedListings() {
+                const grid = document.getElementById("savedGrid");
+                grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-border text-danger"></div></div>';
+                try {
+                    const res = await fetch(`${API_URL}/listings/saved-listings`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
+                    const data = await res.json();
+                    if (data.listings && data.listings.length > 0) {
+                        grid.innerHTML = data.listings.map((item) => generateCardHTML(item, false)).join("");
+                    } else {
+                        grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-heart-broken fs-1 d-block mb-3"></i> No favorite properties saved yet.</div>`;
+                    }
+                } catch (e) { grid.innerHTML = `<div class="text-center text-danger">Error loading data.</div>`; }
+            }
+
+            async function deleteListing(id) {
+                if (confirm("Are you sure you want to permanently delete this property?")) {
+                    try {
+                        const res = await fetch(`${API_URL}/listings/delete/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
+                        const data = await res.json();
+                        if (data.success) loadMyListings();
+                        else alert(data.message);
+                    } catch (e) { alert("Failed to delete. Network error."); }
+                }
+            }
+
+            async function loadMyBookings() {
+                const grid = document.getElementById("bookingsGrid");
+                grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-border text-info"></div></div>';
+                try {
+                    const res = await fetch(`${API_URL}/listings/my-bookings`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
+                    const data = await res.json();
+
+                    if (data.bookings && data.bookings.length > 0) {
+                        grid.innerHTML = data.bookings.map((lead) => {
+                            const item = lead.property;
+                            if (!item) return "";
+
+                            let imgSource = item.imageUrl;
+                            if (imgSource && !imgSource.startsWith("http")) {
+                                imgSource = imgSource.replace(/\\/g, "/");
+                                imgSource = BASE_SERVER_URL + (imgSource.startsWith("/") ? imgSource.substring(1) : imgSource);
+                            }
+
+                            // 🌟 UPDATE: FALLBACK IMAGE TO SATELLITE/PLOT VIEW 🌟
+                            const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
+
+                            if (!imgSource) imgSource = fallbackImg;
+
+                            const date = new Date(lead.bookingDate || lead.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+                            return `
+                            <div class="col-lg-6">
+                                <div class="property-card" style="display:flex; flex-direction:row; height:auto; align-items: stretch;">
+                                    <div style="width: 140px; flex-shrink: 0; border-right: 1px solid #e2e8f0;">
+                                        <img src="${imgSource}" onerror="this.src='${fallbackImg}'" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
+                                    <div class="p-3 w-100">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div style="width: 70%;">
+                                                <span class="badge bg-success mb-1"><i class="fas fa-check-circle"></i> ${lead.status || "Token Paid"}</span>
+                                                <h6 class="fw-bold text-dark text-truncate mb-0">${item.landName}</h6>
+                                            </div>
+                                            <h5 class="fw-bold text-success m-0" style="text-align: right;">₹ ${Number(lead.tokenAmount || 100000).toLocaleString("en-IN")}</h5>
+                                        </div>
+                                        <p class="text-muted small mb-2 text-truncate"><i class="fas fa-map-marker-alt text-danger"></i> ${item.address}</p>
+
+                                        <div class="bg-light p-2 rounded text-muted small" style="font-family:monospace; border: 1px dashed #cbd5e1;">
+                                            <div><strong>Txn ID:</strong> ${lead.transactionId || "N/A"}</div>
+                                            <div><strong>Date:</strong> ${date}</div>
+                                            <div><strong>Method:</strong> ${lead.paymentMethod || "N/A"}</div>
+                                        </div>
+                                        <button class="btn btn-outline-primary btn-sm w-100 mt-3 fw-bold" onclick="window.location.href='property.html?id=${item._id}'">View Property</button>
+                                    </div>
+                                </div>
+                            </div>
+                            `;
+                        }).join("");
+                    } else {
+                        grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-file-invoice-dollar fs-1 d-block mb-3"></i> You haven't booked any properties yet.</div>`;
+                    }
+                } catch (e) { grid.innerHTML = `<div class="text-center text-danger">Error loading bookings. Please check network.</div>`; }
+            }
+
+            function generateCardHTML(item, isMyListing) {
+                let imgSource = item.imageUrl;
+                if (imgSource && !imgSource.startsWith("http")) {
+                    imgSource = imgSource.replace(/\\/g, "/");
+                    imgSource = BASE_SERVER_URL + (imgSource.startsWith("/") ? imgSource.substring(1) : imgSource);
+                }
+
+                // 🌟 UPDATE: FALLBACK IMAGE TO SATELLITE/PLOT VIEW 🌟
+                const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
+
+                if (!imgSource) imgSource = fallbackImg;
+
+                let dimBadge = "";
+                if (item.length || item.breadth) dimBadge = `<span class="badge bg-light text-dark border ms-1"><i class="fas fa-ruler-combined text-primary me-1"></i> ${item.length || "-"} x ${item.breadth || "-"}</span>`;
+
+                let badgeHTML = "";
+                if (isMyListing) {
+                    const status = item.approvalStatus || "Pending";
+                    let statusClass = "status-pending";
+                    if (status === "Approved") statusClass = "status-approved";
+                    if (status === "Rejected") statusClass = "status-rejected";
+                    badgeHTML = `<div class="status-badge ${statusClass}"><i class="fas ${status === "Approved" ? "fa-check-circle" : "fa-clock"} me-1"></i> ${status}</div>`;
+                }
+
+                return `
                 <div class="col-lg-4 col-md-6">
                     <div class="property-card">
                         ${badgeHTML}
-                        <img src="${imgSource}" class="property-img" style="cursor:pointer;" onclick="window.location.href='property.html?id=${item._id}'">
+                        <img src="${imgSource}" onerror="this.src='${fallbackImg}'" class="property-img" style="cursor:pointer;" onclick="window.location.href='property.html?id=${item._id}'">
                         <div class="p-4">
                             <div class="d-flex justify-content-between align-items-start mb-1">
-                                <h4 class="fw-bold text-success m-0">₹ ${Number(item.landPrice).toLocaleString('en-IN')}</h4>
-                                ${item.landSize && item.landSize !== 'Not Specified' ? `<span class="badge bg-light text-dark border">${item.landSize}</span>` : ''}
+                                <h4 class="fw-bold text-success m-0">₹ ${Number(item.landPrice).toLocaleString("en-IN")}</h4>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center mb-2">
+                                ${item.landSize && item.landSize !== "Not Specified" ? `<span class="badge bg-light text-dark border"><i class="fas fa-vector-square text-primary me-1"></i> ${item.landSize}</span>` : ""}
+                                ${dimBadge}
                             </div>
                             <h6 class="fw-bold text-dark text-truncate mt-2">${item.landName}</h6>
                             <p class="text-muted small mb-3"><i class="fas fa-map-marker-alt text-danger"></i> ${item.address}</p>
@@ -330,17 +609,16 @@
                             ${isMyListing ? `
                                 <div class="card-actions">
                                     <button class="btn btn-outline-danger btn-sm rounded-pill fw-bold w-100" onclick="deleteListing('${item._id}')"><i class="fas fa-trash"></i> Remove Listing</button>
-                                </div>
-                            ` : `
+                                </div>` : `
                                 <div class="card-actions">
                                     <button class="btn btn-success btn-sm w-100 rounded-pill fw-bold" onclick="window.location.href='property.html?id=${item._id}'">View Details</button>
-                                </div>
-                            `}
+                                </div>`
+                            }
                         </div>
                     </div>
                 </div>
-            `;
-        }
-    </script>
-</body>
+                `;
+            }
+        </script>
+    </body>
 </html>

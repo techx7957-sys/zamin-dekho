@@ -14,7 +14,6 @@ const LeadSchema = new mongoose.Schema({
         ref: 'Listing', 
         required: true 
     },
-    // 🌟 NAYA: Kis Broker/Admin ko ye lead mili hai? (Tracking ke liye)
     assignedBroker: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
@@ -25,11 +24,10 @@ const LeadSchema = new mongoose.Schema({
     // ==========================================
     status: { 
         type: String, 
-        // 🌟 NAYA: 'Negotiation' aur 'Rejected' add kiya proper deal flow ke liye
-        enum: ['Pending', 'Contacted', 'Site Visit Scheduled', 'Negotiation', 'Closed', 'Rejected'], 
+        // 🌟 NAYA: 'Token Paid' aur 'Reserved' add kiya Amazon-style booking ke liye
+        enum: ['Pending', 'Contacted', 'Site Visit Scheduled', 'Negotiation', 'Token Paid', 'Reserved', 'Closed', 'Rejected'], 
         default: 'Pending' 
     },
-    // 🌟 NAYA: Inquiry kis type ki hai?
     leadType: {
         type: String,
         enum: ['Buy Interest', 'General Inquiry'],
@@ -43,15 +41,37 @@ const LeadSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
-    // 🌟 NAYA: Agar site visit fix hui, toh kis date ko hai?
     scheduledVisitDate: {
         type: Date
     },
-    // 🌟 NAYA: Broker ko yaad dilane ke liye ki next call kab karni hai
     nextFollowUpDate: {
         type: Date
+    },
+
+    // ==========================================
+    // 🌟 4. NAYA: PAYMENT & BOOKING SYSTEM (Token Tracking)
+    // ==========================================
+    tokenAmount: {
+        type: Number,
+        default: 0 // Default 0 jab tak koi payment fix na ho
+    },
+    paymentStatus: {
+        type: String,
+        enum: ['Pending', 'Paid', 'Failed', 'Refunded'],
+        default: 'Pending'
+    },
+    transactionId: {
+        type: String, // Payment Gateway (Jaise Razorpay) ka Transaction ID aayega yahan
+        default: ""
+    },
+    paymentMethod: {
+        type: String, // e.g., 'UPI', 'Credit Card', 'Bank Transfer'
+        default: ""
+    },
+    bookingDate: {
+        type: Date // Jab payment successful ho jaye, tab yeh date set hogi
     }
 
-}, { timestamps: true }); // timestamps auto 'createdAt' aur 'updatedAt' bana dega
+}, { timestamps: true }); 
 
 module.exports = mongoose.model('Lead', LeadSchema);

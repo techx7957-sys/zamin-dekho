@@ -41,7 +41,7 @@ exports.updateLeadStatus = async (req, res) => {
             return res.status(403).json({ success: false, message: "Aap authorized nahi hain!" });
         }
 
-        // 🌟 NAYA: Advanced CRM Fields ko bhi update karna
+        // 🌟 Advanced CRM Fields ko bhi update karna
         const { status, brokerNotes, scheduledVisitDate, nextFollowUpDate } = req.body;
 
         const lead = await Lead.findByIdAndUpdate(
@@ -64,8 +64,29 @@ exports.updateLeadStatus = async (req, res) => {
 };
 
 // ==========================================
-// 3. 🌟 NAYA: APPROVE OR REJECT PROPERTY LISTINGS
+// 🌟 3. GET PENDING PROPERTIES
 // ==========================================
+exports.getPendingProperties = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: "Only Admins can view pending properties!" });
+        }
+
+        // Sirf Pending properties nikalo
+        const properties = await Listing.find({ approvalStatus: 'Pending' })
+            .populate('postedBy', 'fullName')
+            .sort({ createdAt: -1 });
+
+        res.json({ success: true, properties });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// ==========================================
+// 🌟 4. APPROVE OR REJECT PROPERTY LISTINGS (FIXED NAME)
+// ==========================================
+// 🌟 FIX: Iska naam 'updatePropertyApproval' kar diya taaki Route se match kare
 exports.updatePropertyApproval = async (req, res) => {
     try {
         // Sirf Admin hi property approve kar sakta hai
@@ -73,24 +94,25 @@ exports.updatePropertyApproval = async (req, res) => {
             return res.status(403).json({ success: false, message: "Only Admins can approve listings!" });
         }
 
-        const { approvalStatus } = req.body; // 'Approved' or 'Rejected'
+        // 🌟 Frontend se abhi "status" naam se data aa raha hai
+        const { status } = req.body; // 'Approved' or 'Rejected'
 
         const listing = await Listing.findByIdAndUpdate(
             req.params.id,
-            { approvalStatus },
+            { approvalStatus: status },
             { new: true }
         );
 
         if (!listing) return res.status(404).json({ success: false, message: "Listing not found!" });
 
-        res.json({ success: true, listing, message: `Listing is now ${approvalStatus}! 🏠` });
+        res.json({ success: true, listing, message: `Listing is now ${status}! 🏠` });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 };
 
 // ==========================================
-// 4. 🌟 NAYA: ADMIN DASHBOARD STATS ENGINE
+// 5. ADMIN DASHBOARD STATS ENGINE
 // ==========================================
 exports.getDashboardStats = async (req, res) => {
     try {
