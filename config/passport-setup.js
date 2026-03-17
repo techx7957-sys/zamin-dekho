@@ -26,9 +26,9 @@ passport.deserializeUser(async (id, done) => {
 passport.use(
     new GoogleStrategy(
         {
-            clientID: process.env.GOOGLE_CLIENT_ID || "dummy_google_id",
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET || "dummy_google_secret",
-            // 🌟 FIX 1: Pura aur exact Vercel link daal diya!
+            // Yahan humne process.env wapas laga diya hai (SAFE)
+            clientID: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
             callbackURL: "https://zamin-dekho-m5iq.vercel.app/api/auth/google/callback",
             proxy: true,
         },
@@ -62,9 +62,9 @@ passport.use(
 passport.use(
     new TwitterStrategy(
         {
-            clientID: "aGhWeWdEWFhuMFpYa21tM3BHM1I6MTpjYQ",
-            clientSecret: "B3YonViTiwX7_XDqk7zIukK7Kg4vQa6MNOYdHryrs45Il7wN-",
-            // 🌟 FIX 2: Purana Replit link hatakar naya Vercel link daal diya!
+            // Twitter ke bhi secrets hum environment variables se lenge (SAFE)
+            clientID: process.env.TWITTER_CLIENT_ID,
+            clientSecret: process.env.TWITTER_CLIENT_SECRET,
             callbackURL: "https://zamin-dekho-m5iq.vercel.app/api/auth/twitter/callback",
             clientType: "confidential",
             pkce: true,
