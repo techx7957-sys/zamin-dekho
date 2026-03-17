@@ -27,9 +27,9 @@ passport.use(
     new GoogleStrategy(
         {
             clientID: process.env.GOOGLE_CLIENT_ID || "dummy_google_id",
-            clientSecret:
-                process.env.GOOGLE_CLIENT_SECRET || "dummy_google_secret",
-            callbackURL: "/api/auth/google/callback",
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET || "dummy_google_secret",
+            // 🌟 FIX 1: Pura aur exact Vercel link daal diya!
+            callbackURL: "https://zamin-dekho-m5iq.vercel.app/api/auth/google/callback",
             proxy: true,
         },
         async (accessToken, refreshToken, profile, done) => {
@@ -45,7 +45,6 @@ passport.use(
                         authProvider: "google",
                         role: "buyer",
                         isActive: true,
-                        // 🌟 FIX: CRM crashes rokne ke liye default phone number
                         phone: "Not Provided",
                     });
                 }
@@ -63,22 +62,14 @@ passport.use(
 passport.use(
     new TwitterStrategy(
         {
-            // Aapki asli Client ID:
             clientID: "aGhWeWdEWFhuMFpYa21tM3BHM1I6MTpjYQ",
-
-            // 🌟 FIX: Yahan value aur comma (,) miss ho gaya tha!
-            // 👇 YAHAN APNA ASLI SECRET CODE DALIYE 👇
             clientSecret: "B3YonViTiwX7_XDqk7zIukK7Kg4vQa6MNOYdHryrs45Il7wN-",
-
-            callbackURL:
-                "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev/api/auth/twitter/callback",
-
+            // 🌟 FIX 2: Purana Replit link hatakar naya Vercel link daal diya!
+            callbackURL: "https://zamin-dekho-m5iq.vercel.app/api/auth/twitter/callback",
             clientType: "confidential",
             pkce: true,
             state: true,
             proxy: true,
-
-            // Strict OAuth 2.0 Endpoints
             authorizationURL: "https://twitter.com/i/oauth2/authorize",
             tokenURL: "https://api.twitter.com/2/oauth2/token",
         },
@@ -92,14 +83,12 @@ passport.use(
                 let user = await User.findOne({ email: email });
                 if (!user) {
                     user = await User.create({
-                        fullName:
-                            profile.displayName || profile.username || "X User",
+                        fullName: profile.displayName || profile.username || "X User",
                         email: email,
                         password: Math.random().toString(36).slice(-10),
                         authProvider: "twitter",
                         role: "buyer",
                         isActive: true,
-                        // 🌟 FIX: CRM crashes rokne ke liye default phone number
                         phone: "Not Provided",
                     });
                 }
