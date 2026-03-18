@@ -1,10 +1,5 @@
 const vision = require('@google-cloud/vision');
 
-// 🌟 THE VERCEL FIX: dotenv ko sirf local par chalao
-if (process.env.NODE_ENV !== 'production') {
-    require('dotenv').config();
-}
-
 let client;
 
 // ==========================================
