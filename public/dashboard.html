@@ -95,11 +95,11 @@
         <h2 class="fw-bold mb-4 text-center" style="font-size: 32px;"><i class="fas fa-th-large text-primary me-2"></i> User Dashboard</h2>
 
         <ul class="nav nav-pills justify-content-center mb-5 flex-wrap" id="dashboardTabs">
-            <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#postTab"><i class="fas fa-plus-circle me-2"></i> Post Property</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#visitsTab" onclick="loadSiteVisits()"><i class="fas fa-map-marked-alt me-2"></i> Site Visits</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#myListingsTab" onclick="loadMyListings()"><i class="fas fa-home me-2"></i> My Listings</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#savedTab" onclick="loadSavedListings()"><i class="fas fa-heart me-2"></i> Favorites</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#bookingsTab" onclick="loadMyBookings()"><i class="fas fa-file-invoice-dollar me-2"></i> Bookings</button></li>
+            <li class="nav-item"><button class="nav-link active" id="btn-postTab" onclick="switchTab('#postTab')"><i class="fas fa-plus-circle me-2"></i> Post Property</button></li>
+            <li class="nav-item"><button class="nav-link" id="btn-visitsTab" onclick="switchTab('#visitsTab')"><i class="fas fa-map-marked-alt me-2"></i> Site Visits</button></li>
+            <li class="nav-item"><button class="nav-link" id="btn-myListingsTab" onclick="switchTab('#myListingsTab')"><i class="fas fa-home me-2"></i> My Listings</button></li>
+            <li class="nav-item"><button class="nav-link" id="btn-savedTab" onclick="switchTab('#savedTab')"><i class="fas fa-heart me-2"></i> Favorites</button></li>
+            <li class="nav-item"><button class="nav-link" id="btn-bookingsTab" onclick="switchTab('#bookingsTab')"><i class="fas fa-file-invoice-dollar me-2"></i> Bookings</button></li>
         </ul>
 
         <div class="tab-content">
@@ -198,26 +198,22 @@
 
             <div class="tab-pane fade" id="visitsTab">
                 <div class="row g-4" id="visitsGrid">
-                    <div class="text-center w-100 py-5"><div class="spinner-border text-primary"></div></div>
-                </div>
+                    </div>
             </div>
 
             <div class="tab-pane fade" id="myListingsTab">
                 <div class="row g-4" id="myListingsGrid">
-                    <div class="text-center w-100 py-5"><div class="spinner-border text-success"></div></div>
-                </div>
+                   </div>
             </div>
 
             <div class="tab-pane fade" id="savedTab">
                 <div class="row g-4" id="savedGrid">
-                    <div class="text-center w-100 py-5"><div class="spinner-border text-danger"></div></div>
-                </div>
+                   </div>
             </div>
 
             <div class="tab-pane fade" id="bookingsTab">
                 <div class="row g-4" id="bookingsGrid">
-                    <div class="text-center w-100 py-5"><div class="spinner-border text-info"></div></div>
-                </div>
+                   </div>
             </div>
         </div>
     </div>
@@ -341,23 +337,28 @@
             window.location.href = "login.html";
         }
 
-        // 🚀 THE FIX: Naya update kiya gaya switchTab function
+        // 🚀 BULLETPROOF TAB SWITCHER
         function switchTab(tabId) {
-            // 1. Upar wale Navbar ko active karo
+            // 1. Sync Navbar
             document.querySelectorAll('#zaminNav .nav-link').forEach(link => link.classList.remove('active'));
             const activeNav = document.querySelector(`#zaminNav .nav-link[href="${tabId}"]`);
             if(activeNav) activeNav.classList.add('active');
 
-            // 2. Neeche wale Dashboard Tab ko safely open karo
-            const targetBtn = document.querySelector(`button[data-bs-target="${tabId}"]`);
-            if (targetBtn) {
-                const bsTab = new bootstrap.Tab(targetBtn);
-                bsTab.show();
-            }
+            // 2. Sync Dashboard Pills
+            document.querySelectorAll('#dashboardTabs .nav-link').forEach(link => link.classList.remove('active'));
+            const activePill = document.getElementById(`btn-${tabId.replace('#', '')}`);
+            if(activePill) activePill.classList.add('active');
+
+            // 3. Show correct content panel
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.remove('show', 'active');
+            });
+            const activePane = document.querySelector(tabId);
+            if(activePane) activePane.classList.add('show', 'active');
 
             window.location.hash = tabId;
 
-            // 3. Data ko forcibly load karo taaki Loading Dot na atke!
+            // 4. Safely trigger data load
             if (tabId === '#visitsTab') loadSiteVisits();
             else if (tabId === '#myListingsTab') loadMyListings();
             else if (tabId === '#savedTab') loadSavedListings();
@@ -365,17 +366,18 @@
         }
 
         // ==========================================
-        // 🌟 2. SITE VISITS & DEAL ROOM REDIRECT
+        // 🌟 2. BULLETPROOF DATA FETCHING
         // ==========================================
+
         async function loadSiteVisits() {
             const grid = document.getElementById('visitsGrid');
-            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-primary" role="status"></div></div>';
+            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-primary" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Visits...</p></div>';
 
             try {
                 const res = await fetch(`${API_URL}/leads/my-visits`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
                 const data = await res.json();
 
-                if (data.success && data.visits.length > 0) {
+                if (data.success && data.visits && data.visits.length > 0) {
                     grid.innerHTML = data.visits.map(visit => {
                         const prop = visit.property;
                         return `
@@ -404,8 +406,156 @@
                     grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-map-marked-alt fs-1 d-block mb-3 text-secondary opacity-50"></i> No upcoming site visits scheduled.</div>`;
                 }
             } catch(e) {
-                grid.innerHTML = `<div class="text-center text-danger w-100 py-5 fw-bold"><i class="fas fa-wifi mb-2 fs-1"></i><br>Error connecting to Zamin servers.</div>`;
+                grid.innerHTML = `<div class="text-center text-danger w-100 py-5 fw-bold"><i class="fas fa-exclamation-circle mb-2 fs-1"></i><br>Error connecting to Zamin servers.</div>`;
             }
+        }
+
+        async function loadMyListings() {
+            const grid = document.getElementById("myListingsGrid");
+            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-success" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Your Properties...</p></div>';
+
+            try {
+                const res = await fetch(`${API_URL}/listings/my-listings`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
+                const data = await res.json();
+                const items = data.listings || data.data || [];
+
+                if (items.length > 0) {
+                    const validItems = items.filter(i => i !== null);
+                    grid.innerHTML = validItems.map((item) => generateCardHTML(item, true)).join("");
+                } else {
+                    grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-folder-open fs-1 d-block mb-3 opacity-50"></i> You haven't posted any properties yet.</div>`;
+                }
+            } catch (e) { 
+                grid.innerHTML = `<div class="text-center text-danger py-5 fw-bold"><i class="fas fa-exclamation-circle fs-2 mb-2"></i><br>Network Error! Please try again.</div>`; 
+            }
+        }
+
+        async function loadSavedListings() {
+            const grid = document.getElementById("savedGrid");
+            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-danger" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Favorites...</p></div>';
+
+            try {
+                const res = await fetch(`${API_URL}/listings/saved-listings`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
+                const data = await res.json();
+                const items = data.listings || data.savedListings || data.favorites || data.data || [];
+
+                if (items.length > 0) {
+                    const validItems = items.filter(i => i !== null);
+                    if(validItems.length > 0) {
+                        grid.innerHTML = validItems.map((item) => generateCardHTML(item, false)).join("");
+                    } else {
+                        grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-heart-broken fs-1 d-block mb-3 opacity-50"></i> The properties you saved have been removed.</div>`;
+                    }
+                } else {
+                    grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-heart-broken fs-1 d-block mb-3 opacity-50"></i> No favorite properties saved yet.</div>`;
+                }
+            } catch (e) { 
+                grid.innerHTML = `<div class="text-center text-danger py-5 fw-bold"><i class="fas fa-exclamation-circle fs-2 mb-2"></i><br>Network Error! Please try again.</div>`; 
+            }
+        }
+
+        async function loadMyBookings() {
+            const grid = document.getElementById("bookingsGrid");
+            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-info" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Bookings...</p></div>';
+
+            try {
+                const res = await fetch(`${API_URL}/listings/my-bookings`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
+                const data = await res.json();
+
+                if (data.bookings && data.bookings.length > 0) {
+                    grid.innerHTML = data.bookings.map((lead) => {
+                        const item = lead.property;
+                        if (!item) return ""; // Skip if property was deleted
+
+                        let imgSource = item.imageUrl || "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
+
+                        // Rating Trigger
+                        const brokerId = lead.assignedBroker ? lead.assignedBroker._id || lead.assignedBroker : null;
+                        const rateBtn = brokerId ? `<button class="btn btn-warning btn-sm w-100 mt-2 fw-bold text-dark border-0 shadow-sm" onclick="openRateModal('${brokerId}')"><i class="fas fa-star me-1"></i> Rate Broker Service</button>` : '';
+
+                        return `
+                        <div class="col-lg-6">
+                            <div class="property-card" style="display:flex; flex-direction:row; height:auto; align-items: stretch; border: 2px solid #e2e8f0;">
+                                <div style="width: 160px; flex-shrink: 0; border-right: 1px solid #e2e8f0;">
+                                    <img src="${imgSource}" style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                                <div class="p-3 w-100 d-flex flex-column justify-content-between">
+                                    <div>
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <span class="badge bg-success mb-1 py-2 px-3 shadow-sm"><i class="fas fa-check-circle me-1"></i> ${lead.status || "Token Paid"}</span>
+                                            <h5 class="fw-bold text-success m-0" style="font-family:'JetBrains Mono', monospace;">₹ ${Number(lead.tokenAmount || 100000).toLocaleString("en-IN")}</h5>
+                                        </div>
+                                        <h6 class="fw-bold text-dark text-truncate mb-1 lh-base">${item.landName}</h6>
+                                        <p class="text-muted small mb-0 text-truncate"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address}</p>
+                                    </div>
+                                    <div class="mt-3 border-top pt-3">
+                                        <button class="btn btn-outline-dark btn-sm w-100 fw-bold" onclick="window.location.href='property.html?id=${item._id}'">View Property</button>
+                                        ${rateBtn}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    }).join("");
+                } else {
+                    grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-file-invoice-dollar fs-1 d-block mb-3 opacity-50"></i> You haven't booked any properties yet.</div>`;
+                }
+            } catch (e) { 
+                grid.innerHTML = `<div class="text-center text-danger w-100 py-5 fw-bold"><i class="fas fa-exclamation-circle fs-2 mb-2"></i><br>Error loading bookings.</div>`; 
+            }
+        }
+
+        function generateCardHTML(item, isMyListing) {
+            if (!item) return ''; // Safety check for null items
+
+            let imgSource = item.imageUrl;
+            if (imgSource && !imgSource.startsWith("http")) {
+                imgSource = imgSource.replace(/\\/g, "/");
+                imgSource = BASE_SERVER_URL + (imgSource.startsWith("/") ? imgSource.substring(1) : imgSource);
+            }
+            const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
+            if (!imgSource) imgSource = fallbackImg;
+
+            let dimBadge = "";
+            if (item.length || item.breadth) dimBadge = `<span class="badge bg-light text-dark border ms-1"><i class="fas fa-ruler-combined text-primary me-1"></i> ${item.length || "-"} x ${item.breadth || "-"}</span>`;
+
+            let badgeHTML = "";
+            if (isMyListing) {
+                const status = item.approvalStatus || "Pending";
+                let statusClass = "status-pending";
+                if (status === "Approved") statusClass = "status-approved";
+                if (status === "Rejected") statusClass = "status-rejected";
+                badgeHTML = `<div class="status-badge ${statusClass}"><i class="fas ${status === "Approved" ? "fa-check-circle" : "fa-clock"} me-1"></i> ${status}</div>`;
+            }
+
+            return `
+            <div class="col-lg-4 col-md-6">
+                <div class="property-card">
+                    ${badgeHTML}
+                    <img src="${imgSource}" onerror="this.src='${fallbackImg}'" class="property-img" style="cursor:pointer;" onclick="window.location.href='property.html?id=${item._id}'">
+                    <div class="p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h3 class="fw-bold text-success m-0" style="font-family: 'JetBrains Mono', monospace;">₹ ${Number(item.landPrice || 0).toLocaleString("en-IN")}</h3>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center mb-3">
+                            ${item.landSize && item.landSize !== "Not Specified" ? `<span class="badge bg-light text-dark border px-2 py-1"><i class="fas fa-vector-square text-primary me-1"></i> ${item.landSize}</span>` : ""}
+                            ${dimBadge}
+                        </div>
+                        <h5 class="fw-bold text-dark text-truncate lh-base">${item.landName || 'Property'}</h5>
+                        <p class="text-muted small m-0 fw-medium"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address || 'India'}</p>
+
+                        ${isMyListing ? `
+                            <div class="card-actions mt-4 border-top pt-3">
+                                <button class="btn btn-outline-danger btn-sm rounded-pill fw-bold w-100" onclick="deleteListing('${item._id}')"><i class="fas fa-trash me-1"></i> Remove Ad</button>
+                            </div>` : `
+                            <div class="card-actions mt-4 border-top pt-3">
+                                <button class="btn btn-dark w-100 rounded-pill fw-bold" onclick="window.location.href='property.html?id=${item._id}'">Open Details</button>
+                            </div>`
+                        }
+                    </div>
+                </div>
+            </div>
+            `;
         }
 
         // ==========================================
@@ -553,7 +703,7 @@
                         icon: 'success',
                         confirmButtonColor: '#10b981'
                     }).then(() => {
-                        window.location.reload(); // Reset state
+                        window.location.reload(); 
                     });
                 } else if (data.isFraud) {
                     Swal.fire({
@@ -570,37 +720,6 @@
             btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i> POST PROPERTY FOR REVIEW';
         }
 
-        // ==========================================
-        // 🌟 5. FETCH DATA FUNCTIONS
-        // ==========================================
-        async function loadMyListings() {
-            const grid = document.getElementById("myListingsGrid");
-            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-success" role="status"></div></div>';
-            try {
-                const res = await fetch(`${API_URL}/listings/my-listings`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
-                const data = await res.json();
-                if (data.listings && data.listings.length > 0) {
-                    grid.innerHTML = data.listings.map((item) => generateCardHTML(item, true)).join("");
-                } else {
-                    grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-folder-open fs-1 d-block mb-3 opacity-50"></i> You haven't posted any properties yet.</div>`;
-                }
-            } catch (e) { grid.innerHTML = `<div class="text-center text-danger py-5 fw-bold">Error loading data.</div>`; }
-        }
-
-        async function loadSavedListings() {
-            const grid = document.getElementById("savedGrid");
-            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-danger" role="status"></div></div>';
-            try {
-                const res = await fetch(`${API_URL}/listings/saved-listings`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
-                const data = await res.json();
-                if (data.listings && data.listings.length > 0) {
-                    grid.innerHTML = data.listings.map((item) => generateCardHTML(item, false)).join("");
-                } else {
-                    grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-heart-broken fs-1 d-block mb-3 opacity-50"></i> No favorite properties saved yet.</div>`;
-                }
-            } catch (e) { grid.innerHTML = `<div class="text-center text-danger py-5 fw-bold">Error loading data.</div>`; }
-        }
-
         async function deleteListing(id) {
             const result = await Swal.fire({ title: 'Remove Property?', text: "This action is permanent.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' });
             if (result.isConfirmed) {
@@ -613,108 +732,8 @@
             }
         }
 
-        async function loadMyBookings() {
-            const grid = document.getElementById("bookingsGrid");
-            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-info" role="status"></div></div>';
-            try {
-                const res = await fetch(`${API_URL}/listings/my-bookings`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
-                const data = await res.json();
-
-                if (data.bookings && data.bookings.length > 0) {
-                    grid.innerHTML = data.bookings.map((lead) => {
-                        const item = lead.property;
-                        if (!item) return "";
-
-                        let imgSource = item.imageUrl || "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
-                        const date = new Date(lead.bookingDate || lead.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-
-                        // Rating Trigger
-                        const brokerId = lead.assignedBroker ? lead.assignedBroker._id || lead.assignedBroker : null;
-                        const rateBtn = brokerId ? `<button class="btn btn-warning btn-sm w-100 mt-2 fw-bold text-dark border-0 shadow-sm" onclick="openRateModal('${brokerId}')"><i class="fas fa-star me-1"></i> Rate Broker Service</button>` : '';
-
-                        return `
-                        <div class="col-lg-6">
-                            <div class="property-card" style="display:flex; flex-direction:row; height:auto; align-items: stretch; border: 2px solid #e2e8f0;">
-                                <div style="width: 160px; flex-shrink: 0; border-right: 1px solid #e2e8f0;">
-                                    <img src="${imgSource}" style="width: 100%; height: 100%; object-fit: cover;">
-                                </div>
-                                <div class="p-3 w-100 d-flex flex-column justify-content-between">
-                                    <div>
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <span class="badge bg-success mb-1 py-2 px-3 shadow-sm"><i class="fas fa-check-circle me-1"></i> ${lead.status || "Token Paid"}</span>
-                                            <h5 class="fw-bold text-success m-0" style="font-family:'JetBrains Mono', monospace;">₹ ${Number(lead.tokenAmount || 100000).toLocaleString("en-IN")}</h5>
-                                        </div>
-                                        <h6 class="fw-bold text-dark text-truncate mb-1 lh-base">${item.landName}</h6>
-                                        <p class="text-muted small mb-0 text-truncate"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address}</p>
-                                    </div>
-                                    <div class="mt-3 border-top pt-3">
-                                        <button class="btn btn-outline-dark btn-sm w-100 fw-bold" onclick="window.location.href='property.html?id=${item._id}'">View Property</button>
-                                        ${rateBtn}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        `;
-                    }).join("");
-                } else {
-                    grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-file-invoice-dollar fs-1 d-block mb-3 opacity-50"></i> You haven't booked any properties yet.</div>`;
-                }
-            } catch (e) { grid.innerHTML = `<div class="text-center text-danger w-100 py-5 fw-bold">Error loading bookings.</div>`; }
-        }
-
-        function generateCardHTML(item, isMyListing) {
-            let imgSource = item.imageUrl;
-            if (imgSource && !imgSource.startsWith("http")) {
-                imgSource = imgSource.replace(/\\/g, "/");
-                imgSource = BASE_SERVER_URL + (imgSource.startsWith("/") ? imgSource.substring(1) : imgSource);
-            }
-            const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
-            if (!imgSource) imgSource = fallbackImg;
-
-            let dimBadge = "";
-            if (item.length || item.breadth) dimBadge = `<span class="badge bg-light text-dark border ms-1"><i class="fas fa-ruler-combined text-primary me-1"></i> ${item.length || "-"} x ${item.breadth || "-"}</span>`;
-
-            let badgeHTML = "";
-            if (isMyListing) {
-                const status = item.approvalStatus || "Pending";
-                let statusClass = "status-pending";
-                if (status === "Approved") statusClass = "status-approved";
-                if (status === "Rejected") statusClass = "status-rejected";
-                badgeHTML = `<div class="status-badge ${statusClass}"><i class="fas ${status === "Approved" ? "fa-check-circle" : "fa-clock"} me-1"></i> ${status}</div>`;
-            }
-
-            return `
-            <div class="col-lg-4 col-md-6">
-                <div class="property-card">
-                    ${badgeHTML}
-                    <img src="${imgSource}" onerror="this.src='${fallbackImg}'" class="property-img" style="cursor:pointer;" onclick="window.location.href='property.html?id=${item._id}'">
-                    <div class="p-4">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h3 class="fw-bold text-success m-0" style="font-family: 'JetBrains Mono', monospace;">₹ ${Number(item.landPrice).toLocaleString("en-IN")}</h3>
-                        </div>
-                        <div class="d-flex flex-wrap align-items-center mb-3">
-                            ${item.landSize && item.landSize !== "Not Specified" ? `<span class="badge bg-light text-dark border px-2 py-1"><i class="fas fa-vector-square text-primary me-1"></i> ${item.landSize}</span>` : ""}
-                            ${dimBadge}
-                        </div>
-                        <h5 class="fw-bold text-dark text-truncate lh-base">${item.landName}</h5>
-                        <p class="text-muted small m-0 fw-medium"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address}</p>
-
-                        ${isMyListing ? `
-                            <div class="card-actions mt-4 border-top pt-3">
-                                <button class="btn btn-outline-danger btn-sm rounded-pill fw-bold w-100" onclick="deleteListing('${item._id}')"><i class="fas fa-trash me-1"></i> Remove Ad</button>
-                            </div>` : `
-                            <div class="card-actions mt-4 border-top pt-3">
-                                <button class="btn btn-dark w-100 rounded-pill fw-bold" onclick="window.location.href='property.html?id=${item._id}'">Open Details</button>
-                            </div>`
-                        }
-                    </div>
-                </div>
-            </div>
-            `;
-        }
-
         // ==========================================
-        // 🌟 6. DETAILED RATING SUBMIT LOGIC (Step 38)
+        // 🌟 5. DETAILED RATING SUBMIT LOGIC (Step 38)
         // ==========================================
         let ratingModal;
         function openRateModal(brokerId) {
@@ -735,7 +754,6 @@
             const brokerId = document.getElementById('ratingBrokerId').value;
             const review = document.getElementById('reviewText').value;
 
-            // Mapped exactly to backend payload
             const payload = {
                 brokerId,
                 professionalBehavior: document.getElementById('rateProf').value,
