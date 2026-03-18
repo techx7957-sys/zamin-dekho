@@ -5,6 +5,7 @@ const listingController = require("../controllers/listingController");
 // 🛡️ Middlewares
 const { verifyToken } = require("../middleware/authMiddleware"); 
 const upload = require("../middleware/upload"); // Multer configuration for Images/Videos
+const { scanImageContent } = require("../middleware/aiImageScanner"); // 🌟 NAYA: AI Scanner Import kiya
 
 // ==========================================
 // 🌍 1. PUBLIC ROUTES (Sab ke liye)
@@ -21,11 +22,12 @@ router.get("/all", listingController.getAllListings);
 // 🔒 2. PROTECTED ROUTES (Sirf logged-in users)
 // ==========================================
 
-// 🌟 FIX: Nayi Property Add karna (With In-App Camera/Video Upload)
+// 🌟 FIX: Nayi Property Add karna (With In-App Camera/Video Upload & AI Scan)
 router.post(
   "/create",
   verifyToken,
   upload.single("image"), // Handles both image and video buffers
+  scanImageContent,       // 🌟 NAYA: Yahan AI pehle check karega ki photo valid hai ya nahi
   listingController.createListing
 );
 

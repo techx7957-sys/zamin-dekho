@@ -13,25 +13,36 @@ cloudinary.config({
 });
 
 // ==========================================
-// 2. SMART STORAGE ENGINE (Images + PDFs)
+// 2. SMART STORAGE ENGINE (Images + Videos + PDFs)
 // ==========================================
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: async (req, file) => {
-        // 🌟 NAYA: Agar user property ke Documents (PDF) upload kar raha hai
+        // 📄 AGAR FILE PDF (DOCUMENTS) HAI
         if (file.mimetype === 'application/pdf') {
             return {
                 folder: 'zamin_dekho_documents',
-                resource_type: 'raw', // PDFs ko Cloudinary 'raw' format mein save karta hai
+                resource_type: 'raw', 
                 format: 'pdf'
             };
         }
 
-        // Default for Images (Photos)
+        // 🎥 🌟 NAYA: AGAR FILE VIDEO / REEL HAI
+        if (file.mimetype.startsWith('video/')) {
+            return {
+                folder: 'zamin_dekho_reels',
+                resource_type: 'video', // Cloudinary ko batao ki ye video hai
+                allowed_formats: ['mp4', 'webm', 'mov'],
+                moderation: 'webpurify' // 🤖 Cloudinary AI Background Moderation (Gandi videos delete karega)
+            };
+        }
+
+        // 📸 DEFAULT FOR IMAGES (PHOTOS)
         return {
             folder: 'zamin_dekho_properties',
             allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-            // 🌟 FIX: 'quality: auto' aur 'fetch_format: auto' lagane se image size 70% kam ho jayega bina quality lose kiye! App makhan chalegi.
+            moderation: 'webpurify', // 🤖 Fallback Moderation
+            // ⚡ Auto-compression: Quality maintain rahegi par size 70% kam ho jayega!
             transformation: [{ width: 1200, crop: "limit", quality: 'auto', fetch_format: 'auto' }] 
         };
     },
@@ -43,8 +54,8 @@ const storage = new CloudinaryStorage({
 const upload = multer({ 
     storage: storage,
     // 🌟 NAYA: File Size Limit (Anti-Spam/Crash Protection)
-    // Ab koi bhi user 5MB se badi photo ya PDF upload nahi kar payega!
-    limits: { fileSize: 5 * 1024 * 1024 } 
+    // Ab user maximum 50MB tak ki files (Reels ke liye) upload kar payega
+    limits: { fileSize: 50 * 1024 * 1024 } 
 });
 
 module.exports = upload;
