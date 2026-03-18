@@ -3,31 +3,26 @@ const vision = require('@google-cloud/vision');
 let client;
 
 // ==========================================
-// 🛡️ GOOGLE VISION SDK INITIALIZATION
+// 🛡️ GOOGLE VISION SDK INITIALIZATION (HACKED)
 // ==========================================
 try {
-    const rawJson = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    // 🚀 THE ULTIMATE FIX: Humne variable ka naam change kar diya hai!
+    // Ab Google ka automatic system isey file path samajh kar crash nahi karega.
+    const rawJson = process.env.GOOGLE_CREDS_JSON;
 
     if (rawJson && rawJson.trim().startsWith('{')) {
-        // 1. JSON String ko Object mein badlo
         const credentials = JSON.parse(rawJson);
 
-        // 2. Vercel ke Newline Bug ko theek karo (Private Key Fix)
         if (credentials.private_key) {
             credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
         }
 
-        // 3. Client ko un credentials ke sath chalu karo
+        // Manually client ko JSON object pass karo
         client = new vision.ImageAnnotatorClient({ credentials });
         console.log("✅ Google Vision SDK Initialized Successfully!");
 
-        // 🚀 4. THE VERCEL CRASH FIX
-        // Client banne ke baad, variable delete kar do taaki Google aage chal ke isey File Path na samjhe
-        delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
-
     } else {
-        console.log("⚠️ Using Local Default Application Credentials.");
-        client = new vision.ImageAnnotatorClient(); 
+        console.log("⚠️ GOOGLE_CREDS_JSON not found or invalid. AI bypassed.");
     }
 } catch (err) {
     console.error("🔥 Google Vision SDK Init Error:", err.message);
@@ -37,7 +32,6 @@ try {
 // 🧠 SMART MEDIA SCANNER (Images + Videos)
 // ==========================================
 const scanMediaContent = async (req, res, next) => {
-    // Agar koi file upload nahi hui, toh aage badho
     if (!req.file) return next();
 
     const fileUrl = req.file.path;
@@ -46,7 +40,6 @@ const scanMediaContent = async (req, res, next) => {
     console.log("🤖 Zamin AI Scanner analyzing media...");
 
     try {
-        // 🛑 FALLBACK: Agar client setup nahi hua toh upload mat roko
         if (!client) {
             console.log("⚠️ AI Client not ready! Bypassing scan.");
             return next();
@@ -100,8 +93,6 @@ const scanMediaContent = async (req, res, next) => {
         // 🎥 2. IF UPLOAD IS A REEL / VIDEO
         else if (mimeType.startsWith('video/')) {
             console.log("🎥 Video detected. Checking size limit...");
-
-            // 50MB limit check
             if (req.file.size > 50 * 1024 * 1024) {
                 return res.status(400).json({ 
                     success: false, 
@@ -110,11 +101,11 @@ const scanMediaContent = async (req, res, next) => {
             }
         }
 
-        next(); // Sab sahi hai, aage badho
+        next();
 
     } catch (error) {
         console.error("🔥 AI Scan Execution Error:", error.message);
-        next(); // API fail ho jaye toh user ko pareshan mat karo
+        next(); 
     }
 };
 
