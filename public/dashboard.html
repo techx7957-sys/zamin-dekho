@@ -341,15 +341,27 @@
             window.location.href = "login.html";
         }
 
+        // 🚀 THE FIX: Naya update kiya gaya switchTab function
         function switchTab(tabId) {
-            const targetBtn = document.querySelector(`button[data-bs-target="${tabId}"]`);
-            if (targetBtn) targetBtn.click();
-
+            // 1. Upar wale Navbar ko active karo
             document.querySelectorAll('#zaminNav .nav-link').forEach(link => link.classList.remove('active'));
             const activeNav = document.querySelector(`#zaminNav .nav-link[href="${tabId}"]`);
             if(activeNav) activeNav.classList.add('active');
 
+            // 2. Neeche wale Dashboard Tab ko safely open karo
+            const targetBtn = document.querySelector(`button[data-bs-target="${tabId}"]`);
+            if (targetBtn) {
+                const bsTab = new bootstrap.Tab(targetBtn);
+                bsTab.show();
+            }
+
             window.location.hash = tabId;
+
+            // 3. Data ko forcibly load karo taaki Loading Dot na atke!
+            if (tabId === '#visitsTab') loadSiteVisits();
+            else if (tabId === '#myListingsTab') loadMyListings();
+            else if (tabId === '#savedTab') loadSavedListings();
+            else if (tabId === '#bookingsTab') loadMyBookings();
         }
 
         // ==========================================
