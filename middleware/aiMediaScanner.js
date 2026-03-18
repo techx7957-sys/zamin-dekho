@@ -1,12 +1,16 @@
 const vision = require('@google-cloud/vision');
 
+// 🌟 THE VERCEL FIX: dotenv ko sirf local par chalao
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+}
+
 let client;
 
 // ==========================================
-// 🛡️ GOOGLE VISION SDK INITIALIZATION (HACKED)
+// 🛡️ GOOGLE VISION SDK INITIALIZATION
 // ==========================================
 try {
-    // 🚀 THE ULTIMATE FIX 1: Variable ka naam change
     const rawJson = process.env.GOOGLE_CREDS_JSON;
 
     if (rawJson && rawJson.trim().startsWith('{')) {
@@ -16,16 +20,13 @@ try {
             credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
         }
 
-        // 🚀 THE SILVER BULLET VERCEL FIX 2: 'fallback: true'
-        // Ye Google ko force karta hai ki heavy C++ (gRPC) module ki jagah 
-        // normal HTTP/REST API use kare, taaki Vercel crash na ho!
+        // 🚀 'fallback: true' to force REST API and prevent gRPC crashes on Vercel
         client = new vision.ImageAnnotatorClient({ 
             credentials,
             fallback: true 
         });
 
         console.log("✅ Google Vision SDK Initialized Successfully (REST Fallback Mode)!");
-
     } else {
         console.log("⚠️ GOOGLE_CREDS_JSON not found or invalid. AI bypassed.");
     }

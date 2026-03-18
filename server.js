@@ -5,7 +5,11 @@ const path = require("path");
 const fs = require("fs");
 const session = require("express-session");
 const passport = require("passport");
-require("dotenv").config();
+
+// 🌟 THE VERCEL FIX: dotenv ko sirf local par chalao
+if (process.env.NODE_ENV !== 'production') {
+    require("dotenv").config();
+}
 
 // Load Passport strategies BEFORE routes
 require("./config/passport-setup");
@@ -160,7 +164,9 @@ function startServer() {
 }
 
 // Start the server locally
-startServer();
+if (process.env.NODE_ENV !== 'production') {
+  startServer();
+}
 
 // Vercel Serverless Environment Export
 module.exports = app;

@@ -1,7 +1,11 @@
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
-require('dotenv').config();
+
+// 🌟 THE VERCEL FIX: dotenv ko sirf local computer par chalao, production par nahi!
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+}
 
 // ==========================================
 // 1. CLOUDINARY CONFIGURATION
