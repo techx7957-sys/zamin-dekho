@@ -77,11 +77,13 @@
             <div class="collapse navbar-collapse" id="zaminNav">
                 <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center align-items-center gap-lg-2">
                     <li class="nav-item"><a class="nav-link" href="index.html">Find Land</a></li>
+
                     <li class="nav-item"><a class="nav-link" href="#postTab" onclick="switchTab('#postTab')">Post Property</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#visitsTab" onclick="loadSiteVisits()">Site Visits</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#myListingsTab" onclick="loadMyListings()">My Listings</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#savedTab" onclick="loadSavedListings()">Favorites</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#bookingsTab" onclick="loadMyBookings()">My Bookings</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#visitsTab" onclick="switchTab('#visitsTab')">Site Visits</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#myListingsTab" onclick="switchTab('#myListingsTab')">My Listings</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#savedTab" onclick="switchTab('#savedTab')">Favorites</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#bookingsTab" onclick="switchTab('#bookingsTab')">My Bookings</a></li>
+
                     <li id="adminLinkArea" class="nav-item"></li>
                 </ul>
                 <div id="authArea" class="auth-area justify-content-center mt-3 mt-lg-0"></div>
