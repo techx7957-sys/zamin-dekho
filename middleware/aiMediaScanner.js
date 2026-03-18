@@ -1,18 +1,31 @@
 const vision = require('@google-cloud/vision');
 
-// 🌟 FIX: Vercel mein JSON string ko directly padhne ka sahi tareeka
+// 🌟 FIX: Vercel JSON format & Private Key Newline Bug
 let client;
 try {
-    if (process.env.GOOGLE_APPLICATION_CREDENTIALS && process.env.GOOGLE_APPLICATION_CREDENTIALS.startsWith('{')) {
-        // Agar Vercel se raw JSON text aa raha hai, toh use parse karo
-        const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
-        client = new vision.ImageAnnotatorClient({ credentials });
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        const keyString = process.env.GOOGLE_APPLICATION_CREDENTIALS.trim();
+
+        if (keyString.startsWith('{')) {
+            // Parse the JSON string
+            const credentials = JSON.parse(keyString);
+
+            // 🚀 THE MAGIC FIX FOR VERCEL CRASH
+            // Vercel private key ke newlines (\n) kharab kar deta hai, usey wapas theek karo
+            if (credentials.private_key) {
+                credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+            }
+
+            client = new vision.ImageAnnotatorClient({ credentials });
+        } else {
+            // Local file fallback
+            client = new vision.ImageAnnotatorClient(); 
+        }
     } else {
-        // Fallback for local testing
-        client = new vision.ImageAnnotatorClient(); 
+        console.log("⚠️ Google Credentials not found in environment variables.");
     }
 } catch (err) {
-    console.log("Google Vision SDK Error:", err.message);
+    console.error("🔥 Google Vision SDK Init Error:", err.message);
 }
 
 const scanMediaContent = async (req, res, next) => {
@@ -55,7 +68,7 @@ const scanMediaContent = async (req, res, next) => {
                 console.log("🧠 AI Sees:", labels.join(", "));
 
                 const validKeywords = ["property", "house", "building", "real estate", "land", "farm", "grass", "architecture", "apartment", "room", "office", "plot", "nature", "field", "interior design"];
-                const restrictedKeywords = ["selfie", "meme", "text", "screenshot", "font", "portrait", "skin", "face"];
+                const restrictedKeywords = ["selfie", "meme", "text", "screenshot", "font", "portrait", "skin", "face", "person"];
 
                 const isProperty = labels.some(tag => validKeywords.some(v => tag.includes(v)));
                 const isRestricted = labels.some(tag => restrictedKeywords.includes(tag));
@@ -74,11 +87,7 @@ const scanMediaContent = async (req, res, next) => {
         // 🎥 2. IF UPLOAD IS A REEL / VIDEO (Background Moderation)
         // ==========================================
         else if (mimeType.startsWith('video/')) {
-            // Videos live scan karne se app hang ho jayegi. 
-            // Inhe hum Cloudinary ke Auto-Moderation queue mein bhejte hain.
             console.log("🎥 Video detected. Sent to background AI moderation.");
-
-            // Yahan hum size check laga sakte hain (e.g., max 50MB)
             if (req.file.size > 50 * 1024 * 1024) {
                 return res.status(400).json({ success: false, message: "🚨 Video size must be less than 50MB." });
             }
