@@ -7,16 +7,19 @@ const LeadSchema = new mongoose.Schema({
     buyer: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'User', 
-        required: true 
+        required: true,
+        index: true // 🚀 FAST QUERY: For Buyer's 'My Bookings' Dashboard
     },
     property: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Listing', 
-        required: true 
+        required: true,
+        index: true 
     },
     assignedBroker: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+        ref: 'User',
+        index: true // 🚀 FAST QUERY: For Broker's CRM Lead Fetching
     },
 
     // ==========================================
@@ -24,9 +27,9 @@ const LeadSchema = new mongoose.Schema({
     // ==========================================
     status: { 
         type: String, 
-        // 🌟 NAYA: 'Token Paid' aur 'Reserved' add kiya Amazon-style booking ke liye
         enum: ['Pending', 'Contacted', 'Site Visit Scheduled', 'Negotiation', 'Token Paid', 'Reserved', 'Closed', 'Rejected'], 
-        default: 'Pending' 
+        default: 'Pending',
+        index: true // 🚀 FAST QUERY: For Admin Stats (e.g., counting 'Token Paid')
     },
     leadType: {
         type: String,
@@ -49,11 +52,19 @@ const LeadSchema = new mongoose.Schema({
     },
 
     // ==========================================
-    // 🌟 4. NAYA: PAYMENT & BOOKING SYSTEM (Token Tracking)
+    // 📍 4. THE DEAL ROOM ENGINE (GPS Security)
+    // ==========================================
+    isPresenceVerified: {
+        type: Boolean,
+        default: false // Becomes true ONLY when buyer's GPS matches Property GPS
+    },
+
+    // ==========================================
+    // 💳 5. PAYMENT & BOOKING SYSTEM (Token Tracking)
     // ==========================================
     tokenAmount: {
         type: Number,
-        default: 0 // Default 0 jab tak koi payment fix na ho
+        default: 0 
     },
     paymentStatus: {
         type: String,
@@ -61,17 +72,19 @@ const LeadSchema = new mongoose.Schema({
         default: 'Pending'
     },
     transactionId: {
-        type: String, // Payment Gateway (Jaise Razorpay) ka Transaction ID aayega yahan
+        type: String, // Razorpay or internal Transaction ID
         default: ""
     },
     paymentMethod: {
-        type: String, // e.g., 'UPI', 'Credit Card', 'Bank Transfer'
+        type: String, 
         default: ""
     },
     bookingDate: {
-        type: Date // Jab payment successful ho jaye, tab yeh date set hogi
+        type: Date 
     }
 
-}, { timestamps: true }); 
+}, { 
+    timestamps: true 
+}); 
 
 module.exports = mongoose.model('Lead', LeadSchema);

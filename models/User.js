@@ -14,19 +14,26 @@ const userSchema = new mongoose.Schema({
         required: true, 
         unique: true,
         trim: true,
-        lowercase: true
+        lowercase: true,
+        index: true // 🚀 FAST QUERY: Makes Login & OTP searches lightning fast
     },
     phone: { 
         type: String, 
-        default: "" 
+        default: "",
+        index: true // 🚀 FAST QUERY: For Mobile Login
     },
     password: { 
         type: String 
     },
+    avatar: { // 🌟 NAYA: Added to support Profile Photo uploads from Frontend
+        type: String,
+        default: ""
+    },
     role: { 
         type: String, 
         enum: ['buyer', 'seller', 'broker', 'admin'], 
-        default: 'buyer' 
+        default: 'buyer',
+        index: true // 🚀 FAST QUERY: For Admin Dashboard filtering
     },
 
     // ==========================================
@@ -37,47 +44,42 @@ const userSchema = new mongoose.Schema({
         enum: ['local', 'google', 'twitter'], 
         default: 'local' 
     },
-    // 🌟 NAYA: Account Status (e.g., Block spam users)
     isActive: {
         type: Boolean,
-        default: true
+        default: true,
+        index: true
     },
 
     // ==========================================
-    // 3. ENGAGEMENT & GROWTH (Masterplan Phase 2)
+    // 3. ENGAGEMENT & GROWTH
     // ==========================================
     savedProperties: [{ 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Listing' 
     }],
-    // 🌟 NAYA: Recently Viewed (Smart suggestions ke liye zaroori)
+    // 🌟 FIX: Synced perfectly with listingController.js logic
     recentlyViewed: [{ 
-        property: { type: mongoose.Schema.Types.ObjectId, ref: 'Listing' },
-        viewedAt: { type: Date, default: Date.now }
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Listing' 
     }],
 
     // ==========================================
     // 4. NOTIFICATIONS & PREFERENCES
     // ==========================================
-    // 🌟 NAYA: Notification settings
     preferences: {
         emailAlerts: { type: Boolean, default: true },
-        smsAlerts: { type: Boolean, default: false }
-    },
-
-    // ==========================================
-    // 5. TIMESTAMPS
-    // ==========================================
-    createdAt: { 
-        type: Date, 
-        default: Date.now 
+        smsAlerts: { type: Boolean, default: false },
+        whatsappAlerts: { type: Boolean, default: true } // Added since we support WhatsApp OTP
     }
+
+}, { 
+    // 🌟 FIX: Auto manages both 'createdAt' and 'updatedAt'
+    timestamps: true 
 });
 
-// 🌟 NAYA: Recently Viewed array ko max 10 properties tak limit karne ka ek chota sa function
+// Auto-cleanup: Keep only the 10 most recent properties to save DB space
 userSchema.pre('save', function(next) {
     if (this.recentlyViewed && this.recentlyViewed.length > 10) {
-        // Keep only the 10 most recent
         this.recentlyViewed = this.recentlyViewed.slice(-10);
     }
     next();

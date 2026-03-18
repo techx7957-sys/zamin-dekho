@@ -1,370 +1,309 @@
 const Listing = require("../models/Listing");
 const Lead = require("../models/Lead");
 const User = require("../models/User");
-const Broker = require("../models/Broker"); // Broker assigning ke liye
+const Broker = require("../models/Broker");
+const jwt = require("jsonwebtoken"); // Needed to safely check optional user sessions
 
 // ==========================================
-// 🌟 1. ADVANCED SMART SEARCH
+// 🔍 1. SMART SEARCH ENGINE & NEARBY DISCOVERY
 // ==========================================
 exports.searchListings = async (req, res) => {
     try {
-        const { keyword, category, maxPrice, types } = req.query;
-        // 🌟 FIX: Sirf Approved AND Available properties search mein dikhengi!
-        let queryConditions = [
-            { approvalStatus: "Approved", bookingStatus: "Available" },
-        ];
+        const { keyword, category, maxPrice, types, bedroom, lat, lng, radius } = req.query;
 
-        if (category && category !== "all types")
-            queryConditions.push({ category: category.toLowerCase() });
-        if (maxPrice && maxPrice !== "0")
-            queryConditions.push({ landPrice: { $lte: Number(maxPrice) } });
+        let query = { 
+            approvalStatus: "Approved", 
+            bookingStatus: "Available" 
+        };
 
+        // 📍 GEO-SPATIAL SEARCH (Nearby Land Discovery)
+        if (lat && lng && lat !== "0" && lng !== "0") {
+            const maxDistance = radius ? parseInt(radius) * 1000 : 50000; // Default 50KM radius
+            query.location = {
+                $near: {
+                    $geometry: { type: "Point", coordinates: [parseFloat(lng), parseFloat(lat)] },
+                    $maxDistance: maxDistance
+                }
+            };
+        }
+
+        // Filters Application
+        if (category && category.toLowerCase() !== "all types") query.category = category.toLowerCase();
+        if (maxPrice && maxPrice !== "0") query.landPrice = { $lte: Number(maxPrice) };
         if (keyword) {
-            queryConditions.push({
-                $or: [
-                    { landName: { $regex: keyword, $options: "i" } },
-                    { address: { $regex: keyword, $options: "i" } },
-                    { extraInfo: { $regex: keyword, $options: "i" } },
-                ],
-            });
+            query.$or = [
+                { landName: { $regex: keyword, $options: "i" } },
+                { address: { $regex: keyword, $options: "i" } },
+                { extraInfo: { $regex: keyword, $options: "i" } }
+            ];
+        }
+        if (bedroom && bedroom !== "") {
+            const bedPattern = bedroom === "3" ? "3|4|5|6" : bedroom;
+            query.extraInfo = { $regex: `${bedPattern}\\s*(BHK|bedroom)`, $options: "i" };
         }
 
-        if (types) {
-            const typesArray = types
-                .split(",")
-                .map((t) => new RegExp(t.trim(), "i"));
-            queryConditions.push({
-                $or: [
-                    { landName: { $in: typesArray } },
-                    { category: { $in: typesArray } },
-                ],
-            });
-        }
+        let listings = await Listing.find(query)
+            .populate('postedBy', 'fullName role')
+            .sort(lat && lng ? {} : { createdAt: -1 }); 
 
-        let finalFilter =
-            queryConditions.length > 0 ? { $and: queryConditions } : {};
-        const listings = await Listing.find(finalFilter).sort({
-            createdAt: -1,
+        // 🚀 QUALITY CONTROL: Sorting by Broker Reputation
+        const flaggedBrokers = await Broker.find({ visibilityReduced: true }).distinct('user');
+        const lowVisIds = flaggedBrokers.map(id => id.toString());
+
+        listings.sort((a, b) => {
+            const aLow = lowVisIds.includes(a.postedBy?._id.toString());
+            const bLow = lowVisIds.includes(b.postedBy?._id.toString());
+            return aLow === bLow ? 0 : aLow ? 1 : -1;
         });
+
         res.json({ success: true, count: listings.length, listings });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Search failed", error: error.message });
+    }
+};
+
+// ==========================================
+// 🏠 1.5 GET ALL LISTINGS (Home Feed)
+// ==========================================
+exports.getAllListings = async (req, res) => {
+    try {
+        const flagged = await Broker.find({ visibilityReduced: true }).select('user');
+        const lowVisIds = flagged.map(b => b.user.toString());
+
+        let listings = await Listing.find({ approvalStatus: "Approved", bookingStatus: "Available" })
+            .populate('postedBy', 'fullName role')
+            .sort({ createdAt: -1 })
+            .limit(50);
+
+        listings.sort((a, b) => {
+            const aLow = lowVisIds.includes(a.postedBy?._id.toString());
+            const bLow = lowVisIds.includes(b.postedBy?._id.toString());
+            return aLow === bLow ? 0 : aLow ? 1 : -1;
+        });
+
+        res.json({ success: true, listings });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+};
+
+// ==========================================
+// 🛠️ 2. PROPERTY CREATION (PRD Step 34)
+// ==========================================
+exports.createListing = async (req, res) => {
+    try {
+        const { landName, address, landPrice, latitude, longitude, capturedInApp } = req.body;
+
+        // 🚨 FRAUD CHECK: Duplicate Prevention
+        const duplicate = await Listing.findOne({ 
+            address: { $regex: new RegExp(`^${address}$`, "i") }, 
+            landPrice 
+        });
+
+        if (duplicate) {
+            return res.status(406).json({ 
+                success: false, 
+                message: "🚨 Error: Yeh property pehle se listed hai!" 
+            });
+        }
+
+        // AI-Driven Auto Category
+        let finalCategory = req.body.category || "residential";
+        const tags = `${landName} ${address}`.toLowerCase();
+        if (tags.match(/office|shop|commercial|mall/)) finalCategory = "commercial";
+        if (tags.match(/farm|agriculture|khet/)) finalCategory = "agricultural";
+
+        // Safe GeoJSON Construction
+        let coordinates = [0, 0];
+        if (longitude && latitude && !isNaN(longitude) && !isNaN(latitude)) {
+            coordinates = [parseFloat(longitude), parseFloat(latitude)];
+        }
+
+        const newListing = new Listing({
+            ...req.body,
+            category: finalCategory,
+            imageUrl: req.file ? req.file.path.replace(/\\/g, '/') : null, // Fix Windows paths
+            postedBy: req.user.id,
+            isMediaAuthentic: capturedInApp === 'true' ? true : false, 
+            location: {
+                type: "Point",
+                coordinates: coordinates
+            },
+            approvalStatus: req.user.role === "admin" ? "Approved" : "Pending"
+        });
+
+        await newListing.save();
+        res.status(201).json({ 
+            success: true, 
+            message: req.user.role === "admin" ? "Property Live ho gayi! 🚀" : "Approval ke liye bhej di gayi hai. ✅" 
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+};
+
+// ==========================================
+// 💳 3. THE BOOKING ENGINE (Legacy Escrow Fallback)
+// ==========================================
+exports.processBooking = async (req, res) => {
+    try {
+        const { transactionId } = req.body;
+        const property = await Listing.findById(req.params.id);
+
+        if (!property || property.bookingStatus !== "Available") {
+            return res.status(400).json({ success: false, message: "Property sold out!" });
+        }
+
+        property.bookingStatus = "Reserved";
+        await property.save();
+
+        const lead = await Lead.findOneAndUpdate(
+            { buyer: req.user.id, property: req.params.id },
+            { 
+                status: "Token Paid",
+                tokenAmount: 100000,
+                transactionId: transactionId || `ZMN-${Date.now()}`,
+                bookingDate: Date.now(),
+                paymentStatus: "Paid"
+            },
+            { upsert: true, new: true }
+        ).populate('property buyer');
+
+        res.json({ 
+            success: true, 
+            message: "Booking Successful! 🎊", 
+            receipt: {
+                txnId: lead.transactionId,
+                prop: lead.property.landName,
+                amount: "₹ 1,00,000"
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 };
 
 // ==========================================
-// 🌟 2. CREATE PROPERTY LISTING & FRAUD CHECK
+// 📞 3.5. INQUIRIES & LEAD GENERATION (Missing Fixed)
 // ==========================================
-exports.createListing = async (req, res) => {
+exports.submitBuyRequest = async (req, res) => {
     try {
-        const { landName, extraInfo, address, landPrice, landSize, length, breadth } = req.body;
-        const text = ((landName || "") + " " + (extraInfo || "")).toLowerCase();
+        const propertyId = req.params.id;
+        const buyerId = req.user.id;
 
-        // ==========================================
-        // 🚨 AI FRAUD DETECTION ENGINE (STEP 32) 🚨
-        // ==========================================
-        // System checks if exact Address, Price, and Size match an existing property
-        if(address && landPrice && landSize) {
-            const duplicateProperty = await Listing.findOne({
-                address: address,
-                landPrice: landPrice,
-                landSize: landSize
+        // Prevent Duplicate Requests
+        const existingLead = await Lead.findOne({ buyer: buyerId, property: propertyId });
+        if (existingLead) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Aapne pehle hi is zamin ke liye request daal di hai!" 
             });
-
-            if (duplicateProperty) {
-                return res.status(406).json({
-                    success: false,
-                    isFraud: true,
-                    message: "🚨 FRAUD ALERT: A property with this exact Address, Price, and Size is already listed. Duplicate/Spam listings are strictly prohibited on Zamin Dekho!"
-                });
-            }
-        }
-        // ==========================================
-
-        let cat = req.body.category || "residential";
-        // Auto-Category detection fallback
-        if (!req.body.category) {
-            if (
-                text.includes("shop") ||
-                text.includes("commercial") ||
-                text.includes("office")
-            )
-                cat = "commercial";
-            if (
-                text.includes("farm") ||
-                text.includes("acre") ||
-                text.includes("agriculture")
-            )
-                cat = "agricultural";
-            if (text.includes("factory") || text.includes("industrial"))
-                cat = "industrial";
         }
 
-        const newListing = new Listing({
-            ...req.body,
-            imageUrl: req.file ? req.file.path : null, // Assuming Cloudinary Multer is handling this
-            category: cat,
-            postedBy: req.user.id,
-            // Property pehle pending mein jayegi, jab tak admin OK na kare (Agar admin post kar raha hai toh direct approved)
-            approvalStatus: req.user.role === "admin" ? "Approved" : "Pending",
+        const newLead = new Lead({
+            buyer: buyerId,
+            property: propertyId,
+            status: 'Pending',
+            leadType: 'Buy Interest'
         });
 
-        await newListing.save();
-        res.status(201).json({
+        await newLead.save();
+
+        res.status(200).json({
             success: true,
-            message:
-                req.user.role === "admin"
-                    ? "Property Live!"
-                    : "Property sent for Admin Approval!",
+            message: "Site Visit Request Sent!",
+            adminPhone: "+919876543210" 
         });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Request failed." });
     }
 };
 
-// ==========================================
-// 🌟 3. GET ALL LISTINGS (Public Feed)
-// ==========================================
-exports.getAllListings = async (req, res) => {
+exports.getMyBookings = async (req, res) => {
     try {
-        // 🌟 FIX: Public feed mein sirf approved AND available zamin dikhengi
-        const listings = await Listing.find({
-            approvalStatus: "Approved",
-            bookingStatus: "Available",
-        }).sort({ createdAt: -1 });
-        res.json({ success: true, count: listings.length, listings });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
+        const bookings = await Lead.find({ buyer: req.user.id })
+            .populate('property')
+            .populate('assignedBroker', 'fullName _id')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({ success: true, bookings });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Failed to fetch bookings." });
     }
 };
 
 // ==========================================
-// 🌟 4. GET SINGLE PROPERTY (And track history)
+// 📄 4. DETAILED VIEW & HISTORY TRACKING
 // ==========================================
 exports.getListingById = async (req, res) => {
     try {
-        const listing = await Listing.findById(req.params.id).populate(
-            "postedBy",
-            "fullName email phone",
-        );
-        if (!listing)
-            return res
-                .status(404)
-                .json({ success: false, message: "Property Not found" });
+        const listing = await Listing.findById(req.params.id)
+            .populate("postedBy", "fullName email phone role");
 
-        // User ki "Recently Viewed" history update karo (AI recommendations ke liye)
-        if (req.user) {
-            const user = await User.findById(req.user.id);
-            if (user) {
-                // Remove if already exists so we can push it to the top
-                user.recentlyViewed = user.recentlyViewed.filter(
-                    (item) => item.property.toString() !== req.params.id,
-                );
-                user.recentlyViewed.push({
-                    property: req.params.id,
-                    viewedAt: Date.now(),
+        if (!listing) return res.status(404).json({ success: false, message: "Property nahi mili" });
+
+        // Safely extract Token if exists (Because this route is Public)
+        if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+            try {
+                const token = req.headers.authorization.split(" ")[1];
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || "zamin-dekho-secret");
+
+                await User.findByIdAndUpdate(decoded.id, {
+                    $addToSet: { recentlyViewed: listing._id }
                 });
-                await user.save();
+            } catch (err) {
+                // Ignore token errors for public views
             }
         }
 
         res.json({ success: true, listing });
     } catch (e) {
-        res.status(500).json({ success: false, error: "Server Error" });
+        res.status(500).json({ success: false, message: "Server Error" });
     }
 };
 
 // ==========================================
-// 🌟 5. BUY REQUEST (The Master Lead Generator)
-// ==========================================
-exports.buyRequest = async (req, res) => {
-    try {
-        const propertyId = req.params.id;
-        const buyerId = req.user.id;
-
-        // Check if user already requested this
-        const existingLead = await Lead.findOne({
-            buyer: buyerId,
-            property: propertyId,
-        });
-        if (existingLead) {
-            return res
-                .status(400)
-                .json({
-                    success: false,
-                    message:
-                        "Aap pehle hi is zamin ke liye request daal chuke hain. Humari team jald hi call karegi.",
-                });
-        }
-
-        // SMART ASSIGNMENT: Kisi khali Broker ko lead de do
-        const availableBroker = await Broker.findOne({
-            isVerified: true,
-            isAcceptingLeads: true,
-        });
-
-        let assignedBrokerId = null;
-        if (availableBroker) {
-            assignedBrokerId = availableBroker.user; // Broker ke User id ko link karna
-        }
-
-        await Lead.create({
-            buyer: buyerId,
-            property: propertyId,
-            assignedBroker: assignedBrokerId,
-        });
-
-        res.json({
-            success: true,
-            message:
-                "Request sent successfully! Our team will contact you shortly.",
-            adminPhone: "+919876543210", // This can be dynamic later
-        });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-};
-
-// ==========================================
-// 🌟 6. NAYA: PROCESS BOOKING (Token Payment Handler)
-// ==========================================
-exports.processBooking = async (req, res) => {
-    try {
-        const propertyId = req.params.id;
-        const buyerId = req.user.id;
-        const { paymentMethod, transactionId } = req.body;
-
-        // Step 1: Check property status first
-        const property = await Listing.findById(propertyId);
-        if (!property)
-            return res
-                .status(404)
-                .json({ success: false, message: "Property not found!" });
-        if (property.bookingStatus !== "Available") {
-            return res
-                .status(400)
-                .json({
-                    success: false,
-                    message:
-                        "Sorry! This property is already Reserved or Sold.",
-                });
-        }
-
-        // Step 2: Lock the Property
-        property.bookingStatus = "Reserved";
-        await property.save();
-
-        // Step 3: Check if Lead exists
-        let lead = await Lead.findOne({ buyer: buyerId, property: propertyId });
-
-        if (lead) {
-            // Update existing lead to Token Paid
-            lead.status = "Token Paid";
-            lead.tokenAmount = 100000;
-            lead.paymentStatus = "Paid";
-            lead.transactionId =
-                transactionId ||
-                `TXN-SIM-${Math.random().toString(36).slice(-8).toUpperCase()}`;
-            lead.paymentMethod = paymentMethod || "Online";
-            lead.bookingDate = Date.now();
-            await lead.save();
-        } else {
-            // Create a brand new lead directly as Token Paid
-            await Lead.create({
-                buyer: buyerId,
-                property: propertyId,
-                status: "Token Paid",
-                leadType: "Buy Interest",
-                tokenAmount: 100000,
-                paymentStatus: "Paid",
-                transactionId:
-                    transactionId ||
-                    `TXN-SIM-${Math.random().toString(36).slice(-8).toUpperCase()}`,
-                paymentMethod: paymentMethod || "Online",
-                bookingDate: Date.now(),
-            });
-        }
-
-        res.json({
-            success: true,
-            message: "Booking confirmed and Property Reserved successfully!",
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-};
-
-// ==========================================
-// 🌟 7. TOGGLE SAVE (Favorite)
+// 🛠️ 5. USER UTILS (Favorites, Deletion & Dashboard)
 // ==========================================
 exports.toggleSave = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
-        if (user.savedProperties.includes(req.params.id)) {
-            user.savedProperties.pull(req.params.id);
-            res.json({ success: true, message: "Removed from favorites" });
-        } else {
-            user.savedProperties.push(req.params.id);
-            res.json({ success: true, message: "Saved to favorites ❤️" });
-        }
+        const isSaved = user.savedProperties.includes(req.params.id);
+
+        if (isSaved) user.savedProperties.pull(req.params.id);
+        else user.savedProperties.push(req.params.id);
+
         await user.save();
-    } catch (e) {
-        res.status(500).json({ success: false, error: "Failed to save" });
-    }
+        res.json({ success: true, isSaved: !isSaved });
+    } catch (e) { res.status(500).json({ success: false, error: "Action failed" }); }
 };
 
-// ==========================================
-// 🌟 8. GET MY POSTED LISTINGS
-// ==========================================
-exports.getMyListings = async (req, res) => {
-    try {
-        const listings = await Listing.find({ postedBy: req.user.id }).sort({
-            createdAt: -1,
-        });
-        res.json({ success: true, count: listings.length, listings });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-};
-
-// ==========================================
-// 🌟 9. GET SAVED/FAVORITE LISTINGS
-// ==========================================
 exports.getSavedListings = async (req, res) => {
     try {
-        // Deep populate to get full property details
-        const user = await User.findById(req.user.id).populate(
-            "savedProperties",
-        );
-        res.json({
-            success: true,
-            count: user.savedProperties.length,
-            listings: user.savedProperties,
+        const user = await User.findById(req.user.id).populate('savedProperties');
+        res.status(200).json({ success: true, listings: user.savedProperties });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Failed to fetch favorites." });
+    }
+};
+
+exports.deleteListing = async (req, res) => {
+    try {
+        const result = await Listing.findOneAndDelete({ 
+            _id: req.params.id, 
+            postedBy: req.user.id 
         });
+
+        if (!result) return res.status(403).json({ success: false, message: "Permission Denied" });
+        res.json({ success: true, message: "Property deleted!" });
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
     }
 };
 
-// ==========================================
-// 🌟 10. DELETE MY LISTING
-// ==========================================
-exports.deleteListing = async (req, res) => {
+exports.getMyListings = async (req, res) => {
     try {
-        const deletedListing = await Listing.findOneAndDelete({
-            _id: req.params.id,
-            postedBy: req.user.id,
-        });
-        if (!deletedListing)
-            return res
-                .status(404)
-                .json({
-                    success: false,
-                    message: "Listing not found or you are not authorized",
-                });
-
-        res.json({ success: true, message: "Property Deleted Successfully!" });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
+        const listings = await Listing.find({ postedBy: req.user.id }).sort({ createdAt: -1 });
+        res.json({ success: true, listings });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 };

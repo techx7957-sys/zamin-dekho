@@ -2,47 +2,88 @@ const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/adminController");
 
-// 🌟 FIX: 'protect' ki jagah sahi naam 'verifyToken' use kiya hai
+// Security Middleware
 const { verifyToken, authorizeRoles } = require("../middleware/authMiddleware");
 
 // ==========================================
-// 1. LEAD & CRM MANAGEMENT (Brokers & Admins)
+// 📊 1. DASHBOARD & REVENUE STATS
 // ==========================================
 
-// Route to fetch all leads (Role check: Only Admin & Broker allowed)
-router.get(
-  "/leads",
-  verifyToken,
-  authorizeRoles("admin", "broker"),
-  adminController.getAllLeads,
-);
-
-// Route to update a specific lead's status, notes, and dates
-router.put(
-  "/leads/:id",
-  verifyToken,
-  authorizeRoles("admin", "broker"),
-  adminController.updateLeadStatus,
-);
-
-// ==========================================
-// 2. PLATFORM CONTROLS (Admins Only)
-// ==========================================
-
-// 🌟 NAYA: Route to fetch Admin Dashboard Statistics (Total Users, Sales, etc.)
+// Route: Get Admin Dashboard Statistics (Leads, Revenue, Alerts)
 router.get(
   "/stats",
   verifyToken,
   authorizeRoles("admin"),
-  adminController.getDashboardStats,
+  adminController.getDashboardStats
 );
 
-// 🌟 NAYA: Route to Approve or Reject a Property Listing
+// ==========================================
+// 📞 2. CRM & LEAD MANAGEMENT (Admins & Brokers)
+// ==========================================
+
+// Route: Fetch all leads (Broker sees assigned, Admin sees all)
+router.get(
+  "/leads",
+  verifyToken,
+  authorizeRoles("admin", "broker"),
+  adminController.getAllLeads
+);
+
+// Route: Update Lead Pipeline (Status, Notes, Follow-ups)
 router.put(
-  "/property-approve/:id",
+  "/lead/:id",
+  verifyToken,
+  authorizeRoles("admin", "broker"),
+  adminController.updateLeadStatus
+);
+
+// ==========================================
+// 🏠 3. PROPERTY APPROVAL QUEUE (Admins Only)
+// ==========================================
+
+// Route: Get all listings waiting for review
+router.get(
+  "/pending-properties",
   verifyToken,
   authorizeRoles("admin"),
-  adminController.updatePropertyApproval,
+  adminController.getPendingProperties
+);
+
+// 🌟 FIX: URL path corrected to match frontend fetch call (/approve-property)
+// Route: Approve or Reject a Property Listing
+router.put(
+  "/approve-property/:id",
+  verifyToken,
+  authorizeRoles("admin"),
+  adminController.updatePropertyApproval
+);
+
+// ==========================================
+// 🚨 4. QUALITY CONTROL & BROKER COMPLIANCE (Step 40)
+// ==========================================
+
+// Route: Get brokers with low ratings or complaints
+router.get(
+  "/quality-alerts",
+  verifyToken,
+  authorizeRoles("admin"),
+  adminController.getFlaggedBrokers
+);
+
+// Route: Issue official warning to a broker (Strike System)
+router.post(
+  "/broker-warning/:id",
+  verifyToken,
+  authorizeRoles("admin"),
+  adminController.issueBrokerWarning
+);
+
+// Route: Toggle Broker Visibility (Shadowban/Restore)
+router.put(
+  "/toggle-visibility/:id",
+  verifyToken,
+  authorizeRoles("admin"),
+  adminController.toggleVisibility
 );
 
 module.exports = router;

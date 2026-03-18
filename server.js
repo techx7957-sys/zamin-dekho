@@ -10,65 +10,42 @@ require("dotenv").config();
 // Load Passport strategies BEFORE routes
 require("./config/passport-setup");
 
-// Route Imports
+// 🌟 Proper Route Imports (Modular Architecture)
 const authRoutes = require("./routes/authRoutes");
 const listingRoutes = require("./routes/listingRoutes");
 const adminRoutes = require("./routes/adminRoutes");
-const paymentRoutes = require("./paymentRoutes");// 🌟 NAYA: Payment Route Import Kiya
+const brokerRoutes = require("./routes/brokerRoutes"); 
+const paymentRoutes = require("./routes/paymentRoutes"); 
+
+// Controller Imports for routes that don't have a dedicated router yet
+const leadController = require("./controllers/leadController"); 
+const { verifyToken } = require("./middleware/authMiddleware");
 
 const app = express();
 
-// Middlewares
+// ==========================================
+// 🛡️ LAYER 1: BASIC SECURITY & PAYLOAD LIMITS
+// ==========================================
+app.disable('x-powered-by'); // Hackers ko mat batao ki hum Express use kar rahe hain
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "10mb" })); // Koi bada data bhej kar server hang na kare
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Session middleware (required for Passport)
+// Session middleware
 app.use(
     session({
-        secret: process.env.JWT_SECRET || "zamin-dekho-secret",
+        secret: process.env.JWT_SECRET || "zamin-dekho-secret-shield",
         resave: false,
         saveUninitialized: false,
-    }),
+    })
 );
 
-// Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Uploads folder public
+// Serve static assets securely
+app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-// ==========================================
-// 🐦 TWITTER (X) LOGIN ROUTES (THE FIX)
-// ==========================================
-// 1. Twitter ko batana ki humein kya access chahiye (Scope)
-app.get(
-    "/api/auth/twitter",
-    passport.authenticate("twitter", {
-        scope: ["tweet.read", "users.read", "offline.access"],
-    }),
-);
-
-// 2. Callback Route: Jab Twitter user ko wapas bheje
-app.get(
-    "/api/auth/twitter/callback",
-    passport.authenticate("twitter", { failureRedirect: "/login.html" }),
-    (req, res) => {
-        const token = req.user._id;
-        const userData = encodeURIComponent(
-            JSON.stringify({
-                _id: req.user._id,
-                fullName: req.user.fullName,
-                role: req.user.role,
-            }),
-        );
-
-        // Frontend par wapas bhej do token ke sath
-        res.redirect(`/?token=${token}&user=${userData}`);
-    },
-);
-// ==========================================
 
 // Database Connection
 mongoose
@@ -80,73 +57,110 @@ mongoose
     .catch((err) => console.log("❌ MongoDB Connection Error:", err));
 
 // ==========================================
-// 🚀 API ROUTES ENGINE
+// 🚀 API ROUTES ENGINE 
 // ==========================================
 app.use("/api/auth", authRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/payment", paymentRoutes); // 🌟 NAYA: Payment API Route link kar diya!
+app.use("/api/broker", brokerRoutes);
+app.use("/api/payment", paymentRoutes);
+
+// LEADS / DEAL ROOM ROUTES (Buyer Facing)
+app.get('/api/leads/my-visits', verifyToken, leadController.getMyVisits);
+app.post('/api/leads/verify-gps/:id', verifyToken, leadController.verifyGPS);
 
 
 // ==========================================
-// 🔒 CUSTOM FRONTEND ROUTING & SECURITY 
+// 🛡️ LAYER 2: ANTI-HACK & FILE PROTECTION
 // ==========================================
-// Ye code ensure karega ki sirf HTML/Images user ko dikhe aur aapke password wgera secure rahein
 app.get("*", (req, res) => {
-
-    // Agar API ka rasta hai, toh ignore karo
+    // 1. API route not found handler
     if (req.originalUrl.startsWith("/api/")) {
-       return res.status(404).json({ success: false, message: "API Route Not Found" });
+        return res.status(404).json({ success: false, message: "API Route Not Found" });
     }
 
-    let filePath = path.join(__dirname, req.path);
+    // 🚨 DIRECTORY TRAVERSAL PROTECTION (Koi hacker ../../ karke files na chura le)
+    if (req.path.includes('..') || req.path.includes('%00')) {
+        return res.status(403).send("🚨 Nice try! Access Denied by Zamin Dekho Firewall.");
+    }
 
-    // Default to index.html if only '/' is requested
+    let filePath = path.join(__dirname, "public", req.path);
+
     if (req.path === "/") {
-        filePath = path.join(__dirname, "index.html");
+        filePath = path.join(__dirname, "public", "index.html");
     }
 
-    // Security Check: Block access to backend files!
-    const blockedFiles = [".env", "server.js", "package.json", "package-lock.json"];
+    // 🛡️ Block access to backend code/config files
+    const blockedFiles = [".env", "server.js", "package.json", "package-lock.json", "vercel.json"];
     const isBlocked = blockedFiles.some(file => filePath.endsWith(file));
+
     const inProtectedFolder = filePath.includes(path.join(__dirname, 'routes')) || 
                               filePath.includes(path.join(__dirname, 'models')) || 
+                              filePath.includes(path.join(__dirname, 'controllers')) || 
                               filePath.includes(path.join(__dirname, 'config')) ||
+                              filePath.includes(path.join(__dirname, 'middleware')) ||
                               filePath.includes(path.join(__dirname, 'node_modules'));
 
     if (isBlocked || inProtectedFolder) {
-        return res.status(403).send("Forbidden: Access Denied");
+        return res.status(403).send("🚨 Forbidden: Access Denied. Zamin Dekho Security.");
     }
 
-    // Serve the file if it exists, otherwise send index.html (useful for simple routing apps)
+    // SPA Fallback
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
         res.sendFile(filePath);
     } else {
-        res.sendFile(path.join(__dirname, "index.html"));
+        res.sendFile(path.join(__dirname, "public", "index.html"));
     }
 });
 
 
-// Port Binding with auto-retry on EADDRINUSE
+// ==========================================
+// 🛡️ LAYER 3: ANTI-CRASH SYSTEM (Global Error Handlers)
+// ==========================================
+
+// Agar express routes ke andar koi error aaye:
+app.use((err, req, res, next) => {
+    console.error("🔥 Route Error Caught:", err.message);
+    res.status(500).json({ success: false, message: "Internal Server Error! Engine is protected." });
+});
+
+// Agar background mein koi asnyc process fat jaye (Crash Preventer):
+process.on('uncaughtException', (err) => {
+    console.error('🚨 UNCAUGHT EXCEPTION! System saved from crashing.', err);
+    // Server chalata rahega
+});
+
+process.on('unhandledRejection', (err) => {
+    console.error('🚨 UNHANDLED REJECTION! System saved from crashing.', err);
+    // Server chalata rahega
+});
+
+
+// ==========================================
+// ⚡ PORT BINDING & SERVER START
+// ==========================================
 const PORT = process.env.PORT || 5000;
 
 function startServer() {
     const server = app.listen(PORT, "0.0.0.0", () => {
-        console.log(`🚀 Zamin Dekho Server is LIVE on port ${PORT}`);
+        console.log(`\n=========================================`);
+        console.log(`🛡️ Zamin Dekho (SECURED) LIVE on port ${PORT}`);
+        console.log(`=========================================\n`);
     });
 
     server.on("error", (err) => {
         if (err.code === "EADDRINUSE") {
-            console.log(`⚠️ Port ${PORT} in use, retrying in 3 seconds...`);
+            console.log(`⚠️ Port ${PORT} is busy, retrying in 3 seconds...`);
             setTimeout(startServer, 3000);
         } else {
             console.error("Server error:", err);
-            process.exit(1);
+            // Don't exit, keep trying
         }
     });
-
-    process.on("SIGTERM", () => server.close(() => process.exit(0)));
-    process.on("SIGINT", () => server.close(() => process.exit(0)));
 }
 
+// Start the server locally
 startServer();
+
+// Vercel Serverless Environment Export
+module.exports = app;

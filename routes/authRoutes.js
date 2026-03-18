@@ -1,53 +1,73 @@
 const express = require("express");
 const router = express.Router();
 const passport = require("passport");
-const authController = require("../controllers/authController");
 
-// 🌟 FIX: Yahan 'auth' ki jagah 'authMiddleware' kar diya hai
+// Controllers & Middleware
+const authController = require("../controllers/authController");
 const { verifyToken } = require("../middleware/authMiddleware");
 
 // ==========================================
-// 1. STANDARD EMAIL & OTP ROUTES
+// 🚀 1. OMNICHANNEL OTP & MAGIC LOGIN (Step 2)
 // ==========================================
-router.post("/send-otp", authController.sendOtp);
+
+// Route: Request OTP (Dispatches to Email, SMS, WhatsApp)
+router.post("/send-multichannel-otp", authController.sendMultichannelOtp);
+
+// Route: Verify OTP and Login (Creates Buyer account auto-magically if new)
+router.post("/verify-otp-login", authController.verifyOtpAndLogin);
+
+
+// ==========================================
+// 📝 2. TRADITIONAL AUTHENTICATION (Forms)
+// ==========================================
+
+// Route: Full Registration (Strictly for Brokers/Sellers with specific Roles & Passwords)
 router.post("/register", authController.register);
+
+// Route: Standard Email/Password Login (Legacy fallback)
 router.post("/login", authController.login);
 
-// ==========================================
-// 🌟 2. PROFILE MANAGEMENT (Checkout ke liye zaroori)
-// ==========================================
-// Agar Google/Twitter user ka phone number nahi hai, toh checkout se pehle update karna padega
-router.get("/me", verifyToken, authController.getMe);
-router.put("/update-profile", verifyToken, authController.updateProfile);
 
 // ==========================================
-// 3. GOOGLE OAUTH 2.0 ROUTES
+// 👤 3. USER PROFILE & SESSION MANAGEMENT
+// ==========================================
+
+// Route: Get Current Logged-in User Data (Used by Dashboard & Checkout)
+router.get("/me", verifyToken, authController.getMe);
+
+// Route: Update Profile (Name, Avatar, Phone)
+router.put("/update-profile", verifyToken, authController.updateProfile);
+
+
+// ==========================================
+// 🌐 4. GOOGLE OAUTH 2.0 ROUTES
 // ==========================================
 router.get(
     "/google",
-    passport.authenticate("google", { scope: ["profile", "email"] }),
+    passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
 router.get(
     "/google/callback",
     passport.authenticate("google", { failureRedirect: "/login.html" }),
-    authController.socialLoginCallback,
+    authController.socialLoginCallback
 );
 
+
 // ==========================================
-// 4. X (TWITTER) OAUTH 2.0 ROUTES
+// 🐦 5. X (TWITTER) OAUTH 2.0 ROUTES
 // ==========================================
 router.get(
-    ["/twitter", "/x"],
+    "/twitter",
     passport.authenticate("twitter", {
         scope: ["tweet.read", "users.read", "offline.access"],
-    }),
+    })
 );
 
 router.get(
     "/twitter/callback",
     passport.authenticate("twitter", { failureRedirect: "/login.html" }),
-    authController.socialLoginCallback,
+    authController.socialLoginCallback
 );
 
 module.exports = router;

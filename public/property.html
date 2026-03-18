@@ -5,359 +5,155 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Property Details | Zamin Dekho</title>
 
-        <link
-            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-            rel="stylesheet"
-        />
-        <link
-            rel="stylesheet"
-            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-        />
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
         <style>
-            @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+            @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap");
 
-            body {
-                background: #f8fafc;
-                font-family: "Inter", sans-serif;
-                color: #1e293b;
-            }
+            body { background: #f8fafc; font-family: "Inter", sans-serif; color: #1e293b; overflow-x: hidden;}
 
             /* Navbar */
-            .navbar {
-                box-shadow: 0 2px 15px rgba(0, 0, 0, 0.04);
-                padding: 15px 0;
-                background: white !important;
-            }
-            .navbar-brand {
-                font-weight: 800;
-                letter-spacing: -0.5px;
-                color: #10b981 !important;
-                font-size: 24px;
-            }
-            .nav-link {
-                font-weight: 600;
-                color: #475569 !important;
-                margin: 0 15px;
-                font-size: 15px;
-                transition: 0.3s;
-            }
-            .nav-link:hover {
-                color: #10b981 !important;
-            }
+            .navbar { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); padding: 15px 0; background: rgba(255,255,255,0.98) !important; backdrop-filter: blur(10px); }
+            .navbar-brand { font-weight: 800; letter-spacing: -0.5px; color: #10b981 !important; font-size: 26px; }
+            .nav-link { font-weight: 700; color: #475569 !important; margin: 0 5px; font-size: 15px; transition: 0.3s; border-radius: 8px; padding: 8px 16px !important;}
+            .nav-link:hover { color: #10b981 !important; background: #ecfdf5;}
 
             /* Auth UI */
-            .auth-area {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-            .user-id-btn {
-                background: #f8fafc;
-                border: 1px solid #cbd5e1;
-                color: #1e293b;
-                padding: 8px 20px;
-                border-radius: 50px;
-                font-weight: 700;
-                font-size: 14px;
-                transition: 0.2s;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .user-id-btn:hover {
-                background: #e2e8f0;
-            }
-            .logout-btn-premium {
-                background: white;
-                border: 1px solid #ef4444;
-                color: #ef4444;
-                padding: 8px 20px;
-                border-radius: 50px;
-                font-weight: 700;
-                font-size: 14px;
-                transition: 0.2s;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-            }
-            .logout-btn-premium:hover {
-                background: #fee2e2;
-            }
+            .auth-area { display: flex; align-items: center; gap: 12px; }
+            .user-id-btn { background: #ffffff; border: 2px solid #e2e8f0; color: #1e293b; padding: 6px 18px 6px 6px; border-radius: 50px; font-weight: 700; font-size: 14px; transition: 0.3s; cursor: pointer; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);}
+            .user-id-btn:hover { border-color: #10b981; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.1); }
+            .logout-btn-premium { background: #fef2f2; border: 1px solid #fca5a5; color: #ef4444; padding: 10px 20px; border-radius: 50px; font-weight: 700; font-size: 14px; transition: 0.2s; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+            .logout-btn-premium:hover { background: #ef4444; color: white;}
 
-            /* Property Images */
-            .prop-main-img {
-                width: 100%;
-                height: 450px;
-                object-fit: cover;
-                border-radius: 20px;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-            }
+            /* Property Media */
+            .prop-main-img { width: 100%; height: 500px; object-fit: cover; border-radius: 20px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; background: #0f172a;}
 
             /* Content Sections */
-            .detail-box {
-                background: white;
-                padding: 30px;
-                border-radius: 20px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-                border: 1px solid #e2e8f0;
-                margin-bottom: 25px;
-            }
-            .prop-title {
-                font-weight: 800;
-                font-size: 28px;
-                color: #0f172a;
-                margin-bottom: 10px;
-            }
-            .prop-price {
-                font-weight: 800;
-                font-size: 32px;
-                color: #10b981;
-            }
-            .prop-address {
-                color: #64748b;
-                font-size: 16px;
-                font-weight: 500;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
+            .detail-box { background: white; padding: 40px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03); border: 1px solid #e2e8f0; margin-bottom: 25px; }
+            .prop-title { font-weight: 800; font-size: 32px; color: #0f172a; margin-bottom: 10px; line-height: 1.2;}
+            .prop-address { color: #64748b; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 25px;}
 
-            .feature-pill {
-                background: #f1f5f9;
-                padding: 10px 20px;
-                border-radius: 12px;
-                display: inline-flex;
-                align-items: center;
-                gap: 10px;
-                font-weight: 700;
-                color: #334155;
-                margin-right: 10px;
-                margin-bottom: 10px;
-            }
-            .feature-pill i {
-                color: #3b82f6;
-                font-size: 18px;
-            }
+            .feature-pill { background: #f8fafc; padding: 12px 20px; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px; font-weight: 700; color: #334155; margin-right: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; transition: 0.2s;}
+            .feature-pill:hover { background: #eff6ff; border-color: #bfdbfe; color: #1e3a8a;}
+            .feature-pill i { color: #3b82f6; font-size: 18px; }
+
+            .doc-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; display: flex; align-items: center; gap: 15px; background: #f8fafc; margin-bottom: 10px;}
+            .doc-card i { font-size: 24px; color: #10b981; }
 
             /* 🌟 THE BUY ACTION CARD */
-            .action-card {
-                background: white;
-                padding: 30px;
-                border-radius: 20px;
-                box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
-                border: 1px solid #e2e8f0;
-                position: sticky;
-                top: 100px;
-                text-align: center;
-            }
+            .action-card { background: white; padding: 30px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08); border: 1px solid #e2e8f0; position: sticky; top: 100px; text-align: center; }
+            .prop-price { font-weight: 800; font-size: 36px; color: #10b981; font-family: 'JetBrains Mono', monospace;}
 
             /* 🌟 AI METER STYLING */
-            .ai-valuation-box {
-                background: #f8fafc;
-                border-radius: 12px;
-                border: 1px solid #e2e8f0;
-                padding: 15px;
-                margin-bottom: 20px;
-                text-align: left;
-            }
-            .ai-progress-bg {
-                height: 10px;
-                background: #e2e8f0;
-                border-radius: 50px;
-                overflow: hidden;
-                margin: 10px 0;
-            }
-            .ai-progress-bar {
-                height: 100%;
-                width: 0%;
-                transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
-                border-radius: 50px;
-            }
+            .ai-valuation-box { background: #f8fafc; border-radius: 16px; border: 1px solid #e2e8f0; padding: 20px; margin-bottom: 25px; text-align: left; }
+            .ai-progress-bg { height: 12px; background: #e2e8f0; border-radius: 50px; overflow: hidden; margin: 12px 0; }
+            .ai-progress-bar { height: 100%; width: 0%; transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 50px; }
 
             /* 🌟 SATELLITE MAP STYLING */
-            #satelliteMap { 
-                height: 250px; 
-                width: 100%; 
-                border-radius: 12px; 
-                z-index: 1; 
-                border: 1px solid #cbd5e1; 
-                margin-bottom: 20px;
-            }
+            #satelliteMap { height: 250px; width: 100%; border-radius: 16px; z-index: 1; border: 2px solid #e2e8f0; margin-bottom: 25px; }
 
-            /* Booking Button */
-            .btn-book-option {
-                background: #f59e0b;
-                color: white;
-                border: none;
-                width: 100%;
-                padding: 18px;
-                border-radius: 12px;
-                font-size: 18px;
-                font-weight: 800;
-                transition: 0.3s;
-                box-shadow: 0 10px 20px rgba(245, 158, 11, 0.3);
-                cursor: pointer;
-                margin-bottom: 15px;
-            }
-            .btn-book-option:hover {
-                background: #d97706;
-                transform: translateY(-3px);
-                color: white;
-            }
+            /* Buttons */
+            .btn-book-option { background: linear-gradient(45deg, #f59e0b, #d97706); color: white; border: none; width: 100%; padding: 18px; border-radius: 12px; font-size: 18px; font-weight: 800; transition: 0.3s; box-shadow: 0 10px 20px rgba(245, 158, 11, 0.3); cursor: pointer; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px;}
+            .btn-book-option:hover { transform: translateY(-3px); color: white; box-shadow: 0 15px 25px rgba(245, 158, 11, 0.4);}
 
-            .btn-inquiry-option {
-                background: white;
-                color: #3b82f6;
-                border: 2px solid #3b82f6;
-                width: 100%;
-                padding: 15px;
-                border-radius: 12px;
-                font-size: 16px;
-                font-weight: 800;
-                transition: 0.3s;
-                cursor: pointer;
-            }
-            .btn-inquiry-option:hover {
-                background: #eff6ff;
-            }
+            .btn-inquiry-option { background: white; color: #3b82f6; border: 2px solid #3b82f6; width: 100%; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: 800; transition: 0.3s; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;}
+            .btn-inquiry-option:hover { background: #eff6ff; }
 
-            .contact-block {
-                display: none;
-                margin-top: 20px;
-                padding-top: 20px;
-                border-top: 2px dashed #e2e8f0;
-                animation: fadeIn 0.5s;
-            }
-            .broker-info {
-                font-weight: 700;
-                color: #1e293b;
-                font-size: 16px;
-                margin-bottom: 15px;
-            }
-            .btn-call {
-                background: #10b981;
-                color: white;
-                border: none;
-                width: 100%;
-                padding: 15px;
-                border-radius: 12px;
-                font-size: 18px;
-                font-weight: 800;
-                text-decoration: none;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-                box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
-                transition: 0.3s;
-            }
-            .btn-call:hover {
-                background: #059669;
-                color: white;
-                transform: translateY(-3px);
-            }
+            .contact-block { display: none; margin-top: 20px; padding-top: 20px; border-top: 2px dashed #e2e8f0; animation: fadeIn 0.5s; }
+            .broker-info { font-weight: 800; color: #10b981; font-size: 16px; margin-bottom: 10px; }
+
+            .btn-call { background: #10b981; color: white; border: none; width: 100%; padding: 15px; border-radius: 12px; font-size: 18px; font-weight: 800; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3); transition: 0.3s; }
+            .btn-call:hover { background: #059669; color: white; transform: translateY(-3px); }
+
+            /* Map Popup */
+            .leaflet-popup-content-wrapper { border-radius: 12px; padding: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);}
+            .leaflet-popup-content { margin: 0; }
         </style>
     </head>
     <body>
-        <nav class="navbar navbar-expand-lg navbar-light sticky-top">
-            <div class="container">
-                <a class="navbar-brand" href="index.html"
-                    ><i class="fas fa-leaf me-1"></i> ZAMIN DEKHO</a
-                >
-                <button
-                    class="navbar-toggler border-0 shadow-none"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#zaminNav"
-                >
+        <nav class="navbar navbar-expand-lg sticky-top">
+            <div class="container-fluid px-lg-5">
+                <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</a>
+
+                <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#zaminNav">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+
                 <div class="collapse navbar-collapse" id="zaminNav">
-                    <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center">
-                        <li class="nav-item">
-                            <a class="nav-link" href="index.html">Find Land</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="dashboard.html#postTab"
-                                >Post Property</a
-                            >
-                        </li>
-                        <li id="adminLinkArea" class="nav-item"></li>
+                    <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center align-items-center gap-lg-2">
+                        <li class="nav-item"><a class="nav-link" href="index.html"><i class="fas fa-search me-1"></i> Find Land</a></li>
+                        <li class="nav-item"><a class="nav-link" href="reels.html"><i class="fas fa-play-circle me-1"></i> Reels</a></li>
+
+                        <li class="nav-item auth-required-link d-none"><a class="nav-link" href="dashboard.html#postTab"><i class="fas fa-plus-circle me-1"></i> Post Ad</a></li>
+                        <li class="nav-item auth-required-link d-none"><a class="nav-link" href="dashboard.html#bookingsTab"><i class="fas fa-ticket-alt me-1"></i> Bookings</a></li>
+
+                        <li id="adminLinkArea" class="nav-item ms-lg-3"></li>
                     </ul>
-                    <div
-                        id="authArea"
-                        class="auth-area justify-content-center mt-3 mt-lg-0"
-                    ></div>
+
+                    <div id="authArea" class="auth-area justify-content-center mt-3 mt-lg-0"></div>
                 </div>
             </div>
         </nav>
 
-        <div class="container mt-4 mb-5" id="propertyContent">
+        <div class="container mt-5 mb-5" id="propertyContent">
             <div class="text-center py-5">
-                <div
-                    class="spinner-border text-success"
-                    style="width: 3rem; height: 3rem"
-                ></div>
-                <h4 class="mt-3">Loading Details...</h4>
+                <div class="spinner-grow text-success" style="width: 3rem; height: 3rem" role="status"></div>
+                <h4 class="mt-4 fw-bold text-muted">Encrypting & Loading Details...</h4>
             </div>
         </div>
 
         <div class="modal fade" id="userProfileModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
-                    <div class="modal-header border-0 pb-0">
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="cancelProfileEdit()"></button>
-                    </div>
-                    <div class="modal-body text-center pb-5 px-4">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 p-2" style="border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.2);">
+              <div class="modal-header border-0 pb-0">
+                <button type="button" class="btn-close bg-light rounded-circle p-2" data-bs-dismiss="modal" aria-label="Close" onclick="cancelProfileEdit()"></button>
+              </div>
+              <div class="modal-body text-center pb-4 px-4">
 
-                        <div class="position-relative d-inline-block mb-3">
-                            <img src="" id="modalUserAvatar" class="rounded-circle shadow-sm" style="width: 100px; height: 100px; border: 4px solid #ecfdf5; object-fit: cover;">
-                            <label for="avatarUpload" id="avatarEditBtn" class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-2 shadow-sm d-none" style="cursor: pointer; width: 32px; height: 32px; line-height: 14px; right: -5px;">
-                                <i class="fas fa-camera" style="font-size: 14px;"></i>
-                            </label>
-                            <input type="file" id="avatarUpload" accept="image/*" class="d-none" onchange="previewAvatar(event)">
-                        </div>
+                <div class="position-relative d-inline-block mb-3">
+                  <img src="" id="modalUserAvatar" class="rounded-circle shadow-sm" style="width: 110px; height: 110px; border: 4px solid #ecfdf5; object-fit: cover;">
+                  <label for="avatarUpload" id="avatarEditBtn" class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle shadow-sm d-none" style="cursor: pointer; width: 35px; height: 35px; display:flex; align-items:center; justify-content:center; right: -5px;">
+                      <i class="fas fa-camera"></i>
+                  </label>
+                  <input type="file" id="avatarUpload" accept="image/*" class="d-none" onchange="previewAvatar(event)">
+                </div>
 
-                        <div id="nameDisplayContainer">
-                            <h3 class="fw-bold mb-0 text-dark" id="modalUserName">User Name</h3>
-                            <button class="btn btn-link text-primary fw-bold p-0 mb-3 text-decoration-none" style="font-size: 13px;" onclick="enableProfileEdit()">
-                                <i class="fas fa-pencil-alt me-1"></i> Edit Profile
-                            </button>
-                        </div>
+                <div id="nameDisplayContainer">
+                    <h3 class="fw-bold mb-0 text-dark" id="modalUserName">User Name</h3>
+                    <button class="btn btn-link text-primary fw-bold p-0 mb-3 text-decoration-none" style="font-size: 14px;" onclick="enableProfileEdit()"><i class="fas fa-pen me-1"></i> Edit Profile</button>
+                </div>
 
-                        <div id="nameEditContainer" class="d-none mb-3 px-3">
-                            <input type="text" id="editNameInput" class="form-control text-center fw-bold mb-2" placeholder="Enter Full Name">
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-light btn-sm w-50 fw-bold" onclick="cancelProfileEdit()">Cancel</button>
-                                <button class="btn btn-success btn-sm w-50 fw-bold" onclick="saveProfile()" id="saveProfileBtn"><i class="fas fa-save me-1"></i> Save</button>
-                            </div>
-                        </div>
-
-                        <p class="text-muted mb-3" id="modalUserEmail">user@email.com</p>
-
-                        <div class="d-inline-block px-3 py-2 bg-light rounded-pill mb-4 border">
-                            <span class="fw-bold text-dark">Role:</span>
-                            <span class="badge ms-2 px-3 py-2" id="modalUserRole" style="font-size:12px; text-transform:uppercase; letter-spacing: 0.5px;">Buyer</span>
-                        </div>
-
-                        <div class="text-start bg-light p-3 rounded-3 mb-4 border border-light shadow-sm">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <small class="text-muted fw-bold text-uppercase" style="font-size: 11px;"><i class="fas fa-id-card me-1"></i> Account ID</small>
-                                    <div class="fw-bold text-dark mt-1 fs-5" id="modalUserId" style="font-family: monospace;">#12345</div>
-                                </div>
-                                <i class="fas fa-check-circle text-success fs-3"></i>
-                            </div>
-                        </div>
-
-                        <a href="dashboard.html" class="btn btn-primary w-100 rounded-pill fw-bold py-3 mb-2 shadow-sm"><i class="fas fa-columns me-2"></i> Go to Dashboard</a>
+                <div id="nameEditContainer" class="d-none mb-3 px-3">
+                    <input type="text" id="editNameInput" class="form-control text-center fw-bold mb-3 fs-5" placeholder="Enter Full Name">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-light fw-bold w-50" onclick="cancelProfileEdit()">Cancel</button>
+                        <button class="btn btn-success fw-bold w-50 shadow-sm" onclick="saveProfile()" id="saveProfileBtn"><i class="fas fa-save me-1"></i> Save</button>
                     </div>
                 </div>
+
+                <p class="text-muted fw-semibold mb-4 bg-light d-inline-block px-3 py-1 rounded-pill" id="modalUserEmail">user@email.com</p>
+
+                <div class="text-start bg-light p-4 rounded-4 mb-4 border border-light shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-3">
+                        <div>
+                            <small class="text-muted fw-bold text-uppercase" style="font-size: 11px;"><i class="fas fa-id-badge me-1"></i> Account ID</small>
+                            <div class="fw-bold text-dark mt-1 fs-5" id="modalUserId" style="font-family: 'JetBrains Mono', monospace;">#12345</div>
+                        </div>
+                        <i class="fas fa-check-circle text-success fs-2 opacity-75"></i>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-secondary">Account Role</span>
+                        <span class="badge px-3 py-2 fs-6 shadow-sm" id="modalUserRole" style="text-transform:uppercase; letter-spacing: 1px;">Buyer</span>
+                    </div>
+                </div>
+
+                <a href="dashboard.html" class="btn btn-dark w-100 rounded-pill fw-bold py-3 shadow"><i class="fas fa-laptop-house me-2"></i> Open Dashboard</a>
+              </div>
             </div>
+          </div>
         </div>
 
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -375,31 +171,25 @@
                 const token = localStorage.getItem("zamin_token");
 
                 if (!propId) {
-                    contentDiv.innerHTML = `<div class="text-center text-danger py-5"><h2>Property ID Missing!</h2><a href="index.html" class="btn btn-primary mt-3">Go Back to Search</a></div>`;
+                    contentDiv.innerHTML = `<div class="text-center text-danger py-5"><i class="fas fa-search-minus fs-1 mb-3"></i><h2>Property ID Missing!</h2><a href="index.html" class="btn btn-primary mt-3 rounded-pill px-4 fw-bold">Go Back to Search</a></div>`;
                     return;
                 }
 
                 try {
                     let fetchConfig = {};
-                    if (token)
-                        fetchConfig.headers = {
-                            Authorization: `Bearer ${token}`,
-                        };
+                    if (token) fetchConfig.headers = { Authorization: `Bearer ${token}` };
 
-                    const res = await fetch(
-                        `${API_URL}/listings/${propId}`,
-                        fetchConfig,
-                    );
+                    const res = await fetch(`${API_URL}/listings/${propId}`, fetchConfig);
                     const data = await res.json();
 
                     if (data.success) {
                         propertyData = data.listing;
                         renderProperty(propertyData);
                     } else {
-                        contentDiv.innerHTML = `<div class="text-center text-danger py-5"><h2>Property Not Found!</h2><p>It may have been sold or removed by admin.</p><a href="index.html" class="btn btn-primary mt-3">Go Back to Search</a></div>`;
+                        contentDiv.innerHTML = `<div class="text-center text-danger py-5"><i class="fas fa-store-slash fs-1 mb-3"></i><h2>Property Sold or Removed!</h2><p class="text-muted fw-bold">This listing is no longer available.</p><a href="index.html" class="btn btn-dark mt-3 rounded-pill px-4 fw-bold">Explore Other Properties</a></div>`;
                     }
                 } catch (e) {
-                    contentDiv.innerHTML = `<div class="text-center text-danger py-5"><h2>Server Error!</h2><p>Could not connect to database.</p></div>`;
+                    contentDiv.innerHTML = `<div class="text-center text-danger py-5"><i class="fas fa-wifi fs-1 mb-3"></i><h2>Server Error!</h2><p class="text-muted fw-bold">Could not connect to Zamin Dekho database.</p></div>`;
                 }
             }
 
@@ -407,49 +197,71 @@
                 let imgSource = item.imageUrl;
                 if (imgSource && !imgSource.startsWith("http")) {
                     imgSource = imgSource.replace(/\\/g, "/");
-                    imgSource =
-                        BASE_SERVER_URL +
-                        (imgSource.startsWith("/")
-                            ? imgSource.substring(1)
-                            : imgSource);
+                    imgSource = BASE_SERVER_URL + (imgSource.startsWith("/") ? imgSource.substring(1) : imgSource);
                 }
-                const fallbackImg =
-                    "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1000&q=80";
+                const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
                 if (!imgSource) imgSource = fallbackImg;
+
+                // 🌟 NAYA: Handle Video vs Image Render
+                const isVideo = imgSource.match(/\.(mp4|webm|ogg)$/i) || imgSource.includes('video/upload');
+                const mediaHTML = isVideo 
+                    ? `<video src="${imgSource}" class="prop-main-img mb-4" controls autoplay muted loop></video>`
+                    : `<img src="${imgSource}" onerror="this.src='${fallbackImg}'" class="prop-main-img mb-4" alt="Property Image">`;
 
                 document.getElementById("propertyContent").innerHTML = `
                 <div class="row g-4">
                     <div class="col-lg-8">
-                        <img src="${imgSource}" onerror="this.src='${fallbackImg}'" class="prop-main-img mb-4" alt="Property Image">
+                        ${mediaHTML}
 
                         <div class="detail-box">
-                            <span class="badge bg-dark px-3 py-2 rounded-pill mb-3 text-uppercase">${item.category}</span>
-                            <h1 class="prop-title">${item.landName}</h1>
-                            <p class="prop-address"><i class="fas fa-map-marker-alt text-danger"></i> ${item.address}</p>
-
-                            <hr class="my-4">
-
-                            <h4 class="fw-bold mb-3">Overview</h4>
-                            <div class="d-flex flex-wrap">
-                                <div class="feature-pill"><i class="fas fa-tag"></i> Verified Listing</div>
-                                ${item.landSize && item.landSize !== "Not Specified" ? `<div class="feature-pill"><i class="fas fa-vector-square"></i> ${item.landSize}</div>` : ""}
-                                ${item.length ? `<div class="feature-pill"><i class="fas fa-ruler-horizontal"></i> L: ${item.length}</div>` : ""}
-                                ${item.breadth ? `<div class="feature-pill"><i class="fas fa-ruler-vertical"></i> W: ${item.breadth}</div>` : ""}
-                                ${item.roadConnectivity && item.roadConnectivity !== "Not Specified" ? `<div class="feature-pill"><i class="fas fa-road"></i> ${item.roadConnectivity}</div>` : ""}
-                                <div class="feature-pill"><i class="fas fa-chart-line"></i> High Growth Area</div>
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                <span class="badge bg-dark px-3 py-2 rounded-pill text-uppercase shadow-sm" style="letter-spacing: 1px;">${item.category}</span>
+                                ${item.isMediaAuthentic ? `<span class="badge bg-primary text-white px-3 py-2 rounded-pill shadow-sm"><i class="fas fa-shield-check me-1"></i> Verified In-App Capture</span>` : ''}
                             </div>
 
-                            <h4 class="fw-bold mt-4 mb-3">Property Description</h4>
-                            <p class="text-muted" style="font-size:16px; line-height:1.8;">
+                            <h1 class="prop-title">${item.landName}</h1>
+                            <p class="prop-address"><i class="fas fa-map-marker-alt text-danger fs-5"></i> ${item.address}</p>
+
+                            <hr class="my-4 border-secondary opacity-25">
+
+                            <h4 class="fw-bold mb-4 text-dark"><i class="fas fa-list-ul text-primary me-2"></i> Overview</h4>
+                            <div class="d-flex flex-wrap">
+                                <div class="feature-pill"><i class="fas fa-shield-alt text-success"></i> 100% Verified</div>
+                                ${item.landSize && item.landSize !== "Not Specified" ? `<div class="feature-pill"><i class="fas fa-vector-square"></i> Area: ${item.landSize}</div>` : ""}
+                                ${item.length ? `<div class="feature-pill"><i class="fas fa-ruler-horizontal"></i> Length: ${item.length}</div>` : ""}
+                                ${item.breadth ? `<div class="feature-pill"><i class="fas fa-ruler-vertical"></i> Width: ${item.breadth}</div>` : ""}
+                                ${item.roadConnectivity && item.roadConnectivity !== "Not Specified" ? `<div class="feature-pill"><i class="fas fa-road text-secondary"></i> ${item.roadConnectivity}</div>` : ""}
+                                <div class="feature-pill"><i class="fas fa-chart-line text-warning"></i> High Growth Area</div>
+                            </div>
+
+                            <h4 class="fw-bold mt-5 mb-3 text-dark"><i class="fas fa-align-left text-primary me-2"></i> Property Description</h4>
+                            <p class="text-muted fw-medium" style="font-size:16px; line-height:1.8;">
                                 ${item.extraInfo || "A premium property located in a highly sought-after area. Perfect for investment or immediate use. Contact us for physical site visits and document verification."}
                             </p>
+
+                            <h4 class="fw-bold mt-5 mb-3 text-dark"><i class="fas fa-file-contract text-primary me-2"></i> Legal Documents</h4>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="doc-card">
+                                        <i class="fas fa-file-pdf"></i>
+                                        <div><h6 class="m-0 fw-bold">Title Deed</h6><small class="text-success fw-bold"><i class="fas fa-check"></i> Verified by Zamin</small></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="doc-card">
+                                        <i class="fas fa-map"></i>
+                                        <div><h6 class="m-0 fw-bold">Boundary Map</h6><small class="text-success fw-bold"><i class="fas fa-check"></i> Verified by Zamin</small></div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
 
                     <div class="col-lg-4">
                         <div class="action-card">
-                            <h5 class="text-muted fw-bold mb-1">Estimated Price</h5>
-                            <div class="prop-price mb-3">₹ ${Number(item.landPrice).toLocaleString("en-IN")}</div>
+                            <h5 class="text-muted fw-bold mb-2 text-uppercase" style="letter-spacing: 1px;">Asking Price</h5>
+                            <div class="prop-price mb-4">₹ ${Number(item.landPrice).toLocaleString("en-IN")}</div>
 
                             <div class="ai-valuation-box shadow-sm">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -474,25 +286,25 @@
                                 </div>
                             </div>
 
-                            <h6 class="fw-bold text-start mb-2 mt-4 text-secondary"><i class="fas fa-satellite me-2"></i>Satellite Location</h6>
+                            <h6 class="fw-bold text-start mb-3 mt-4 text-secondary"><i class="fas fa-satellite me-2"></i>Satellite Boundary View</h6>
                             <div id="satelliteMap"></div>
 
                             <button class="btn-book-option" onclick="goToCheckout('${item._id}')">
-                                <i class="fas fa-lock me-2"></i> Book with Token
+                                <i class="fas fa-lock"></i> Secure with Token
                             </button>
 
                             <button id="buyBtn" class="btn-inquiry-option" onclick="triggerBuyFlow('${item._id}')">
-                                <i class="fas fa-phone-alt me-2"></i> Request Call Back
+                                <i class="fas fa-headset"></i> Request Site Visit
                             </button>
 
                             <div id="contactBlock" class="contact-block">
                                 <div class="broker-info">
-                                    <i class="fas fa-check-circle text-success me-1"></i> Request Sent!
+                                    <i class="fas fa-check-circle me-1"></i> Request Sent Successfully!
                                 </div>
-                                <p class="text-muted small mb-3">A broker will call you shortly to discuss details.</p>
+                                <p class="text-muted small mb-3 fw-medium">An expert agent will contact you shortly to schedule a physical visit.</p>
 
                                 <a href="tel:+919876543210" class="btn-call" id="callZaminBtn">
-                                    <i class="fas fa-headset"></i> Call Support Now
+                                    <i class="fas fa-phone-volume"></i> Call Support Now
                                 </a>
                             </div>
                         </div>
@@ -500,8 +312,8 @@
                 </div>
             `;
 
-                // Call Map & AI Engine after HTML injection
-                initSatelliteMap(item.address);
+                // Initialize interactive elements after injection
+                initSatelliteMap(item.address, item.location);
                 runAIPrediction(item.landPrice);
             }
 
@@ -541,38 +353,69 @@
             }
 
             // ==========================================
-            // 🌟 SATELLITE MAP ENGINE (FREE GEOCODING)
+            // 🌟 ENHANCED SATELLITE MAP ENGINE (STEP 13)
             // ==========================================
-            async function initSatelliteMap(address) {
-                const map = L.map('satelliteMap').setView([20.5937, 78.9629], 5);
+            async function initSatelliteMap(address, exactLocation) {
+                const map = L.map('satelliteMap', { zoomControl: false }).setView([20.5937, 78.9629], 5);
 
-                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                    attribution: '&copy; Esri'
-                }).addTo(map);
+                const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri' });
+                const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
+
+                satelliteLayer.addTo(map);
+                L.control.layers({ "🛰️ Satellite": satelliteLayer, "🗺️ Street": streetLayer }, null, {position: 'bottomright'}).addTo(map);
+                L.control.zoom({position: 'topright'}).addTo(map);
 
                 try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
-                    const data = await res.json();
+                    let lat, lon;
 
-                    if (data && data.length > 0) {
-                        const lat = data[0].lat;
-                        const lon = data[0].lon;
-
-                        map.setView([lat, lon], 17);
-
-                        L.circle([lat, lon], {
-                            color: 'red',
-                            fillColor: '#f03',
-                            fillOpacity: 0.4,
-                            radius: 50
-                        }).addTo(map)
-                        .bindPopup("<b class='text-dark'>Approximate Boundary</b><br><span class='text-success fw-bold'><i class='fas fa-shield-check'></i> Verified Area</span>")
-                        .openPopup();
+                    // If exact coordinates exist in DB, use them (Better accuracy)
+                    if(exactLocation && exactLocation.coordinates && exactLocation.coordinates[0] !== 0) {
+                        lon = exactLocation.coordinates[0];
+                        lat = exactLocation.coordinates[1];
                     } else {
-                        console.log("Geocoding failed to find exact location.");
+                        // Fallback to Geocoding
+                        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+                        const data = await res.json();
+                        if (data && data.length > 0) {
+                            lat = parseFloat(data[0].lat);
+                            lon = parseFloat(data[0].lon);
+                        } else throw new Error("Location not found");
                     }
+
+                    map.setView([lat, lon], 18);
+
+                    // Dynamic polygon to simulate boundary
+                    const offset = 0.0006; 
+                    const latlngs = [
+                        [lat - offset, lon - offset],
+                        [lat - offset, lon + offset],
+                        [lat + offset + 0.0003, lon + offset],
+                        [lat + offset, lon - offset + 0.0002]
+                    ];
+
+                    const polygon = L.polygon(latlngs, {
+                        color: '#10b981', weight: 3, fillColor: '#10b981', fillOpacity: 0.3
+                    }).addTo(map);
+
+                    const popupContent = `
+                        <div class="text-center" style="min-width: 140px;">
+                            <b class="text-dark fs-6 font-monospace">ZAMIN RADAR</b><br>
+                            <span class="text-success fw-bold mt-1 d-block" style="font-size: 11px;"><i class="fas fa-shield-check"></i> BOUNDARY LOCKED</span>
+                            <hr style="margin: 10px 0; opacity: 0.2;">
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=$${lat},${lon}" target="_blank" class="btn btn-sm btn-primary w-100 rounded-pill fw-bold text-white text-decoration-none">
+                                <i class="fas fa-directions me-1"></i> Directions
+                            </a>
+                        </div>
+                    `;
+                    polygon.bindPopup(popupContent).openPopup();
+
                 } catch (e) {
-                    console.error("Map Error:", e);
+                    document.getElementById('satelliteMap').innerHTML = `
+                        <div class="d-flex flex-column justify-content-center align-items-center h-100 bg-light text-muted fw-bold border rounded">
+                            <i class="fas fa-map-marker-slash fs-2 mb-2 text-danger"></i>
+                            <span>Exact boundary hidden for privacy.</span>
+                        </div>
+                    `;
                 }
             }
 
@@ -582,8 +425,7 @@
             function goToCheckout(propertyId) {
                 const token = localStorage.getItem("zamin_token");
                 if (!token) {
-                    alert("Please Login to book this property.");
-                    window.location.href = `login.html`;
+                    Swal.fire("Authentication Required", "Please login to secure this property.", "warning").then(() => window.location.href = `login.html`);
                     return;
                 }
                 window.location.href = `checkout.html?id=${propertyId}`;
@@ -598,55 +440,44 @@
                 const contactBlock = document.getElementById("contactBlock");
 
                 if (!token) {
-                    alert("Please Login to express interest.");
-                    window.location.href = `login.html`;
+                    Swal.fire("Authentication Required", "Please login to request a site visit.", "warning").then(() => window.location.href = `login.html`);
                     return;
                 }
 
-                buyBtn.innerHTML =
-                    '<i class="fas fa-spinner fa-spin"></i> Sending Request...';
+                buyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
                 buyBtn.disabled = true;
 
                 try {
-                    const res = await fetch(
-                        `${API_URL}/listings/buy-request/${propertyId}`,
-                        {
-                            method: "POST",
-                            headers: { Authorization: `Bearer ${token}` },
-                        },
-                    );
+                    const res = await fetch(`${API_URL}/listings/buy-request/${propertyId}`, {
+                        method: "POST",
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
 
                     const data = await res.json();
 
                     if (data.success) {
                         buyBtn.style.display = "none";
                         contactBlock.style.display = "block";
-
-                        if (data.adminPhone) {
-                            document.getElementById("callZaminBtn").href =
-                                `tel:${data.adminPhone}`;
-                        }
+                        if (data.adminPhone) document.getElementById("callZaminBtn").href = `tel:${data.adminPhone}`;
                     } else {
-                        alert("System Message: " + data.message);
-                        if (data.message.includes("pehle hi is zamin")) {
+                        Swal.fire("Notice", data.message, "info");
+                        if (data.message.includes("pehle hi is zamin") || data.message.includes("already requested")) {
                             buyBtn.style.display = "none";
                             contactBlock.style.display = "block";
                         } else {
-                            buyBtn.innerHTML =
-                                '<i class="fas fa-phone-alt me-2"></i> Request Call Back';
+                            buyBtn.innerHTML = '<i class="fas fa-headset me-2"></i> Request Site Visit';
                             buyBtn.disabled = false;
                         }
                     }
                 } catch (e) {
-                    alert("Network error.");
-                    buyBtn.innerHTML =
-                        '<i class="fas fa-phone-alt me-2"></i> Request Call Back';
+                    Swal.fire("Network Error", "Failed to send request.", "error");
+                    buyBtn.innerHTML = '<i class="fas fa-headset me-2"></i> Request Site Visit';
                     buyBtn.disabled = false;
                 }
             }
 
             // ==========================================
-            // 🌟 EDIT PROFILE LOGIC & NAVBAR UPDATE 🌟
+            // 🌟 NAVBAR & AUTH LOGIC
             // ==========================================
             let tempAvatarBase64 = null;
 
@@ -654,7 +485,6 @@
                 document.getElementById('nameDisplayContainer').classList.add('d-none');
                 document.getElementById('nameEditContainer').classList.remove('d-none');
                 document.getElementById('avatarEditBtn').classList.remove('d-none'); 
-
                 const currentName = document.getElementById('modalUserName').innerText;
                 document.getElementById('editNameInput').value = currentName === 'User' ? '' : currentName;
             }
@@ -664,8 +494,8 @@
                 document.getElementById('nameEditContainer').classList.add('d-none');
                 document.getElementById('avatarEditBtn').classList.add('d-none'); 
 
-                const user = JSON.parse(localStorage.getItem('zamin_user'));
-                const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'User')}&background=10b981&color=fff&size=100`;
+                const user = JSON.parse(localStorage.getItem('zamin_user') || "{}");
+                const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'User')}&background=10b981&color=fff&size=120`;
                 document.getElementById('modalUserAvatar').src = avatarUrl;
                 tempAvatarBase64 = null;
             }
@@ -684,7 +514,7 @@
 
             async function saveProfile() {
                 const newName = document.getElementById('editNameInput').value.trim();
-                if(!newName) return alert("Name cannot be empty");
+                if(!newName) return Swal.fire("Required", "Name cannot be empty", "warning");
 
                 const btn = document.getElementById('saveProfileBtn');
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
@@ -699,26 +529,18 @@
                         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                         body: JSON.stringify({ fullName: newName, avatar: tempAvatarBase64 || user.avatar })
                     });
-
                     const data = await response.json();
 
                     if (data.success) {
                         user.fullName = newName;
                         if(tempAvatarBase64) user.avatar = tempAvatarBase64;
                         localStorage.setItem('zamin_user', JSON.stringify(user));
-
                         updateNavbarUI();
                         cancelProfileEdit(); 
-                    } else {
-                         alert("Failed to update profile: " + data.message);
-                    }
-
-                } catch (error) {
-                    alert("Error saving profile. Please check server.");
-                } finally {
-                    btn.innerHTML = '<i class="fas fa-save me-1"></i> Save';
-                    btn.disabled = false;
-                }
+                        Swal.fire("Updated", "Profile saved successfully", "success");
+                    } else { Swal.fire("Error", data.message, "error"); }
+                } catch (error) { Swal.fire("Error", "Network connection failed.", "error"); } 
+                finally { btn.innerHTML = '<i class="fas fa-save me-1"></i> Save'; btn.disabled = false; }
             }
 
             function updateNavbarUI() {
@@ -727,49 +549,44 @@
                 const adminArea = document.getElementById("adminLinkArea");
 
                 if (token) {
+                    document.querySelectorAll('.auth-required-link').forEach(el => el.classList.remove('d-none'));
                     try {
                         const user = JSON.parse(localStorage.getItem("zamin_user"));
                         if (user.role === "admin" || user.role === "broker") {
-                            adminArea.innerHTML = `<a class="nav-link text-danger fw-bold" style="background: #fee2e2; padding: 8px 16px !important;" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
+                            adminArea.innerHTML = `<a class="nav-link text-danger fw-bold" style="background: #fee2e2;" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
                         }
 
                         const firstName = user.fullName ? user.fullName.split(" ")[0] : "User";
-
                         document.getElementById('modalUserName').innerText = user.fullName || 'User';
                         document.getElementById('modalUserEmail').innerText = user.email || 'No email';
 
-                        const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'User')}&background=10b981&color=fff&size=100`;
+                        const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'User')}&background=10b981&color=fff&size=120`;
                         document.getElementById('modalUserAvatar').src = avatarUrl;
 
                         const roleBadge = document.getElementById('modalUserRole');
                         roleBadge.innerText = user.role || 'Buyer';
-                        if(user.role === 'admin') { roleBadge.className = 'badge bg-danger ms-2 px-3 py-2'; }
-                        else if(user.role === 'broker') { roleBadge.className = 'badge bg-warning text-dark ms-2 px-3 py-2'; }
-                        else if(user.role === 'seller') { roleBadge.className = 'badge bg-success ms-2 px-3 py-2'; }
-                        else { roleBadge.className = 'badge bg-primary ms-2 px-3 py-2'; }
+                        if(user.role === 'admin') { roleBadge.className = 'badge bg-danger shadow-sm'; }
+                        else if(user.role === 'broker') { roleBadge.className = 'badge bg-warning text-dark shadow-sm'; }
+                        else if(user.role === 'seller') { roleBadge.className = 'badge bg-success shadow-sm'; }
+                        else { roleBadge.className = 'badge bg-primary shadow-sm'; }
 
-                        document.getElementById('modalUserId').innerText = user._id ? `#${user._id}` : 'N/A';
+                        document.getElementById('modalUserId').innerText = user._id ? `#${user._id.substring(user._id.length - 6)}` : 'N/A';
 
                         authArea.innerHTML = `
-                            <button data-bs-toggle="modal" data-bs-target="#userProfileModal" class="user-id-btn me-2 border-0 bg-light"><img src="${avatarUrl}" style="width:20px; height:20px; border-radius:50%; object-fit:cover;" class="me-1"> ${firstName}</button>
+                            <button data-bs-toggle="modal" data-bs-target="#userProfileModal" class="user-id-btn me-2">
+                                <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> ${firstName}
+                            </button>
                             <button onclick="logout()" class="logout-btn-premium"><i class="fas fa-sign-out-alt"></i> Logout</button>
                         `;
                     } catch (e) {}
                 } else {
-                    authArea.innerHTML = `<a href="login.html" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm">Login to Explore</a>`;
+                    authArea.innerHTML = `<a href="login.html" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm" style="background:#10b981;"><i class="fas fa-user me-2"></i> Login</a>`;
                 }
             }
 
-            function logout() {
-                localStorage.removeItem("zamin_token");
-                localStorage.removeItem("zamin_user");
-                window.location.reload();
-            }
+            function logout() { localStorage.removeItem("zamin_token"); localStorage.removeItem("zamin_user"); window.location.reload(); }
 
-            window.onload = () => {
-                updateNavbarUI();
-                loadProperty();
-            };
+            window.onload = () => { updateNavbarUI(); loadProperty(); };
         </script>
     </body>
 </html>

@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zamin Reels | Zamin Dekho</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            background-color: #000; font-family: 'Inter', sans-serif;
+            overflow: hidden; 
+        }
+
+        /* The Reel Container */
+        .reels-container {
+            height: 100vh; width: 100vw;
+            overflow-y: scroll; scroll-snap-type: y mandatory;
+            scroll-behavior: smooth; scrollbar-width: none;
+        }
+        .reels-container::-webkit-scrollbar { display: none; }
+
+        /* Individual Reel */
+        .reel-card {
+            height: 100vh; width: 100vw; scroll-snap-align: start;
+            position: relative; background-color: #1e293b; overflow: hidden;
+        }
+
+        @keyframes panImage {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.15); }
+        }
+
+        .reel-media {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        img.reel-media { animation: panImage 15s infinite alternate ease-in-out; }
+
+        .overlay-gradient {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 50%;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 100%);
+            z-index: 1; pointer-events: none;
+        }
+
+        /* Top Navbar Overlay */
+        .top-nav {
+            position: absolute; top: 0; left: 0; width: 100%;
+            padding: 20px; z-index: 10;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .top-nav h3 { color: white; font-weight: 800; margin: 0; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .btn-exit { background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 15px; border-radius: 50px; backdrop-filter: blur(10px); font-weight: 700; text-decoration: none;}
+        .btn-add-reel { background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 50px; font-weight: 700; cursor: pointer; display: none; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);}
+
+        /* Bottom Info Section */
+        .reel-info { position: absolute; bottom: 30px; left: 15px; z-index: 10; width: 75%; color: white; }
+        .ad-badge { background: #f59e0b; color: white; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; margin-bottom: 8px; display: inline-block; box-shadow: 0 2px 10px rgba(245,158,11,0.5);}
+        .authentic-badge { background: #0d6efd; color: white; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; margin-bottom: 8px; display: inline-block; box-shadow: 0 2px 10px rgba(13,110,253,0.5); margin-right: 5px;}
+        .broker-name { font-weight: 600; font-size: 14px; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+        .broker-name img { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #10b981; }
+        .prop-title { font-weight: 800; font-size: 20px; margin-bottom: 5px; text-shadow: 0 2px 5px rgba(0,0,0,0.8); line-height: 1.2;}
+        .prop-desc { font-size: 13px; font-weight: 400; opacity: 0.9; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .prop-price { font-size: 22px; font-weight: 800; color: #10b981; text-shadow: 0 2px 5px rgba(0,0,0,0.8); }
+
+        /* Action Buttons */
+        .reel-actions {
+            position: absolute; bottom: 40px; right: 15px; z-index: 10;
+            display: flex; flex-direction: column; align-items: center; gap: 20px;
+        }
+        .action-btn {
+            background: transparent; border: none; color: white; font-size: 28px;
+            display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); transition: 0.2s; text-decoration: none;
+        }
+        .action-btn:hover { transform: scale(1.1); color: white; }
+        .action-btn span { font-size: 12px; font-weight: 600; }
+        .action-btn.liked i { color: #ef4444; animation: heartBurst 0.3s ease-out; }
+
+        @keyframes heartBurst { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
+
+        /* Custom Paper Plane Icon */
+        .btn-paperplane-img {
+            width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
+            background: transparent; border: none; cursor: pointer; padding: 0; margin-bottom: 5px;
+            transition: transform 0.2s ease-in-out;
+        }
+        .btn-paperplane-img img { width: 100%; height: 100%; object-fit: contain; filter: invert(100%) drop-shadow(0 2px 5px rgba(0,0,0,0.5)); }
+        .action-btn-custom-wrapper { display: flex; flex-direction: column; align-items: center; gap: 2px; text-decoration: none; }
+        .action-btn-custom-wrapper:hover .btn-paperplane-img { transform: scale(1.15) rotate(10deg); }
+
+        /* Comments Modal */
+        .comments-modal {
+            position: fixed; bottom: -100%; left: 0; width: 100%; height: 60vh;
+            background: white; border-radius: 20px 20px 0 0; z-index: 1000;
+            transition: bottom 0.3s ease-in-out; box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column;
+        }
+        .comments-modal.active { bottom: 0; }
+        .comments-header { padding: 15px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; font-weight: 800; }
+        .comments-body { flex: 1; overflow-y: auto; padding: 20px; background: #f8fafc;}
+        .comment-item { display: flex; gap: 12px; margin-bottom: 15px; }
+        .comment-item img { width: 35px; height: 35px; border-radius: 50%; }
+        .comment-text { background: white; padding: 10px 15px; border-radius: 0 15px 15px 15px; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); border: 1px solid #e2e8f0;}
+        .comment-text strong { display: block; font-size: 12px; color: #64748b; margin-bottom: 2px; }
+        .comments-footer { padding: 15px; background: white; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; }
+        .comments-footer input { flex: 1; border: 1px solid #cbd5e1; border-radius: 50px; padding: 10px 20px; outline: none; font-size: 14px;}
+        .comments-footer button { background: #10b981; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 16px; cursor: pointer;}
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
+        .modal-overlay.active { display: block; }
+
+        /* 🌟 IN-APP CAMERA & UPLOAD UI 🌟 */
+        .camera-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; z-index: 2000; display: none; flex-direction: column;
+        }
+        .camera-overlay.active { display: flex; }
+        .camera-view { flex: 1; width: 100%; object-fit: cover; background: #111; }
+        .camera-controls {
+            position: absolute; bottom: 0; left: 0; width: 100%; padding: 30px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+        }
+        .record-btn {
+            width: 70px; height: 70px; border-radius: 50%; border: 4px solid white;
+            background: #ef4444; cursor: pointer; transition: 0.2s;
+        }
+        .record-btn.recording { border-radius: 20px; transform: scale(0.9); animation: pulseRecord 1s infinite; }
+        @keyframes pulseRecord { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+        .gps-status { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: white; padding: 5px 15px; border-radius: 50px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px;}
+
+        .upload-form-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 2001; display: none; overflow-y: auto;
+        }
+        .upload-form-modal.active { display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <h3><i class="fas fa-play-circle me-2 text-success"></i>Zamin Reels</h3>
+        <div>
+            <button class="btn-add-reel me-2" id="btnAddReel" onclick="openCamera()"><i class="fas fa-camera me-1"></i> Post Reel</button>
+            <a href="index.html" class="btn-exit"><i class="fas fa-times"></i></a>
+        </div>
+    </div>
+
+    <div class="reels-container" id="reelsContainer">
+        <div class="d-flex justify-content-center align-items-center h-100 text-white flex-column">
+            <div class="spinner-border text-success mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+            <h5 class="fw-bold">Loading Premium Properties...</h5>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay" onclick="closeComments()"></div>
+
+    <div class="comments-modal" id="commentsModal">
+        <div class="comments-header">
+            <span><i class="fas fa-comments me-2 text-primary"></i> Comments</span>
+            <button class="btn-close" onclick="closeComments()"></button>
+        </div>
+        <div class="comments-body" id="commentsList">
+            <div class="comment-item">
+                <img src="https://i.pravatar.cc/100?img=11" alt="User">
+                <div class="comment-text">
+                    <strong>Ramesh Singh</strong>
+                    Is this property negotiable? Also, what is the road access like?
+                </div>
+            </div>
+            <div class="comment-item">
+                <img src="https://i.pravatar.cc/100?img=12" alt="User">
+                <div class="comment-text">
+                    <strong>Priya Sharma</strong>
+                    Looks like a great deal! Is electricity connection nearby?
+                </div>
+            </div>
+        </div>
+        <div class="comments-footer">
+            <input type="text" id="newCommentInput" placeholder="Ask a question about this land...">
+            <button onclick="addComment()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <div class="camera-overlay" id="cameraOverlay">
+        <div class="gps-status" id="gpsStatus"><i class="fas fa-spinner fa-spin"></i> Locating GPS...</div>
+        <button onclick="closeCamera()" class="btn-exit" style="position:absolute; top:20px; right:20px; z-index:10;"><i class="fas fa-times"></i> Cancel</button>
+
+        <video class="camera-view" id="cameraFeed" autoplay muted playsinline></video>
+
+        <div class="camera-controls">
+            <button class="btn btn-dark rounded-circle" style="width:50px; height:50px;" onclick="switchCamera()"><i class="fas fa-sync-alt"></i></button>
+            <div class="record-btn" id="recordBtn" onclick="toggleRecording()"></div>
+            <div style="width:50px;"></div> 
+        </div>
+    </div>
+
+    <div class="upload-form-modal" id="uploadFormModal">
+        <div class="bg-dark text-white p-3 d-flex justify-content-between align-items-center sticky-top">
+            <h5 class="m-0 fw-bold"><i class="fas fa-upload me-2 text-success"></i> Post Property Reel</h5>
+            <button class="btn-close btn-close-white" onclick="closeUploadForm()"></button>
+        </div>
+        <div class="p-4">
+            <video id="recordedPreview" controls class="w-100 rounded-3 mb-4" style="max-height: 250px; background: #000;"></video>
+
+            <div class="alert alert-primary small fw-bold py-2 mb-4">
+                <i class="fas fa-shield-alt me-1"></i> Authentic Media & GPS Locked
+            </div>
+
+            <form id="reelUploadForm" onsubmit="submitReel(event)">
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-muted small text-uppercase">Property Title</label>
+                    <input type="text" id="r_title" class="form-control fw-bold" placeholder="e.g. 2 Acre Farm House" required>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Price (₹)</label>
+                        <input type="number" id="r_price" class="form-control fw-bold" placeholder="Total Price" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Total Size</label>
+                        <input type="text" id="r_size" class="form-control fw-bold" placeholder="e.g. 2000 sq ft" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-muted small text-uppercase">Location Details</label>
+                    <textarea id="r_address" class="form-control" rows="2" placeholder="Exact address or landmark" required></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-muted small text-uppercase">Additional Notes</label>
+                    <textarea id="r_extra" class="form-control" rows="2" placeholder="Road access, electricity, negotiable?"></textarea>
+                </div>
+
+                <input type="hidden" id="r_lat">
+                <input type="hidden" id="r_lng">
+
+                <button type="submit" id="submitReelBtn" class="btn btn-success w-100 py-3 fw-bold fs-5 mt-3 rounded-pill shadow">
+                    <i class="fas fa-paper-plane me-2"></i> Publish Reel
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "/api";
+        const BASE_SERVER_URL = "/";
+
+        window.onload = async () => {
+            // Check auth to show "Post Reel" button
+            const token = localStorage.getItem('zamin_token');
+            const userStr = localStorage.getItem('zamin_user');
+            if(token && userStr) {
+                const user = JSON.parse(decodeURIComponent(userStr));
+                // Allow Brokers and Admins to post reels (PRD Step 5)
+                if(user.role === 'broker' || user.role === 'admin' || user.role === 'seller') {
+                    document.getElementById('btnAddReel').style.display = 'block';
+                }
+            }
+            loadReels();
+        };
+
+        // ==========================================
+        // 🌟 1. LOAD & RENDER REELS
+        // ==========================================
+        async function loadReels() {
+            const container = document.getElementById('reelsContainer');
+            try {
+                const res = await fetch(`${API_URL}/listings/all`);
+                const data = await res.json();
+
+                if (data.success && data.listings.length > 0) {
+                    container.innerHTML = ''; 
+
+                    data.listings.forEach((item, index) => {
+                        let mediaSource = item.imageUrl;
+                        if (mediaSource && !mediaSource.startsWith("http")) {
+                            mediaSource = mediaSource.replace(/\\/g, "/");
+                            mediaSource = BASE_SERVER_URL + (mediaSource.startsWith("/") ? mediaSource.substring(1) : mediaSource);
+                        }
+                        const fallbackImg = "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1080&h=1920&q=80&fit=crop";
+                        if (!mediaSource) mediaSource = fallbackImg;
+
+                        const isVideo = mediaSource.match(/\.(mp4|webm|ogg)$/i) || mediaSource.includes('video/upload');
+
+                        let mediaHTML = isVideo 
+                            ? `<video src="${mediaSource}" class="reel-media scroll-video" loop muted playsinline></video>`
+                            : `<img src="${mediaSource}" onerror="this.src='${fallbackImg}'" class="reel-media" alt="Property">`;
+
+                        const randomLikes = Math.floor(Math.random() * 500) + 50;
+                        const randomComments = Math.floor(Math.random() * 50) + 5;
+
+                        // Fake Featured logic for UI
+                        const isFeatured = Math.random() > 0.7; 
+
+                        // Authentic Media Badge (Step 34 verification)
+                        const authenticBadge = item.isMediaAuthentic 
+                            ? `<div class="authentic-badge"><i class="fas fa-shield-alt me-1"></i> Verified In-App</div>` 
+                            : '';
+
+                        const reelHTML = `
+                            <div class="reel-card" ondblclick="toggleLike(this)">
+                                ${mediaHTML}
+                                <div class="overlay-gradient"></div>
+
+                                <div class="reel-info">
+                                    ${authenticBadge}
+                                    ${isFeatured ? `<div class="ad-badge"><i class="fas fa-star me-1"></i> Featured</div>` : ''}
+                                    <div class="broker-name">
+                                        <img src="https://i.pravatar.cc/100?img=${index+20}" alt="Broker">
+                                        ${item.postedBy ? item.postedBy.fullName : 'Verified Owner'}
+                                    </div>
+                                    <h2 class="prop-title">${item.landName}</h2>
+                                    <p class="prop-desc"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address} <br> Size: ${item.landSize || 'Verified Area'}</p>
+                                    <div class="prop-price">₹ ${Number(item.landPrice).toLocaleString('en-IN')}</div>
+                                </div>
+
+                                <div class="reel-actions">
+                                    <button class="action-btn like-btn" onclick="toggleLike(this.parentElement.parentElement)">
+                                        <i class="fas fa-heart"></i>
+                                        <span class="like-count">${randomLikes}</span>
+                                    </button>
+                                    <button class="action-btn" onclick="openComments()">
+                                        <i class="fas fa-comment-dots"></i>
+                                        <span>${randomComments}</span>
+                                    </button>
+                                    <a href="property.html?id=${item._id}" class="action-btn-custom-wrapper">
+                                        <div class="btn-paperplane-img">
+                                            <img src="image_1d0a2f.png" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-paper-plane\\'></i>'" alt="Search">
+                                        </div>
+                                        <span style="color: white; font-size: 12px; font-weight: 600; text-shadow: 0 2px 5px rgba(0,0,0,0.5);">View details</span>
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                        container.innerHTML += reelHTML;
+                    });
+
+                    setupVideoAutoPlay();
+
+                } else {
+                    container.innerHTML = `<div class="text-center text-white p-5 mt-5"><h3>No properties available right now.</h3></div>`;
+                }
+            } catch (e) {
+                container.innerHTML = `<div class="text-center text-danger p-5 mt-5"><h3>Failed to load Reels. Check server.</h3></div>`;
+            }
+        }
+
+        function setupVideoAutoPlay() {
+            const videos = document.querySelectorAll('.scroll-video');
+            if(videos.length === 0) return;
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if(entry.isIntersecting) {
+                        entry.target.play().catch(e => console.log("Auto-play prevented"));
+                    } else {
+                        entry.target.pause();
+                        entry.target.currentTime = 0;
+                    }
+                });
+            }, { threshold: 0.6 });
+
+            videos.forEach(video => observer.observe(video));
+        }
+
+        // ==========================================
+        // 🌟 2. IN-APP CAMERA & RECORDING ENGINE
+        // ==========================================
+        let mediaRecorder;
+        let recordedChunks = [];
+        let videoBlob;
+        let currentStream;
+        let isRecording = false;
+        let facingMode = "environment"; 
+
+        async function openCamera() {
+            document.getElementById('cameraOverlay').classList.add('active');
+            getGPSLocation();
+            startCameraStream();
+        }
+
+        function closeCamera() {
+            document.getElementById('cameraOverlay').classList.remove('active');
+            if(currentStream) currentStream.getTracks().forEach(track => track.stop());
+        }
+
+        async function startCameraStream() {
+            if(currentStream) currentStream.getTracks().forEach(track => track.stop());
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: facingMode },
+                    audio: true
+                });
+                document.getElementById('cameraFeed').srcObject = currentStream;
+            } catch (err) {
+                alert("Camera access denied or not available!");
+                closeCamera();
+            }
+        }
+
+        function switchCamera() {
+            facingMode = facingMode === "user" ? "environment" : "user";
+            startCameraStream();
+        }
+
+        function toggleRecording() {
+            const btn = document.getElementById('recordBtn');
+            if(!isRecording) {
+                // Start Recording
+                recordedChunks = [];
+                mediaRecorder = new MediaRecorder(currentStream, { mimeType: 'video/webm' });
+                mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+                mediaRecorder.onstop = () => {
+                    videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                    openUploadForm();
+                };
+                mediaRecorder.start();
+                isRecording = true;
+                btn.classList.add('recording');
+            } else {
+                // Stop Recording
+                mediaRecorder.stop();
+                isRecording = false;
+                btn.classList.remove('recording');
+                closeCamera();
+            }
+        }
+
+        function getGPSLocation() {
+            const statusDiv = document.getElementById('gpsStatus');
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        document.getElementById('r_lat').value = position.coords.latitude;
+                        document.getElementById('r_lng').value = position.coords.longitude;
+                        statusDiv.innerHTML = `<i class="fas fa-check-circle text-success me-1"></i> GPS Locked`;
+                    },
+                    (err) => {
+                        statusDiv.innerHTML = `<i class="fas fa-exclamation-triangle text-warning me-1"></i> GPS Failed. Upload restricted.`;
+                    },
+                    { enableHighAccuracy: true }
+                );
+            }
+        }
+
+        // ==========================================
+        // 🌟 3. REEL UPLOAD SYSTEM (Syncs with ListingController)
+        // ==========================================
+        function openUploadForm() {
+            document.getElementById('uploadFormModal').classList.add('active');
+            const preview = document.getElementById('recordedPreview');
+            preview.src = URL.createObjectURL(videoBlob);
+        }
+
+        function closeUploadForm() {
+            document.getElementById('uploadFormModal').classList.remove('active');
+            videoBlob = null;
+        }
+
+        async function submitReel(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitReelBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading Securely...';
+            btn.disabled = true;
+
+            const lat = document.getElementById('r_lat').value;
+            const lng = document.getElementById('r_lng').value;
+
+            if(!lat || !lng) {
+                Swal.fire('GPS Required', 'Location is required to prove authenticity of the property!', 'warning');
+                btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i> Publish Reel';
+                btn.disabled = false;
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('landName', document.getElementById('r_title').value);
+            formData.append('landPrice', document.getElementById('r_price').value);
+            formData.append('landSize', document.getElementById('r_size').value);
+            formData.append('address', document.getElementById('r_address').value);
+            formData.append('extraInfo', document.getElementById('r_extra').value);
+
+            // Send exact GPS coordinates and Authentication flag to backend
+            formData.append('latitude', lat);
+            formData.append('longitude', lng);
+            formData.append('capturedInApp', 'true'); 
+
+            // Append the video blob
+            formData.append('image', videoBlob, `zamin_reel_${Date.now()}.webm`);
+
+            try {
+                const token = localStorage.getItem('zamin_token');
+                const response = await fetch(`${API_URL}/listings/create`, {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${token}` },
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    Swal.fire({ title: 'Reel Live! 🚀', text: 'Authentic property video posted.', icon: 'success' })
+                    .then(() => {
+                        closeUploadForm();
+                        loadReels(); // Refresh feed
+                    });
+                } else {
+                    Swal.fire('Error', data.message || "Upload failed. It might be a duplicate.", 'error');
+                }
+            } catch (err) {
+                Swal.fire('Connection Error', 'Failed to reach Zamindekho servers.', 'error');
+            } finally {
+                btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i> Publish Reel';
+                btn.disabled = false;
+            }
+        }
+
+        // UI Interactions
+        function toggleLike(element) {
+            const likeBtn = element.querySelector('.like-btn') || element;
+            const isLiked = likeBtn.classList.contains('liked');
+            const countSpan = likeBtn.querySelector('.like-count');
+            let currentCount = parseInt(countSpan.innerText);
+
+            if (isLiked) {
+                likeBtn.classList.remove('liked');
+                countSpan.innerText = currentCount - 1;
+            } else {
+                likeBtn.classList.add('liked');
+                countSpan.innerText = currentCount + 1;
+                if (navigator.vibrate) navigator.vibrate(50);
+            }
+        }
+
+        function openComments() {
+            document.getElementById('commentsModal').classList.add('active');
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        function closeComments() {
+            document.getElementById('commentsModal').classList.remove('active');
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
+        function addComment() {
+            const input = document.getElementById('newCommentInput');
+            if(input.value.trim() === "") return;
+
+            const newCommentHTML = `
+                <div class="comment-item" style="animation: heartBurst 0.3s ease-out;">
+                    <img src="https://i.pravatar.cc/100?img=60" alt="Me">
+                    <div class="comment-text border-primary border">
+                        <strong class="text-primary">You (Buyer)</strong>
+                        ${input.value}
+                    </div>
+                </div>
+            `;
+            const commentsList = document.getElementById('commentsList');
+            commentsList.innerHTML = newCommentHTML + commentsList.innerHTML; 
+            input.value = '';
+            commentsList.scrollTo(0,0);
+        }
+    </script>
+</body>
+</html>

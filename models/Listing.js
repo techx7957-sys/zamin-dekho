@@ -12,6 +12,7 @@ const listingSchema = new mongoose.Schema({
     landPrice: {
         type: Number,
         required: true,
+        index: true // 🚀 FAST QUERY: For Price Filters
     },
     address: {
         type: String,
@@ -19,12 +20,13 @@ const listingSchema = new mongoose.Schema({
     },
     phone: {
         type: String,
-        required: true,
+        default: "Not Provided", // Made optional to prevent errors if not passed
     },
     category: {
         type: String,
         enum: ["residential", "commercial", "agricultural", "industrial"],
         default: "residential",
+        index: true // 🚀 FAST QUERY: For Category Tabs
     },
     propertyType: {
         type: String,
@@ -32,7 +34,22 @@ const listingSchema = new mongoose.Schema({
     },
 
     // ==========================================
-    // 2. DETAILED INSIGHTS (From Masterplan)
+    // 🌍 2. GEO-SPATIAL ENGINE (PRD Step 10 & 20)
+    // ==========================================
+    location: {
+        type: {
+            type: String,
+            enum: ['Point'], // MongoDB requires this exact format for GeoJSON
+            default: 'Point'
+        },
+        coordinates: {
+            type: [Number], // Must be [longitude, latitude]
+            default: [0, 0]
+        }
+    },
+
+    // ==========================================
+    // 3. DETAILED INSIGHTS 
     // ==========================================
     landSize: {
         type: String,
@@ -68,45 +85,47 @@ const listingSchema = new mongoose.Schema({
     },
 
     // ==========================================
-    // 3. MEDIA & DOCUMENTS
+    // 📸 4. MEDIA & AUTHENTICITY (Step 34)
     // ==========================================
     imageUrl: {
         type: String,
-        required: true, // Main HD Image
+        required: true, // Main Image or Video URL
     },
     documentUrl: {
         type: String,
         default: "",
     },
+    isMediaAuthentic: {
+        type: Boolean,
+        default: false // Becomes true ONLY if captured via our in-app camera
+    },
 
     // ==========================================
-    // 4. ADMIN & PLATFORM CONTROLS
+    // 🛡️ 5. ADMIN & PLATFORM CONTROLS
     // ==========================================
     approvalStatus: {
         type: String,
         enum: ["Pending", "Approved", "Rejected"],
-        default: "Approved",
+        default: "Pending", // 🌟 FIX: Default must be pending so Admin can review it
+        index: true 
     },
-
-    // 🌟 NAYA: Booking System (Token Payment ke baad zamin lock karne ke liye)
     bookingStatus: {
         type: String,
         enum: ["Available", "Reserved", "Sold"],
-        default: "Available", // Default sab available rahenge
+        default: "Available", 
+        index: true
     },
-
-    // ==========================================
-    // 5. OWNERSHIP & TIMESTAMPS
-    // ==========================================
     postedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true,
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now,
-    },
+    }
+}, { 
+    // 🌟 FIX: Auto manages createdAt and updatedAt
+    timestamps: true 
 });
+
+// 🚀 THE MAGIC: 2D Sphere Index for 50km Radar & Deal Room Geofencing
+listingSchema.index({ location: "2dsphere" });
 
 module.exports = mongoose.model("Listing", listingSchema);

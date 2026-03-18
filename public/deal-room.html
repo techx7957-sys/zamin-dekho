@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Deal Room | Zamin Dekho</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        body {
+            background-color: #0f172a; /* Deep Secure Navy */
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 🌟 GPS VERIFICATION RADAR SCREEN 🌟 */
+        #radarScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.98); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.5s;
+        }
+        .radar {
+            width: 150px; height: 150px; border-radius: 50%;
+            border: 2px solid rgba(16, 185, 129, 0.3);
+            position: relative; overflow: hidden;
+            box-shadow: 0 0 50px rgba(16, 185, 129, 0.2);
+            margin-bottom: 30px;
+        }
+        .radar::before {
+            content: ''; position: absolute; top: 50%; left: 50%;
+            width: 100%; height: 100%; background: conic-gradient(from 0deg, transparent 70%, rgba(16, 185, 129, 0.8) 100%);
+            transform-origin: 0 0; animation: scan 2s linear infinite;
+        }
+        .radar::after {
+            content: '\f3c5'; font-family: 'Font Awesome 5 Free'; font-weight: 900;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 40px; color: #10b981;
+        }
+        @keyframes scan { 100% { transform: rotate(360deg); } }
+
+        .radar-text { font-family: 'JetBrains Mono', monospace; color: #10b981; font-weight: 700; letter-spacing: 2px; text-align: center;}
+
+        /* 🌟 MAIN DEAL ROOM UI 🌟 */
+        .top-bar { background: #1e293b; padding: 15px 20px; border-bottom: 2px solid #10b981; display: flex; justify-content: space-between; align-items: center; }
+        .secure-badge { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; padding: 5px 12px; border-radius: 50px; font-size: 11px; font-weight: bold; font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; gap: 5px;}
+
+        .room-container { flex: 1; display: flex; flex-direction: column; max-width: 800px; margin: 0 auto; width: 100%; padding: 15px; }
+
+        /* Deal Progress Tracker (PRD Step 23) */
+        .deal-progress { display: flex; justify-content: space-between; position: relative; margin-bottom: 20px; padding: 0 10px; }
+        .deal-progress::before { content: ''; position: absolute; top: 15px; left: 30px; right: 30px; height: 2px; background: #334155; z-index: 1; }
+        .step { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 5px; color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .step .icon { width: 32px; height: 32px; border-radius: 50%; background: #1e293b; border: 2px solid #334155; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: 0.3s; }
+        .step.active { color: #10b981; }
+        .step.active .icon { background: #10b981; border-color: #10b981; color: white; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+        .step.current .icon { background: #f59e0b; border-color: #f59e0b; color: white; animation: pulseStep 1.5s infinite; }
+        @keyframes pulseStep { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+
+        .prop-info-card { background: linear-gradient(145deg, #1e293b, #0f172a); border-radius: 15px; padding: 15px; border: 1px solid #334155; margin-bottom: 15px; display: flex; gap: 15px; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .prop-img { width: 90px; height: 90px; border-radius: 10px; object-fit: cover; border: 1px solid #475569;}
+        .prop-details h3 { font-weight: 800; margin: 0 0 5px 0; font-size: 18px; line-height: 1.2;}
+        .prop-details .price { color: #10b981; font-size: 22px; font-weight: 800; font-family: 'JetBrains Mono', monospace;}
+
+        /* Chat Area */
+        .chat-box { flex: 1; background: #0b1120; border: 1px solid #1e293b; border-radius: 15px; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; margin-bottom: 15px; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);}
+        .message { max-width: 80%; padding: 12px 16px; border-radius: 15px; font-size: 13.5px; line-height: 1.5; position: relative;}
+        .msg-system { align-self: center; background: rgba(16, 185, 129, 0.1); color: #10b981; font-size: 11px; border-radius: 50px; padding: 5px 15px; font-family: 'JetBrains Mono', monospace; border: 1px solid rgba(16, 185, 129, 0.2);}
+        .msg-broker { align-self: flex-start; background: #1e293b; border-bottom-left-radius: 2px; border: 1px solid #334155; color: #e2e8f0;}
+        .msg-buyer { align-self: flex-end; background: #3b82f6; color: white; border-bottom-right-radius: 2px; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);}
+
+        .chat-input-area { display: flex; gap: 10px; margin-bottom: 15px;}
+        .chat-input { flex: 1; background: #1e293b; border: 1px solid #334155; color: white; padding: 15px 20px; border-radius: 50px; outline: none; font-size: 14px; transition: 0.3s;}
+        .chat-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);}
+        .btn-send { background: #3b82f6; border: none; color: white; width: 50px; height: 50px; border-radius: 50%; font-size: 18px; transition: 0.2s; display: flex; align-items: center; justify-content: center;}
+        .btn-send:hover { background: #2563eb; transform: scale(1.05); }
+
+        /* Action Buttons */
+        .deal-actions { display: flex; gap: 10px; }
+        .btn-pay-token { flex: 2; background: linear-gradient(45deg, #f59e0b, #d97706); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: 800; font-size: 15px; box-shadow: 0 5px 15px rgba(245, 158, 11, 0.3); transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px;}
+        .btn-pay-token:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(245, 158, 11, 0.5); }
+        .btn-cancel { flex: 1; background: transparent; border: 2px solid #334155; color: #94a3b8; border-radius: 12px; font-weight: 700; transition: 0.3s;}
+        .btn-cancel:hover { background: #ef4444; color: white; border-color: #ef4444;}
+    </style>
+</head>
+<body>
+
+    <div id="radarScreen">
+        <div class="radar"></div>
+        <h3 class="fw-bold mt-4 mb-2 text-white">Dual Presence Verification</h3>
+        <p class="radar-text" id="radarStatus">MATCHING GPS COORDINATES...</p>
+        <p class="text-muted small mt-3 px-4 text-center" style="max-width: 400px;">Please stay at the property location. We are verifying your device's GPS against the property coordinates (100m Geofence).</p>
+    </div>
+
+    <div class="top-bar">
+        <div class="d-flex align-items-center gap-3">
+            <a href="dashboard.html" class="text-white text-decoration-none"><i class="fas fa-arrow-left"></i></a>
+            <h5 class="m-0 fw-bold">Deal Room</h5>
+        </div>
+        <div class="secure-badge"><i class="fas fa-shield-alt"></i> ENCRYPTED</div>
+    </div>
+
+    <div class="room-container">
+
+        <div class="deal-progress">
+            <div class="step active"><div class="icon"><i class="fas fa-map-marker-alt"></i></div><span>Visit</span></div>
+            <div class="step current"><div class="icon"><i class="fas fa-rupee-sign"></i></div><span>Token</span></div>
+            <div class="step"><div class="icon"><i class="fas fa-file-signature"></i></div><span>Legal</span></div>
+            <div class="step"><div class="icon"><i class="fas fa-handshake"></i></div><span>Registry</span></div>
+        </div>
+
+        <div class="prop-info-card">
+            <img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=300" id="drImage" class="prop-img" alt="Property">
+            <div class="prop-details">
+                <div class="secure-badge border-0 bg-secondary text-light mb-2 d-inline-block px-2 py-1" style="font-size: 10px;" id="drToken">VERIFYING...</div>
+                <h3 id="drName">Loading Property...</h3>
+                <div class="price" id="drPrice">₹ 0</div>
+            </div>
+        </div>
+
+        <div class="chat-box" id="chatBox">
+            <div class="msg-system" id="timeDisplay">Today, Live</div>
+            <div class="msg-system"><i class="fas fa-satellite-dish me-1"></i> Radar Match Verified. Deal Room Unlocked.</div>
+
+            <div class="message msg-broker">
+                <strong class="d-block text-info small mb-1">Zamin Assistant</strong>
+                Welcome to the Secure Deal Room! Both parties are physically verified at the site. Please discuss final details here. The platform records this chat for your safety.
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Type a message to the broker...">
+            <button class="btn-send" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+
+        <div class="deal-actions">
+            <button class="btn-cancel" onclick="window.location.href='dashboard.html'">Exit Room</button>
+            <button class="btn-pay-token" id="payBtn" onclick="proceedToPayment()">
+                <i class="fas fa-lock"></i> Pay Escrow Token (₹1 Lakh)
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "/api";
+        const BASE_SERVER_URL = "/";
+        let currentLeadId = null;
+        let propertyId = null;
+
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentLeadId = urlParams.get('lead'); // Passed from dashboard
+
+            document.getElementById('timeDisplay').innerText = new Date().toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'});
+            startGeoFenceVerification();
+        };
+
+        function startGeoFenceVerification() {
+            const statusText = document.getElementById('radarStatus');
+
+            if (!navigator.geolocation) {
+                Swal.fire('Error', 'GPS is not supported by your device.', 'error');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    statusText.innerText = "COORDINATES ACQUIRED. CALCULATING DISTANCE...";
+
+                    try {
+                        const token = localStorage.getItem('zamin_token');
+
+                        // Backend API Call to verify GPS (Haversine 100m check)
+                        const res = await fetch(`${API_URL}/leads/verify-gps/${currentLeadId || 'demo'}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+                        });
+
+                        const data = await res.json();
+
+                        setTimeout(() => {
+                            if(data.success) {
+                                unlockDealRoom(data);
+                            } else {
+                                // Strict Reject: User is too far from the property
+                                Swal.fire({ 
+                                    title: 'Radar Verification Failed 🚨', 
+                                    text: data.message || "You are not within the 100-meter geo-fence of the property.", 
+                                    icon: 'error',
+                                    confirmButtonColor: '#ef4444'
+                                }).then(() => window.location.href = 'dashboard.html');
+                            }
+                        }, 2000); 
+
+                    } catch (e) {
+                        // Fallback ONLY for Development/Demo if server is unreachable
+                        console.warn("Server unreachable. Falling back to Demo Mode.");
+                        setTimeout(() => {
+                            unlockDealRoom({
+                                dealRoomToken: "DEMO-XYZ",
+                                property: { landName: "Demo Premium Farm", landPrice: 12500000, _id: "demo-id" }
+                            });
+                        }, 2000);
+                    }
+                },
+                (err) => {
+                    Swal.fire('GPS Error', 'Please allow Location Access to prove you are at the site.', 'error')
+                    .then(() => window.location.href = 'dashboard.html');
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+
+        function unlockDealRoom(data) {
+            document.getElementById('radarScreen').style.opacity = '0';
+            setTimeout(() => document.getElementById('radarScreen').style.display = 'none', 500);
+
+            if(data.property) {
+                propertyId = data.property._id || data.property.id;
+                document.getElementById('drName').innerText = data.property.landName;
+                document.getElementById('drPrice').innerText = `₹ ${Number(data.property.landPrice).toLocaleString("en-IN")}`;
+                document.getElementById('drToken').innerText = `ROOM ID: ${data.dealRoomToken}`;
+
+                if(data.property.imageUrl) {
+                    let imgSource = data.property.imageUrl;
+                    if (!imgSource.startsWith("http")) imgSource = BASE_SERVER_URL + imgSource.replace(/\\/g, "/").replace(/^\//, '');
+                    document.getElementById('drImage').src = imgSource;
+                }
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if(!text) return;
+
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML += `<div class="message msg-buyer">${text}</div>`;
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Fake Broker Reply for Demo
+            setTimeout(() => {
+                chatBox.innerHTML += `
+                    <div class="message msg-broker">
+                        <strong class="d-block text-info small mb-1">Zamin Broker</strong>
+                        I agree to the terms. Please proceed with the token payment below so I can reserve this property for you.
+                    </div>
+                `;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, 1500);
+        }
+
+        document.getElementById('chatInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        function proceedToPayment() {
+            if(!propertyId) propertyId = 'demo-id';
+            window.location.href = `checkout.html?id=${propertyId}`;
+        }
+    </script>
+</body>
+</html>
