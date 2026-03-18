@@ -27,7 +27,7 @@ router.post(
   "/create",
   verifyToken,
   upload.single("image"), // Handles both image and video buffers
-  scanImageContent,       // 🌟 NAYA: Yahan AI pehle check karega ki photo valid hai ya nahi
+  scanMediaContent,       // 🚀 THE FIX: Purane scanImageContent ko scanMediaContent kar diya
   listingController.createListing
 );
 
