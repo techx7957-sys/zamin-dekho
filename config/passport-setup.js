@@ -2,7 +2,6 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const TwitterStrategy = require("passport-twitter-oauth2").Strategy;
 const User = require("../models/User");
-require("dotenv").config();
 
 // ==========================================
 // SESSION SERIALIZATION
