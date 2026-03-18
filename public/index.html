@@ -111,7 +111,7 @@
             .property-card:hover .property-img { transform: scale(1.05); }
             .img-wrapper { overflow: hidden; position: relative; }
 
-            .badge-promoted { position: absolute; top: 15px; left: 15px; background: linear-gradient(45deg, #f59e0b, #d97706); color: white; font-size: 11px; font-weight: 800; padding: 6px 15px; border-radius: 50px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); z-index: 10; letter-spacing: 1px;}
+            .badge-promoted { position: absolute; top: 15px; left: 15px; background: linear-gradient(45deg, #f59e0b, #d97706); color: white; font-size: 11px; font-weight: 800; padding: 6px 15px; border-radius: 50px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(0,0,0, 0.3); z-index: 10; letter-spacing: 1px;}
             .badge-verified { position: absolute; bottom: 15px; left: 15px; background: rgba(255,255,255,0.9); color: #10b981; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 8px; z-index: 10; display: flex; align-items: center; gap: 5px; backdrop-filter: blur(5px);}
 
             /* Modal Styling */
@@ -209,16 +209,41 @@
 
         <div class="container mt-5 mb-5">
 
-            <div class="d-flex justify-content-between align-items-center mb-4 mt-5">
-                <h4 class="fw-bold m-0 text-dark"><i class="fas fa-fire text-warning me-2"></i> Trending Premium Lands</h4>
-            </div>
-            <div class="featured-row mb-5 pb-3" id="featuredGrid">
-                <div class="text-center w-100 py-3 text-muted"><div class="spinner-grow text-warning" role="status"></div></div>
+            <div id="homeSections">
+
+                <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
+                    <h4 class="fw-bold m-0 text-dark"><i class="fas fa-history text-secondary me-2"></i> Recently Viewed Lands</h4>
+                </div>
+                <div class="featured-row mb-2 pb-3" id="recentlyViewedGrid">
+                    <div class="text-muted small fw-bold ps-2"><div class="spinner-grow text-secondary spinner-grow-sm"></div> Loading...</div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
+                    <h4 class="fw-bold m-0 text-dark"><i class="fas fa-thumbs-up text-primary me-2"></i> Recommended for You</h4>
+                </div>
+                <div class="featured-row mb-2 pb-3" id="recommendedGrid">
+                    <div class="text-muted small fw-bold ps-2"><div class="spinner-grow text-primary spinner-grow-sm"></div> Loading...</div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
+                    <h4 class="fw-bold m-0 text-dark"><i class="fas fa-map-marker-alt text-danger me-2"></i> Trending Locations</h4>
+                </div>
+                <div class="featured-row mb-2 pb-3" id="trendingLocationsGrid">
+                    <div class="text-muted small fw-bold ps-2"><div class="spinner-grow text-danger spinner-grow-sm"></div> Loading...</div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
+                    <h4 class="fw-bold m-0 text-dark"><i class="fas fa-crown text-warning me-2"></i> Explore Premium Lands</h4>
+                </div>
+                <div class="featured-row mb-5 pb-3" id="premiumGrid">
+                    <div class="text-muted small fw-bold ps-2"><div class="spinner-grow text-warning spinner-grow-sm"></div> Loading...</div>
+                </div>
+
             </div>
 
             <div class="d-flex justify-content-between align-items-end mb-4 border-bottom border-2 pb-3 mt-4">
                 <div>
-                    <h3 class="fw-bold m-0 text-dark" id="resultsHeading">Explore All Properties</h3>
+                    <h3 class="fw-bold m-0 text-dark" id="resultsHeading">Newly Added Lands</h3>
                     <p class="text-muted small fw-bold m-0 mt-1" id="resultSubtitle">100% verified listings from owners & brokers</p>
                 </div>
                 <span class="badge bg-primary px-3 py-2 rounded-pill fs-6 shadow-sm" id="resultCount">Searching...</span>
@@ -309,7 +334,6 @@
                 }
             });
 
-            // 🌟 UPDATED: Advanced Property Categories Data
             const propertyTypesData = {
                 "Residential": [
                     { id: "r1", val: "Flat / Apartment", label: "Flat / Apartment" },
@@ -366,15 +390,17 @@
             function resetFilters() {
                 document.getElementById('mainSearchInput').value = '';
                 document.querySelectorAll('.type-chk').forEach(c => c.checked = false);
-                // 🌟 FIX: Ensuring dropdowns completely reset to default
                 document.getElementById('budgetFilter').selectedIndex = 0; 
                 document.getElementById('bedroomFilter').selectedIndex = 0;
                 userLat = null; 
                 userLng = null;
                 document.getElementById('gpsIcon').classList.remove('gps-active');
+
+                // 🌟 NAYA: Reset karne par saare premium sections wapas dikhao
+                document.getElementById('homeSections').style.display = 'block';
+                document.getElementById('resultsHeading').innerText = `Newly Added Lands`;
             }
 
-            // Geo-Spatial Discovery (PRD Step 10)
             function detectFastGPS() {
                 const input = document.getElementById('mainSearchInput');
                 const icon = document.getElementById('gpsIcon');
@@ -436,7 +462,7 @@
             }
 
             async function executeAdvancedSearch() {
-                const keyword = document.getElementById('mainSearchInput').value.replace('Nearby: ', ''); // Clean prefix if gps used
+                const keyword = document.getElementById('mainSearchInput').value.replace('Nearby: ', ''); 
                 const cat = document.getElementById('mainCategory').value;
                 const budget = document.getElementById('budgetFilter').value;
                 const bedroom = document.getElementById('bedroomFilter').value;
@@ -444,6 +470,9 @@
                 document.querySelectorAll('.type-chk:checked').forEach(c => types.push(c.value));
 
                 toggleFilterPanel(false);
+
+                // 🌟 NAYA: Search karte hi home sections hide kar do
+                document.getElementById('homeSections').style.display = 'none';
 
                 document.getElementById('resultsHeading').innerText = `Search Results`;
                 if(userLat && userLng) {
@@ -462,13 +491,72 @@
                 fetchAll(`${API_URL}/listings/search?${query}`);
             }
 
+            // 🌟 NAYA: Data Shuffle Function (UI ko alive dikhane ke liye)
+            function shuffleArray(array) {
+                let arr = [...array];
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            }
+
+            // 🌟 NAYA: Card Generate Helper
+            function getCardHTML(item, badgeHTML = '') {
+                let imgSource = item.imageUrl;
+                if(imgSource && !imgSource.startsWith('http')) {
+                    imgSource = imgSource.replace(/\\/g, '/'); 
+                    imgSource = BASE_SERVER_URL + (imgSource.startsWith('/') ? imgSource.substring(1) : imgSource);
+                }
+
+                const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
+                if(!imgSource) imgSource = fallbackImg;
+
+                let dimBadge = '';
+                if (item.length || item.breadth) dimBadge = `<span class="badge bg-light text-dark border ms-2"><i class="fas fa-ruler-combined text-primary me-1"></i> ${item.length || '-'}x${item.breadth || '-'}</span>`;
+
+                const verifiedBadge = `<div class="badge-verified"><i class="fas fa-shield-check text-success"></i> Zamin Verified</div>`;
+
+                return `
+                    <div class="property-card h-100" onclick="window.location.href='property.html?id=${item._id}'">
+                        <div class="img-wrapper">
+                            ${badgeHTML}
+                            ${!badgeHTML ? `<span class="badge bg-dark px-3 py-2 rounded-pill position-absolute shadow" style="top:15px; left:15px; font-weight:800; text-transform: uppercase; letter-spacing:0.5px;">${item.category || 'LAND'}</span>` : ''}
+                            ${verifiedBadge}
+                            <img src="${imgSource}" onerror="this.src='${fallbackImg}'" class="property-img" alt="Property">
+                        </div>
+                        <div class="card-body p-4 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h3 class="fw-bold text-success m-0" style="font-family: 'JetBrains Mono', monospace;">₹ ${Number(item.landPrice).toLocaleString('en-IN')}</h3>
+                                </div>
+                                <h5 class="fw-bold text-dark text-truncate mb-2 lh-base" title="${item.landName}">${item.landName}</h5>
+                                <p class="text-muted small mb-3 fw-medium"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address}</p>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center pt-3 border-top">
+                                ${item.landSize && item.landSize !== 'Not Specified' ? `<span class="badge bg-light text-dark border px-2 py-1"><i class="fas fa-vector-square text-primary me-1"></i> ${item.landSize}</span>` : ''}
+                                ${dimBadge}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
             async function fetchAll(url = `${API_URL}/listings/all`) {
-                const grid = document.getElementById('listingsGrid');
-                const fGrid = document.getElementById('featuredGrid');
+                const mainGrid = document.getElementById('listingsGrid');
+                const premiumGrid = document.getElementById('premiumGrid');
+                const recentGrid = document.getElementById('recentlyViewedGrid');
+                const recommendedGrid = document.getElementById('recommendedGrid');
+                const trendingGrid = document.getElementById('trendingLocationsGrid');
                 const resCount = document.getElementById('resultCount');
 
-                grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-success" role="status"></div></div>';
-                if(url.includes('/all')) fGrid.innerHTML = '';
+                const isSearch = url.includes('/search');
+
+                mainGrid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-success" role="status"></div></div>';
+
+                if(!isSearch) {
+                    premiumGrid.innerHTML = ''; recentGrid.innerHTML = ''; recommendedGrid.innerHTML = ''; trendingGrid.innerHTML = '';
+                }
 
                 try {
                     const res = await fetch(url);
@@ -476,63 +564,39 @@
 
                     if (data.success && data.listings.length > 0) {
                         resCount.innerText = `${data.listings.length} Lands Found`;
-                        let featuredCount = 0;
-                        grid.innerHTML = ''; 
+                        mainGrid.innerHTML = ''; 
 
-                        data.listings.forEach(item => {
-                            let imgSource = item.imageUrl;
-                            if(imgSource && !imgSource.startsWith('http')) {
-                                imgSource = imgSource.replace(/\\/g, '/'); 
-                                imgSource = BASE_SERVER_URL + (imgSource.startsWith('/') ? imgSource.substring(1) : imgSource);
-                            }
+                        let allItems = [...data.listings];
 
-                            const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
-                            if(!imgSource) imgSource = fallbackImg;
-
-                            let dimBadge = '';
-                            if (item.length || item.breadth) dimBadge = `<span class="badge bg-light text-dark border ms-2"><i class="fas fa-ruler-combined text-primary me-1"></i> ${item.length || '-'}x${item.breadth || '-'}</span>`;
-
-                            const isFeatured = Math.random() > 0.8;
-                            const verifiedBadge = `<div class="badge-verified"><i class="fas fa-shield-check"></i> Zamin Verified</div>`;
-
-                            const cardInnerHTML = `
-                                <div class="property-card h-100" onclick="window.location.href='property.html?id=${item._id}'">
-                                    <div class="img-wrapper">
-                                        ${isFeatured ? '<div class="badge-promoted"><i class="fas fa-bolt"></i> Premium Ad</div>' : ''}
-                                        ${!isFeatured ? `<span class="badge bg-dark px-3 py-2 rounded-pill position-absolute shadow" style="top:15px; left:15px; font-weight:800; text-transform: uppercase; letter-spacing:0.5px;">${item.category || 'LAND'}</span>` : ''}
-                                        ${verifiedBadge}
-                                        <img src="${imgSource}" onerror="this.src='${fallbackImg}'" class="property-img" alt="Property">
-                                    </div>
-                                    <div class="card-body p-4 d-flex flex-column justify-content-between">
-                                        <div>
-                                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                                <h3 class="fw-bold text-success m-0" style="font-family: 'JetBrains Mono', monospace;">₹ ${Number(item.landPrice).toLocaleString('en-IN')}</h3>
-                                            </div>
-                                            <h5 class="fw-bold text-dark text-truncate mb-2 lh-base" title="${item.landName}">${item.landName}</h5>
-                                            <p class="text-muted small mb-3 fw-medium"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address}</p>
-                                        </div>
-                                        <div class="d-flex flex-wrap align-items-center pt-3 border-top">
-                                            ${item.landSize && item.landSize !== 'Not Specified' ? `<span class="badge bg-light text-dark border px-2 py-1"><i class="fas fa-vector-square text-primary me-1"></i> ${item.landSize}</span>` : ''}
-                                            ${dimBadge}
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-
-                            grid.innerHTML += `<div class="col-lg-4 col-md-6">${cardInnerHTML}</div>`;
-
-                            if(url.includes('/all') && isFeatured && featuredCount < 6) {
-                                fGrid.innerHTML += `<div style="min-width: 340px; flex: 0 0 auto;">${cardInnerHTML}</div>`;
-                                featuredCount++;
-                            }
+                        // Populate Main Grid (Newly Added / Search Results)
+                        allItems.forEach(item => {
+                            mainGrid.innerHTML += `<div class="col-lg-4 col-md-6">${getCardHTML(item)}</div>`;
                         });
-                        if(url.includes('/all') && featuredCount === 0) fGrid.innerHTML = `<div class="text-muted small ps-2 fw-bold">New premium properties updating soon...</div>`;
+
+                        // 🌟 NAYA: Populate Premium Rows using Shuffled Data
+                        if(!isSearch) {
+                            const renderHorizontal = (items, gridElement, badgeHTML) => {
+                                gridElement.innerHTML = items.length ? items.map(item => {
+                                    return `<div style="min-width: 320px; max-width: 320px; flex: 0 0 auto;">${getCardHTML(item, badgeHTML)}</div>`;
+                                }).join('') : '<div class="text-muted small ps-2 fw-bold">Updating soon...</div>';
+                            };
+
+                            renderHorizontal(shuffleArray(allItems).slice(0, 3), recentGrid, ''); 
+                            renderHorizontal(shuffleArray(allItems).slice(0, 4), recommendedGrid, '<div class="badge-promoted" style="background: linear-gradient(45deg, #10b981, #059669);"><i class="fas fa-thumbs-up"></i> Recommended</div>'); 
+                            renderHorizontal(shuffleArray(allItems).slice(0, 4), trendingGrid, '<div class="badge-promoted" style="background: linear-gradient(45deg, #ef4444, #b91c1c);"><i class="fas fa-fire"></i> Trending</div>'); 
+                            renderHorizontal(shuffleArray(allItems).slice(0, 5), premiumGrid, '<div class="badge-promoted"><i class="fas fa-crown"></i> Premium Ad</div>'); 
+                        }
                     } else {
                         resCount.innerText = "0 Results";
-                        grid.innerHTML = `<div class="text-center w-100 py-5"><i class="fas fa-search-minus fs-1 text-muted mb-3"></i><h4 class="text-muted fw-bold">No properties found in this criteria!</h4><button class="btn btn-outline-primary mt-3 rounded-pill fw-bold" onclick="resetFilters(); executeAdvancedSearch();">Clear Filters</button></div>`;
-                        if(url.includes('/all')) fGrid.innerHTML = `<div class="text-muted small ps-2">No active ads.</div>`;
+                        mainGrid.innerHTML = `<div class="text-center w-100 py-5"><i class="fas fa-search-minus fs-1 text-muted mb-3"></i><h4 class="text-muted fw-bold">No properties found in this criteria!</h4><button class="btn btn-outline-primary mt-3 rounded-pill fw-bold" onclick="resetFilters(); executeAdvancedSearch();">Clear Filters</button></div>`;
+                        if(!isSearch) {
+                            premiumGrid.innerHTML = `<div class="text-muted small ps-2 fw-bold">No premium ads yet.</div>`;
+                            recentGrid.innerHTML = `<div class="text-muted small ps-2 fw-bold">No recent history.</div>`;
+                            recommendedGrid.innerHTML = `<div class="text-muted small ps-2 fw-bold">Check back later.</div>`;
+                            trendingGrid.innerHTML = `<div class="text-muted small ps-2 fw-bold">No trends detected.</div>`;
+                        }
                     }
-                } catch(e) { grid.innerHTML = `<div class="text-center w-100 py-5"><h4 class="text-danger fw-bold"><i class="fas fa-wifi me-2"></i>Server Offline or Network Error</h4></div>`; }
+                } catch(e) { mainGrid.innerHTML = `<div class="text-center w-100 py-5"><h4 class="text-danger fw-bold"><i class="fas fa-wifi me-2"></i>Server Offline or Network Error</h4></div>`; }
             }
 
             // Edit Profile Logic
