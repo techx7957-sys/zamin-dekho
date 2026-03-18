@@ -674,6 +674,7 @@
                 }
             }
 
+            // 🚀 THE FIX: Sirf Broker aur Admin ko CRM Panel dikhega, baakiyo ke liye hide
             function updateNavbarUI() {
                 const token = localStorage.getItem('zamin_token');
                 const authArea = document.getElementById('authArea');
@@ -683,8 +684,11 @@
                     document.querySelectorAll('.auth-required-link').forEach(el => el.classList.remove('d-none'));
                     try {
                         const user = JSON.parse(localStorage.getItem('zamin_user'));
-                        if(user.role === 'admin' || user.role === 'broker') {
-                            adminArea.innerHTML = `<a class="nav-link text-danger fw-bold" style="background: #fee2e2;" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
+
+                        if(user && (user.role === 'admin' || user.role === 'broker')) {
+                            adminArea.innerHTML = `<a class="nav-link text-danger fw-bold" style="background: #fee2e2; border-radius: 8px; padding: 8px 16px !important;" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
+                        } else {
+                            adminArea.innerHTML = ''; // 🛑 Forcibly Hide for Buyer/Seller
                         }
 
                         const firstName = user.fullName ? user.fullName.split(' ')[0] : 'User';

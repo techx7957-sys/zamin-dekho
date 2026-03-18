@@ -307,14 +307,17 @@
             else switchTab('#postTab');
         };
 
+        // 🚀 THE FIX: Forcibly Hide CRM Panel for Normal Users
         function updateNavbarUI() {
             try {
                 const user = JSON.parse(localStorage.getItem("zamin_user"));
                 const adminArea = document.getElementById('adminLinkArea');
                 const authArea = document.getElementById('authArea');
 
-                if(user.role === 'admin' || user.role === 'broker') {
+                if(user && (user.role === 'admin' || user.role === 'broker')) {
                     adminArea.innerHTML = `<a class="nav-link text-danger fw-bold" style="background: #fee2e2; padding: 8px 16px !important;" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
+                } else {
+                    adminArea.innerHTML = ''; // 🛑 Forcibly Hide for Buyer/Seller
                 }
 
                 const firstName = user.fullName ? user.fullName.split(" ")[0] : "User";
