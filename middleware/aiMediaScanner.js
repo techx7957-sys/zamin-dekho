@@ -6,8 +6,7 @@ let client;
 // 🛡️ GOOGLE VISION SDK INITIALIZATION (HACKED)
 // ==========================================
 try {
-    // 🚀 THE ULTIMATE FIX: Humne variable ka naam change kar diya hai!
-    // Ab Google ka automatic system isey file path samajh kar crash nahi karega.
+    // 🚀 THE ULTIMATE FIX 1: Variable ka naam change
     const rawJson = process.env.GOOGLE_CREDS_JSON;
 
     if (rawJson && rawJson.trim().startsWith('{')) {
@@ -17,9 +16,15 @@ try {
             credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
         }
 
-        // Manually client ko JSON object pass karo
-        client = new vision.ImageAnnotatorClient({ credentials });
-        console.log("✅ Google Vision SDK Initialized Successfully!");
+        // 🚀 THE SILVER BULLET VERCEL FIX 2: 'fallback: true'
+        // Ye Google ko force karta hai ki heavy C++ (gRPC) module ki jagah 
+        // normal HTTP/REST API use kare, taaki Vercel crash na ho!
+        client = new vision.ImageAnnotatorClient({ 
+            credentials,
+            fallback: true 
+        });
+
+        console.log("✅ Google Vision SDK Initialized Successfully (REST Fallback Mode)!");
 
     } else {
         console.log("⚠️ GOOGLE_CREDS_JSON not found or invalid. AI bypassed.");
