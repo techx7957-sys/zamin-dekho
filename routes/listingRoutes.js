@@ -5,7 +5,7 @@ const listingController = require("../controllers/listingController");
 // 🛡️ Middlewares
 const { verifyToken } = require("../middleware/authMiddleware"); 
 const upload = require("../middleware/upload"); // Multer configuration for Images/Videos
-const { scanImageContent } = require("../middleware/aiImageScanner"); // 🌟 NAYA: AI Scanner Import kiya
+const { scanMediaContent } = require('../middleware/aiMediaScanner');// 🌟 NAYA: AI Scanner Import kiya
 
 // ==========================================
 // 🌍 1. PUBLIC ROUTES (Sab ke liye)
