@@ -184,7 +184,9 @@
                     <h6 class="fw-bold m-0 text-dark"><i class="fas fa-filter me-2 text-primary"></i> Select Property Types</h6>
                     <span class="clear-btn" onclick="resetFilters()"><i class="fas fa-redo-alt me-1"></i> Reset Filters</span>
                 </div>
-                <div class="checkbox-grid" id="propertyTypeGrid"></div>
+
+                <div class="property-types-section" id="propertyTypeGrid">
+                    </div>
 
                 <div class="filter-pills-row">
                     <select id="budgetFilter" class="filter-pill">
@@ -193,6 +195,7 @@
                         <option value="10000000">Below 1 Crore</option>
                         <option value="50000000">Below 5 Crores</option>
                         <option value="100000000">Below 10 Crores</option>
+                        <option value="above_10">Above 10 Crores</option> 
                     </select>
                     <select id="bedroomFilter" class="filter-pill">
                         <option value="">Any Bedrooms</option>
@@ -285,7 +288,6 @@
             const API_URL = "/api";
             const BASE_SERVER_URL = "/";
 
-            // Global Geo-Spatial Variables (PRD Step 10)
             let userLat = null;
             let userLng = null;
 
@@ -307,29 +309,31 @@
                 }
             });
 
+            // 🌟 UPDATED: Advanced Property Categories Data
             const propertyTypesData = {
                 "Residential": [
-                    { id: "r1", val: "Flat", label: "Flat / Apartment" },
-                    { id: "r2", val: "Floor", label: "Builder Floor" },
-                    { id: "r3", val: "House", label: "Independent Villa" },
-                    { id: "r4", val: "Land", label: "Residential Plot" },
-                    { id: "r6", val: "Farm", label: "Farm House" }
+                    { id: "r1", val: "Flat / Apartment", label: "Flat / Apartment" },
+                    { id: "r2", val: "Builder Floor", label: "Builder Floor" },
+                    { id: "r3", val: "Independent Villa", label: "Independent Villa" },
+                    { id: "r4", val: "Studio Apartment", label: "Studio Apartment" },
+                    { id: "r5", val: "Residential Plot", label: "Residential Plot" },
+                    { id: "r6", val: "Farm House", label: "Farm House" }
                 ],
                 "Commercial": [
-                    { id: "c1", val: "Office", label: "Office Space" },
-                    { id: "c2", val: "Shop", label: "Retail Shop" },
+                    { id: "c1", val: "Office Space", label: "Office Space" },
+                    { id: "c2", val: "Shop / Showroom", label: "Shop / Showroom" },
                     { id: "c3", val: "Commercial Land", label: "Commercial Land" },
-                    { id: "c5", val: "Warehouse", label: "Warehouse" }
+                    { id: "c4", val: "Warehouse / Godown", label: "Warehouse / Godown" }
                 ],
                 "Agricultural": [
                     { id: "a1", val: "Agricultural Land", label: "Agricultural Land" },
-                    { id: "a2", val: "Farm", label: "Farm House" },
-                    { id: "a4", val: "Orchard", label: "Orchard" }
+                    { id: "a2", val: "Farm House", label: "Farm House" },
+                    { id: "a3", val: "Orchard", label: "Orchard" }
                 ],
                 "Industrial": [
-                    { id: "i1", val: "Industrial Land", label: "Industrial Plot" },
-                    { id: "i2", val: "Factory", label: "Factory" },
-                    { id: "i3", val: "Shed", label: "Industrial Shed" }
+                    { id: "i1", val: "Industrial Building", label: "Industrial Building" },
+                    { id: "i2", val: "Industrial Land", label: "Industrial Land" },
+                    { id: "i3", val: "Factory", label: "Factory" }
                 ]
             };
 
@@ -343,12 +347,16 @@
                 else if (cat === "Commercial") input.placeholder = "Search 'Retail Shop in Mumbai'";
                 else input.placeholder = `Search ${cat.toLowerCase()} properties...`;
 
-                grid.innerHTML = propertyTypesData[cat].map(t => `
-                    <div class="form-check">
-                        <input class="form-check-input type-chk" type="checkbox" value="${t.val}" id="${t.id}" checked>
-                        <label class="form-check-label" for="${t.id}">${t.label}</label>
+                grid.innerHTML = `
+                    <div class="checkbox-grid">
+                        ${propertyTypesData[cat].map(t => `
+                            <div class="form-check">
+                                <input class="form-check-input type-chk" type="checkbox" value="${t.val}" id="${t.id}">
+                                <label class="form-check-label" for="${t.id}">${t.label}</label>
+                            </div>
+                        `).join('')}
                     </div>
-                `).join('');
+                `;
 
                 bedFilter.style.display = (cat === "Residential") ? "inline-block" : "none";
             }
@@ -358,14 +366,15 @@
             function resetFilters() {
                 document.getElementById('mainSearchInput').value = '';
                 document.querySelectorAll('.type-chk').forEach(c => c.checked = false);
-                document.getElementById('budgetFilter').value = "0";
-                document.getElementById('bedroomFilter').value = "";
+                // 🌟 FIX: Ensuring dropdowns completely reset to default
+                document.getElementById('budgetFilter').selectedIndex = 0; 
+                document.getElementById('bedroomFilter').selectedIndex = 0;
                 userLat = null; 
                 userLng = null;
                 document.getElementById('gpsIcon').classList.remove('gps-active');
             }
 
-            // 🌟 NAYA: Geo-Spatial Discovery (PRD Step 10)
+            // Geo-Spatial Discovery (PRD Step 10)
             function detectFastGPS() {
                 const input = document.getElementById('mainSearchInput');
                 const icon = document.getElementById('gpsIcon');
@@ -391,7 +400,6 @@
                             icon.classList.remove('fa-spin');
                             icon.classList.add('gps-active'); 
 
-                            // Auto trigger search
                             executeAdvancedSearch();
                         } catch(e) { input.value = "Location found!"; icon.classList.remove('fa-spin'); icon.classList.add('gps-active'); executeAdvancedSearch(); }
                     }, 
@@ -447,7 +455,6 @@
                 let query = `keyword=${encodeURIComponent(keyword)}&category=${cat.toLowerCase()}&maxPrice=${budget}&types=${types.join(',')}`;
                 if(bedroom) query += `&bedroom=${bedroom}`;
 
-                // Add Geospatial parameters if GPS was used
                 if(userLat && userLng) {
                     query += `&lat=${userLat}&lng=${userLng}`;
                 }
@@ -486,8 +493,6 @@
                             if (item.length || item.breadth) dimBadge = `<span class="badge bg-light text-dark border ms-2"><i class="fas fa-ruler-combined text-primary me-1"></i> ${item.length || '-'}x${item.breadth || '-'}</span>`;
 
                             const isFeatured = Math.random() > 0.8;
-
-                            // QC Badge Check (Assuming all returned are Approved, but we can verify)
                             const verifiedBadge = `<div class="badge-verified"><i class="fas fa-shield-check"></i> Zamin Verified</div>`;
 
                             const cardInnerHTML = `
@@ -516,7 +521,6 @@
 
                             grid.innerHTML += `<div class="col-lg-4 col-md-6">${cardInnerHTML}</div>`;
 
-                            // Only populate featured row on initial load
                             if(url.includes('/all') && isFeatured && featuredCount < 6) {
                                 fGrid.innerHTML += `<div style="min-width: 340px; flex: 0 0 auto;">${cardInnerHTML}</div>`;
                                 featuredCount++;
@@ -531,9 +535,7 @@
                 } catch(e) { grid.innerHTML = `<div class="text-center w-100 py-5"><h4 class="text-danger fw-bold"><i class="fas fa-wifi me-2"></i>Server Offline or Network Error</h4></div>`; }
             }
 
-            // ==========================================
-            // 🌟 EDIT PROFILE LOGIC 🌟
-            // ==========================================
+            // Edit Profile Logic
             let tempAvatarBase64 = null;
 
             function enableProfileEdit() {

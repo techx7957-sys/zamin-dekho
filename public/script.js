@@ -2,19 +2,30 @@
 // ZAMIN DEKHO - GLOBAL SCRIPT (PRO VERSION)
 // ==========================================
 
-// 🌟 THE MASTER SOCIAL LOGIN HANDLER 🌟
-// Yeh function automatically URL se token aur user data nikalega aur save karega
+// 🌟 FIX: Vercel-ready Dynamic URLs
+const API_BASE = "/api";
+const FRONTEND_URL = window.location.origin; 
+
+// ==========================================
+// 1. 🌟 THE MASTER INITIALIZER 🌟
+// ==========================================
+// FIX: Dono page-load events ko ek sath joda gaya hai speed ke liye
 window.addEventListener('DOMContentLoaded', () => {
+    handleSocialLogin();
+    updateNavbar();
+});
+
+// Social Login Handler (Token Extraction)
+function handleSocialLogin() {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
-    // Humara backend user ka data URL mein encode karke bhejta hai
     const user = urlParams.get('user');
 
     if (token) {
         // 1. Save Token
         localStorage.setItem('zamin_token', token);
 
-        // 2. Save User Data (agar aaya hai toh decode karke save karo)
+        // 2. Save User Data
         if (user) {
             localStorage.setItem('zamin_user', decodeURIComponent(user));
         }
@@ -23,19 +34,14 @@ window.addEventListener('DOMContentLoaded', () => {
         window.history.replaceState({}, document.title, window.location.pathname);
 
         // 4. Show Success Toast
-        showToast("Social Login Successful!", "success");
+        showToast("Login Successful! Welcome to Zamin Dekho 🚀", "success");
 
-        // 5. Short Delay ke baad page reload karo taaki "Login" button gayab hoke "Dashboard" aa jaye
+        // 5. 🌟 FIX: Reload ki jagah seedha Dashboard par bhejo!
         setTimeout(() => {
-            window.location.reload();
-        }, 1500); // 1.5 second ka delay taaki toast dikh sake
+            window.location.href = 'dashboard.html';
+        }, 1500); 
     }
-});
-
-// 🌟 FIX: Removed Hardcoded Localhost URLs
-// Ab ye automatically ussi server ko call karega jahan par website host hui hai.
-const API_BASE = "/api";
-const FRONTEND_URL = window.location.origin; 
+}
 
 // ==========================================
 // 2. AUTHENTICATION UTILITIES
@@ -150,24 +156,30 @@ function formatDate(dateString) {
 }
 
 // ==========================================
-// 6. UI UPDATE LOGIC (THE MISSING PIECE)
+// 5. UI UPDATE LOGIC (NAVBAR)
 // ==========================================
 function updateNavbar() {
     const token = getToken(); // Check if user is logged in
+    const user = getUser();
 
     if (token) {
         // Website par jahan bhi 'login.html' ka link hai, usko pakdo
         const loginLinks = document.querySelectorAll('a[href="login.html"]');
 
         loginLinks.forEach(link => {
-            link.href = "dashboard.html"; // Rasta badal do
-            link.innerHTML = "My Dashboard"; // Naam badal do
-            // Thoda style change karne ke liye (Optional)
-            link.style.backgroundColor = "#166534"; 
+            // Check agar admin hai toh Admin Panel par bhejo, warna normal Dashboard par
+            if (user && user.role === 'admin') {
+                link.href = "admin.html";
+                link.innerHTML = '🛡️ Admin Panel';
+                link.style.backgroundColor = "#dc2626"; // Red for admin
+            } else {
+                link.href = "dashboard.html"; 
+                link.innerHTML = '👤 My Dashboard'; 
+                link.style.backgroundColor = "#166534"; // Green for users
+            }
             link.style.color = "white";
+            link.style.padding = "8px 16px";
+            link.style.borderRadius = "6px";
         });
     }
 }
-
-// Jaise hi page load ho, Navbar ko update karo
-window.addEventListener('DOMContentLoaded', updateNavbar);

@@ -29,7 +29,22 @@ exports.searchListings = async (req, res) => {
 
         // Filters Application
         if (category && category.toLowerCase() !== "all types") query.category = category.toLowerCase();
-        if (maxPrice && maxPrice !== "0") query.landPrice = { $lte: Number(maxPrice) };
+
+        // 🌟 FIX: Updated Logic for "Above 10 Crores"
+        if (maxPrice && maxPrice !== "0") {
+            if (maxPrice === "above_10") {
+                query.landPrice = { $gt: 100000000 }; 
+            } else {
+                query.landPrice = { $lte: Number(maxPrice) }; 
+            }
+        }
+
+        // 🌟 FIX: Property Type Multi-Select Logic
+        if (types && types !== "") {
+            const typesArray = types.split(",").map(type => type.trim());
+            query.propertyType = { $in: typesArray }; 
+        }
+
         if (keyword) {
             query.$or = [
                 { landName: { $regex: keyword, $options: "i" } },
@@ -37,6 +52,7 @@ exports.searchListings = async (req, res) => {
                 { extraInfo: { $regex: keyword, $options: "i" } }
             ];
         }
+
         if (bedroom && bedroom !== "") {
             const bedPattern = bedroom === "3" ? "3|4|5|6" : bedroom;
             query.extraInfo = { $regex: `${bedPattern}\\s*(BHK|bedroom)`, $options: "i" };
