@@ -1,9 +1,19 @@
-// File: middleware/aiMediaScanner.js
-
 const vision = require('@google-cloud/vision');
 
-// Initialize Google Cloud Vision Client (For Images)
-const client = new vision.ImageAnnotatorClient();
+// 🌟 FIX: Vercel mein JSON string ko directly padhne ka sahi tareeka
+let client;
+try {
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS && process.env.GOOGLE_APPLICATION_CREDENTIALS.startsWith('{')) {
+        // Agar Vercel se raw JSON text aa raha hai, toh use parse karo
+        const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+        client = new vision.ImageAnnotatorClient({ credentials });
+    } else {
+        // Fallback for local testing
+        client = new vision.ImageAnnotatorClient(); 
+    }
+} catch (err) {
+    console.log("Google Vision SDK Error:", err.message);
+}
 
 const scanMediaContent = async (req, res, next) => {
     // Agar koi file upload nahi hui, toh error mat do, aage badho
@@ -15,9 +25,9 @@ const scanMediaContent = async (req, res, next) => {
     console.log("🤖 Zamin AI Scanner analyzing media...");
 
     try {
-        // 🛑 FALLBACK: Agar API key nahi hai toh app crash hone se bachao
-        if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-            console.log("⚠️ Google API Key missing! Bypass mode active.");
+        // 🛑 FALLBACK: Agar client setup nahi hua (key missing/invalid) toh app bachao
+        if (!client) {
+            console.log("⚠️ Google API Key missing or invalid! Bypass mode active.");
             return next();
         }
 
@@ -35,27 +45,29 @@ const scanMediaContent = async (req, res, next) => {
 
             // CHECK A: Anti-Porn/Violence
             const safeSearch = result.safeSearchAnnotation;
-            if (safeSearch.adult === 'LIKELY' || safeSearch.adult === 'VERY_LIKELY' || safeSearch.violence === 'LIKELY') {
+            if (safeSearch && (safeSearch.adult === 'LIKELY' || safeSearch.adult === 'VERY_LIKELY' || safeSearch.violence === 'LIKELY' || safeSearch.violence === 'VERY_LIKELY')) {
                 return res.status(400).json({ success: false, message: "🚨 Account Warning: Inappropriate content detected!" });
             }
 
             // CHECK B: Real Estate Verification
-            const labels = result.labelAnnotations.map(label => label.description.toLowerCase());
-            console.log("🧠 AI Sees:", labels.join(", "));
+            if (result.labelAnnotations) {
+                const labels = result.labelAnnotations.map(label => label.description.toLowerCase());
+                console.log("🧠 AI Sees:", labels.join(", "));
 
-            const validKeywords = ["property", "house", "building", "real estate", "land", "farm", "grass", "architecture", "apartment", "room", "office", "plot", "nature", "field"];
-            const restrictedKeywords = ["selfie", "meme", "text", "screenshot", "font", "portrait", "skin", "face"];
+                const validKeywords = ["property", "house", "building", "real estate", "land", "farm", "grass", "architecture", "apartment", "room", "office", "plot", "nature", "field", "interior design"];
+                const restrictedKeywords = ["selfie", "meme", "text", "screenshot", "font", "portrait", "skin", "face"];
 
-            const isProperty = labels.some(tag => validKeywords.some(v => tag.includes(v)));
-            const isRestricted = labels.some(tag => restrictedKeywords.includes(tag));
+                const isProperty = labels.some(tag => validKeywords.some(v => tag.includes(v)));
+                const isRestricted = labels.some(tag => restrictedKeywords.includes(tag));
 
-            if (isRestricted || !isProperty) {
-                return res.status(400).json({
-                    success: false,
-                    message: "🚨 Zamin AI Blocked: Ye photo zameen ya property ki nahi lag rahi. Please upload real photos!"
-                });
+                if (isRestricted || !isProperty) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "🚨 Zamin AI Blocked: Ye photo zameen ya property ki nahi lag rahi. Please upload real photos!"
+                    });
+                }
+                console.log("✅ Image AI Verified.");
             }
-            console.log("✅ Image AI Verified.");
         }
 
         // ==========================================
