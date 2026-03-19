@@ -13,20 +13,21 @@
 
         body { 
             background: #f8fafc; 
-            height: 100vh; 
+            min-height: 100vh; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             font-family: 'Inter', sans-serif; 
             margin: 0;
+            padding: 20px;
         }
 
         .login-card { 
             background: white; 
             padding: 40px; 
-            border-radius: 24px; 
+            border-radius: 20px; 
             width: 100%; 
-            max-width: 420px; 
+            max-width: 440px; 
             box-shadow: 0 20px 50px rgba(0,0,0,0.05); 
             border: 1px solid #e2e8f0;
             animation: slideUp 0.5s ease-out;
@@ -34,11 +35,17 @@
 
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        .form-control { padding: 14px; border-radius: 12px; border: 1px solid #cbd5e1; font-size: 15px; background: #f1f5f9; margin-bottom: 15px; transition: 0.3s;}
-        .form-control:focus { border-color: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); background: white; }
+        .form-label { font-size: 13px; font-weight: 800; color: #64748b; margin-bottom: 8px; display: block; text-transform: uppercase; letter-spacing: 0.5px;}
 
-        .btn-otp { background: #10b981; color: white; border: none; padding: 15px; border-radius: 12px; font-weight: 800; width: 100%; transition: 0.3s; font-size: 16px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;}
-        .btn-otp:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); }
+        .input-block { position: relative; border: 1px solid #cbd5e1; border-radius: 12px; background: #f8fafc; padding: 14px 14px 14px 45px; transition: 0.3s; display: flex; align-items: center; margin-bottom: 15px;}
+        .input-block:focus-within { border-color: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); background: white; }
+        .input-block i.field-icon { position: absolute; left: 16px; font-size: 18px; color: #94a3b8; transition: 0.3s;}
+        .input-block input { border: none; background: transparent; padding: 0; margin: 0; font-size: 15px; color: #1e293b; width: 100%; font-weight: 500;}
+        .input-block input:focus { outline: none; }
+        .input-block input::placeholder { color: #cbd5e1; font-weight: 500;}
+
+        .btn-otp { background: #10b981; color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 800; width: 100%; transition: 0.3s; font-size: 16px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 5px 15px rgba(16, 185, 129, 0.2);}
+        .btn-otp:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3); }
         .btn-otp:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
 
         .divider { display: flex; align-items: center; text-align: center; color: #94a3b8; font-size: 12px; font-weight: 700; margin: 25px 0; text-transform: uppercase; letter-spacing: 1px;}
@@ -59,6 +66,10 @@
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
         .msg-success { background: #ecfdf5; color: #065f46; border-left: 5px solid #10b981; }
         .msg-error { background: #fef2f2; color: #991b1b; border-left: 5px solid #ef4444; }
+
+        .footer-link { text-align: center; margin-top: 25px; font-weight: 600; font-size: 14px; color: #64748b;}
+        .footer-link a { color: #10b981; text-decoration: none; font-weight: 800; }
+        .footer-link a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -72,9 +83,17 @@
         </div>
 
         <div id="step1">
-            <label class="small fw-bold text-muted mb-2 text-uppercase">Login to your account</label>
-            <input type="email" id="loginEmail" class="form-control" placeholder="Enter your email address" required>
-            <input type="tel" id="loginPhone" class="form-control" placeholder="Phone Number (e.g. 9876543210)" maxlength="10" required>
+            <label class="form-label text-center mb-3">Login to your account</label>
+
+            <div class="input-block">
+                <i class="fas fa-envelope field-icon"></i>
+                <input type="email" id="loginEmail" placeholder="Enter your email address" required>
+            </div>
+
+            <div class="input-block">
+                <i class="fas fa-phone field-icon"></i>
+                <input type="tel" id="loginPhone" placeholder="Phone Number (e.g. 9876543210)" maxlength="10" required>
+            </div>
 
             <button class="btn-otp" onclick="requestMultichannelOTP()" id="btnRequest">
                 Send Secure OTP <i class="fas fa-arrow-right"></i>
@@ -83,15 +102,15 @@
             <div class="divider">OR CONTINUE WITH</div>
 
             <a href="/api/auth/google" class="social-btn">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="18" alt="Google"> Google
+                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="18" alt="Google"> Continue with Google
             </a>
             <a href="/api/auth/twitter" class="social-btn" style="background: #0f172a; color: white; border: none;">
                 <i class="fab fa-x-twitter"></i> Continue with X
             </a>
 
-            <div class="text-center mt-4 mb-2">
-                <span class="text-muted fw-medium">Don't have an account? </span>
-                <a href="register.html" class="text-primary fw-bold text-decoration-none" style="transition: 0.2s;">Register Here</a>
+            <div class="footer-link">
+                <span>Don't have an account? </span>
+                <a href="register.html">Register Here</a>
             </div>
         </div>
 
@@ -121,7 +140,7 @@
             </div>
         </div>
 
-        <p class="text-center small mt-4 mb-0 text-muted">
+        <p class="text-center small mt-4 mb-0 text-muted" style="font-size: 11px;">
             By continuing, you agree to our <a href="#" class="text-success fw-bold text-decoration-none">Terms of Service</a>.
         </p>
     </div>
