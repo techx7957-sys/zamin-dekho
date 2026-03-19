@@ -119,7 +119,8 @@
             toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'} me-2"></i> ${msg}`;
             toast.className = `msg-toast msg-${type}`;
             toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 4000);
+            // ⚡ Toast timeout reduced to 2000ms (2 seconds) for faster UI response
+            setTimeout(() => { toast.style.display = 'none'; }, 2000);
         }
 
         // Direct Login with Email and Password
@@ -131,7 +132,7 @@
             if(!email || !password) return showToast("Enter Email and Password!", "error");
 
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Logging in...';
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
 
             try {
                 const res = await fetch(`${API_URL}/login`, {
@@ -142,10 +143,11 @@
                 const data = await res.json();
 
                 if(data.success) {
-                    showToast("Login Successful! Welcome back.", "success");
+                    showToast("Login Successful!", "success");
                     localStorage.setItem('zamin_token', data.token);
                     localStorage.setItem('zamin_user', encodeURIComponent(JSON.stringify(data.user)));
 
+                    // ⚡ SUPER FAST REDIRECT: Reduced to 200ms
                     setTimeout(() => {
                         // Role Based Redirection
                         if(data.user.role === 'admin' || data.user.role === 'broker') {
@@ -153,7 +155,7 @@
                         } else {
                             window.location.href = 'index.html';
                         }
-                    }, 1000);
+                    }, 200);
                 } else {
                     showToast(data.message || "Invalid Email or Password", "error");
                     btn.disabled = false;
