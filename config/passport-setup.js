@@ -2,6 +2,7 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const TwitterStrategy = require("passport-twitter-oauth2").Strategy;
 const User = require("../models/User");
+const bcrypt = require("bcryptjs");
 
 // ==========================================
 // SESSION SERIALIZATION
@@ -20,12 +21,11 @@ passport.deserializeUser(async (id, done) => {
 });
 
 // ==========================================
-// 1. GOOGLE LOGIN ENGINE
+// 1. GOOGLE LOGIN ENGINE (Strictly 'buyer')
 // ==========================================
 passport.use(
     new GoogleStrategy(
         {
-            // Yahan humne process.env wapas laga diya hai (SAFE)
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
             callbackURL: "https://zamin-dekho-m5iq.vercel.app/api/auth/google/callback",
@@ -37,12 +37,17 @@ passport.use(
                     email: profile.emails[0].value,
                 });
                 if (!user) {
+                    // Generate a secure random password for Social Auth users
+                    const randomPassword = Math.random().toString(36).slice(-10);
+                    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+                    // CREATE NEW USER AS STRICT BUYER
                     user = await User.create({
                         fullName: profile.displayName,
                         email: profile.emails[0].value,
-                        password: Math.random().toString(36).slice(-10),
+                        password: hashedPassword, // Hashed random password for DB integrity
                         authProvider: "google",
-                        role: "buyer",
+                        role: "buyer", // 🛑 THE RULE: ALWAYS BUYER
                         isActive: true,
                         phone: "Not Provided",
                     });
@@ -56,12 +61,11 @@ passport.use(
 );
 
 // ==========================================
-// 2. TWITTER (X) OAUTH 2.0 ENGINE
+// 2. TWITTER (X) OAUTH 2.0 ENGINE (Strictly 'buyer')
 // ==========================================
 passport.use(
     new TwitterStrategy(
         {
-            // Twitter ke bhi secrets hum environment variables se lenge (SAFE)
             clientID: process.env.TWITTER_CLIENT_ID,
             clientSecret: process.env.TWITTER_CLIENT_SECRET,
             callbackURL: "https://zamin-dekho-m5iq.vercel.app/api/auth/twitter/callback",
@@ -77,16 +81,22 @@ passport.use(
                 let email =
                     profile.emails && profile.emails.length > 0
                         ? profile.emails[0].value
-                        : `${profile.username || profile.id}@x.com`;
+                        : `${profile.username || profile.id}@x.com`; // Fallback email logic
 
                 let user = await User.findOne({ email: email });
+
                 if (!user) {
+                    // Generate a secure random password for Social Auth users
+                    const randomPassword = Math.random().toString(36).slice(-10);
+                    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+                    // CREATE NEW USER AS STRICT BUYER
                     user = await User.create({
                         fullName: profile.displayName || profile.username || "X User",
                         email: email,
-                        password: Math.random().toString(36).slice(-10),
+                        password: hashedPassword, // Hashed random password for DB integrity
                         authProvider: "twitter",
-                        role: "buyer",
+                        role: "buyer", // 🛑 THE RULE: ALWAYS BUYER
                         isActive: true,
                         phone: "Not Provided",
                     });

@@ -4,11 +4,11 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Broker = require('../models/Broker');
 
-// Temporary Memory for OTP
+// Temporary Memory for OTP (Used for Registration only)
 let otpStore = {}; 
 
 // ==========================================
-// 🚀 1. OMNICHANNEL OTP (Email + SMS + WhatsApp)
+// 🚀 1. OMNICHANNEL OTP (For Registration Verification)
 // ==========================================
 exports.sendMultichannelOtp = async (req, res) => {
     const { email, phone } = req.body;
@@ -21,11 +21,10 @@ exports.sendMultichannelOtp = async (req, res) => {
         // 6-digit Secure OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // ✅ PERFECT: Storing as object with expiry
         otpStore[email] = {
             otp: otp,
             phone: phone,
-            expires: Date.now() + 10 * 60 * 1000 // 10 mins
+            expires: Date.now() + 10 * 60 * 1000 // 10 mins expiry
         };
 
         // 📧 1. SEND EMAIL (Via Nodemailer with Branding)
@@ -41,12 +40,12 @@ exports.sendMultichannelOtp = async (req, res) => {
         const mailOptions = {
             from: `"Zamindekho" <${process.env.EMAIL_USER}>`,
             to: email,
-            subject: "Your Zamindekho Login OTP",
+            subject: "Your Zamindekho Verification OTP",
             html: `
                 <div style="font-family: Arial, sans-serif; border: 1px solid #e2e8f0; padding: 30px; border-radius: 12px; max-width: 500px; margin: auto;">
                     <h2 style="color: #0f172a; text-align: center;">Zamindekho</h2>
                     <p style="color: #334155; font-size: 16px;">Namaste,</p>
-                    <p style="color: #334155; font-size: 16px;">Aapka secure login code niche diya gaya hai:</p>
+                    <p style="color: #334155; font-size: 16px;">Aapka secure verification code niche diya gaya hai:</p>
                     <div style="text-align: center; margin: 20px 0;">
                         <h1 style="background: #f8fafc; color: #10b981; padding: 15px; border-radius: 8px; display: inline-block; letter-spacing: 8px; border: 1px dashed #10b981;">${otp}</h1>
                     </div>
@@ -58,16 +57,16 @@ exports.sendMultichannelOtp = async (req, res) => {
         await transporter.sendMail(mailOptions);
 
         // 💬 2. SEND SMS (Business Name: Zamindekho)
-        const smsMessage = `Welcome to Zamindekho! Your login OTP is ${otp}. Do not share this with anyone.`;
-        /* 🚀 PRO TIP: Yahan Twilio ya kisi SMS gateway ka code aayega. */
+        const smsMessage = `Welcome to Zamindekho! Your verification OTP is ${otp}. Do not share this with anyone.`;
+        /* PRO TIP: Twilio/MSG91 SMS Gateway Code here */
 
         // 🟢 3. SEND WHATSAPP (Business Account: Zamindekho)
-        const whatsappMessage = `*Zamindekho*\n\nNamaste! 🙏\nAapka secure login OTP hai: *${otp}*\n\nYeh code 10 minute tak valid hai.`;
-        /* 🚀 PRO TIP: Yahan WhatsApp Cloud API ka code aayega. */
+        const whatsappMessage = `*Zamindekho*\n\nNamaste! 🙏\nAapka secure verification OTP hai: *${otp}*\n\nYeh code 10 minute tak valid hai.`;
+        /* PRO TIP: WhatsApp Cloud API Code here */
 
         // 📊 SIMULATION LOGS FOR BACKEND
         console.log(`\n=========================================`);
-        console.log(`🚀 OMNICHANNEL OTP DISPATCHED`);
+        console.log(`🚀 OMNICHANNEL OTP DISPATCHED FOR REGISTRATION`);
         console.log(`🏢 Brand: Zamindekho`);
         console.log(`📱 SMS Sent to: ${phone}`);
         console.log(`🟢 WhatsApp Sent to: ${phone}`);
@@ -83,98 +82,106 @@ exports.sendMultichannelOtp = async (req, res) => {
 };
 
 // ==========================================
-// 🌟 2. VERIFY OTP & LOGIN (Auto-Registration)
+// 🌟 2. REGISTER (Strict Verification + Password Hash)
 // ==========================================
-exports.verifyOtpAndLogin = async (req, res) => {
+exports.register = async (req, res) => {
     try {
-        const { email, otp } = req.body;
+        const { fullName, email, phone, password, role, otp } = req.body;
+
+        // Ensure all fields are provided
+        if(!fullName || !email || !password || !otp) {
+             return res.status(400).json({ success: false, message: "Sabhi details aur OTP zaroori hain!" });
+        }
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: "Account pehle se bana hua hai! Please Login karein." });
+        }
+
         const record = otpStore[email];
 
-        if (!record || record.otp !== otp || Date.now() > record.expires) {
-            return res.status(400).json({ success: false, message: "Invalid ya Expired OTP! ❌" });
+        if (!record || record.otp !== String(otp) || Date.now() > record.expires) {
+            return res.status(400).json({ success: false, message: "Galat ya Expired OTP! ❌" });
         }
 
-        let user = await User.findOne({ email });
+        // Encrypt Password
+        const hashed = await bcrypt.hash(password, 10);
+        const newUser = await User.create({ 
+            fullName, 
+            email, 
+            phone: record.phone, // Force use verified phone
+            password: hashed, 
+            role: role || 'buyer',
+            isActive: true
+        });
+
+        // If Broker, create Broker specific profile
+        if (newUser.role === 'broker') {
+            await Broker.create({ user: newUser._id });
+        }
+
+        delete otpStore[email]; // Cleanup OTP memory
+        res.status(201).json({ success: true, message: "Account Created Successfully! 🎉" });
+
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+};
+
+// ==========================================
+// 🔐 3. STRICT LOGIN (Email + Password Only)
+// ==========================================
+exports.login = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // 1. Find User
+        const user = await User.findOne({ email });
 
         if (!user) {
-            user = await User.create({
-                email: email,
-                phone: record.phone,
-                fullName: "User_" + Math.floor(1000 + Math.random() * 9000),
-                isActive: true,
-                role: 'buyer'
-            });
+            return res.status(400).json({ success: false, message: "Account not found! Kripya pehle Register karein." });
         }
 
-        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        delete otpStore[email]; // Cleanup
+        // 2. Compare Passwords
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ success: false, message: "Galat Email ya Password! ❌" });
+        }
 
+        if (!user.isActive) {
+            return res.status(403).json({ success: false, message: "Aapka account Admin dwara block kiya gaya hai." });
+        }
+
+        // 3. Issue Token
+        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+        // Return without password
         res.json({ 
             success: true, 
             token, 
             user: { _id: user._id, fullName: user.fullName, role: user.role, email: user.email } 
         });
 
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-};
-
-// ==========================================
-// 3. REGISTER (Updated Fix for Object Store)
-// ==========================================
-exports.register = async (req, res) => {
-    try {
-        const { fullName, email, phone, password, role, otp } = req.body;
-        const record = otpStore[email];
-
-        if (!record || record.otp !== otp || Date.now() > record.expires) {
-            return res.status(400).json({ success: false, message: "Galat ya Expired OTP!" });
-        }
-
-        const hashed = await bcrypt.hash(password, 10);
-        const newUser = await User.create({ fullName, email, phone, password: hashed, role: role || 'buyer' });
-
-        if (newUser.role === 'broker') {
-            await Broker.create({ user: newUser._id });
-        }
-
-        delete otpStore[email]; 
-        res.status(201).json({ success: true, message: "Account Created!" });
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
     }
 };
 
 // ==========================================
-// 4. LOGIN (Password Method)
-// ==========================================
-exports.login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const user = await User.findOne({ email });
-
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(400).json({ success: false, message: "Invalid Credentials" });
-        }
-
-        if (!user.isActive) {
-            return res.status(403).json({ success: false, message: "Account Blocked by Admin" });
-        }
-
-        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.json({ success: true, token, user });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-};
-
-// ==========================================
-// 5. SOCIAL & PROFILE UTILS
+// 🌐 4. SOCIAL & PROFILE UTILS
 // ==========================================
 exports.socialLoginCallback = async (req, res) => {
+    // NOTE: This assumes Passport.js is handling Google/X logic. 
+    // In Passport Strategy, ensure new social users are explicitly set to { role: 'buyer' }
     const token = jwt.sign({ id: req.user._id, role: req.user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    const userData = encodeURIComponent(JSON.stringify(req.user));
+    const userData = encodeURIComponent(JSON.stringify({ 
+        _id: req.user._id, 
+        fullName: req.user.fullName, 
+        role: req.user.role, 
+        email: req.user.email 
+    }));
+
     res.redirect(`/index.html?token=${token}&user=${userData}`);
 };
 
@@ -197,3 +204,5 @@ exports.updateProfile = async (req, res) => {
         res.json({ success: true, user: updatedUser });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 };
+
+// Note: Removed verifyOtpAndLogin since Auto-OTP Login is no longer required per new flow.
