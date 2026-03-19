@@ -44,7 +44,7 @@
         .input-block input:focus { outline: none; }
         .input-block input::placeholder { color: #cbd5e1; font-weight: 500;}
 
-        /* Main Login Button */
+        /* Main Login Button (Now Green) */
         .btn-login { background: #10b981; color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 800; width: 100%; transition: 0.3s; font-size: 16px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 5px 15px rgba(16, 185, 129, 0.2);}
         .btn-login:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3); }
         .btn-login:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -119,6 +119,7 @@
             toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'} me-2"></i> ${msg}`;
             toast.className = `msg-toast msg-${type}`;
             toast.style.display = 'block';
+            // Toast timeout at 2 seconds
             setTimeout(() => { toast.style.display = 'none'; }, 2000);
         }
 
@@ -145,12 +146,15 @@
                     localStorage.setItem('zamin_token', data.token);
                     localStorage.setItem('zamin_user', encodeURIComponent(JSON.stringify(data.user)));
 
-                    // ⚡ INSTANT REDIRECT (NO DELAY AT ALL)
-                    if(data.user.role === 'admin' || data.user.role === 'broker') {
-                        window.location.replace('dashboard.html');
-                    } else {
-                        window.location.replace('index.html');
-                    }
+                    // ⚡ STRICT 100ms DELAY FOR SMOOTH UI TRANSITION
+                    setTimeout(() => {
+                        if(data.user.role === 'admin' || data.user.role === 'broker') {
+                            window.location.replace('dashboard.html');
+                        } else {
+                            window.location.replace('index.html');
+                        }
+                    }, 100);
+
                 } else {
                     showToast(data.message || "Invalid Email or Password", "error");
                     btn.disabled = false;
@@ -178,12 +182,14 @@
 
                 const userObj = JSON.parse(decodeURIComponent(userStr));
 
-                // ⚡ INSTANT REDIRECT (NO DELAY AT ALL)
-                if(userObj.role === 'admin' || userObj.role === 'broker') {
-                    window.location.replace('dashboard.html');
-                } else {
-                    window.location.replace('index.html');
-                }
+                // ⚡ STRICT 100ms DELAY FOR SMOOTH UI TRANSITION
+                setTimeout(() => {
+                    if(userObj.role === 'admin' || userObj.role === 'broker') {
+                        window.location.replace('dashboard.html');
+                    } else {
+                        window.location.replace('index.html');
+                    }
+                }, 100);
             }
         };
     </script>
