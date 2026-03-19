@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const twilio = require('twilio'); // 🌟 ADDED: Twilio Package
 const User = require('../models/User');
 const Broker = require('../models/Broker');
 
@@ -27,7 +28,28 @@ exports.sendMultichannelOtp = async (req, res) => {
             expires: Date.now() + 10 * 60 * 1000 // 10 mins expiry
         };
 
-        // 📧 1. SEND EMAIL (Via Nodemailer with Branding)
+        let whatsappSent = false;
+
+        // 🟢 1. SEND WHATSAPP (Via Twilio Cloud API)
+        try {
+            const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+            // Format phone number to E.164 standard (e.g., +919876543210)
+            let formattedPhone = phone.startsWith('+') ? phone : (phone.startsWith('91') ? `+${phone}` : `+91${phone}`);
+
+            await client.messages.create({
+                body: `*Zamindekho*\n\nNamaste! 🙏\nAapka secure verification OTP hai: *${otp}*\n\nYeh code 10 minute tak valid hai.`,
+                from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`, 
+                to: `whatsapp:${formattedPhone}`
+            });
+            console.log(`🟢 Twilio WhatsApp OTP Sent to ${formattedPhone}`);
+            whatsappSent = true;
+        } catch (whatsappError) {
+            console.error("WhatsApp Sending Error:", whatsappError.message);
+            // Agar WhatsApp fail ho jaye, toh hum error throw nahi karenge taaki Email send ho sake
+        }
+
+        // 📧 2. SEND EMAIL (Via Nodemailer with Branding)
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: { 
@@ -49,32 +71,26 @@ exports.sendMultichannelOtp = async (req, res) => {
                     <div style="text-align: center; margin: 20px 0;">
                         <h1 style="background: #f8fafc; color: #10b981; padding: 15px; border-radius: 8px; display: inline-block; letter-spacing: 8px; border: 1px dashed #10b981;">${otp}</h1>
                     </div>
-                    <p style="color: #64748b; font-size: 13px; text-align: center;">Yeh code Email, SMS aur WhatsApp par bheja gaya hai. Kripya ise kisi ke saath share na karein.</p>
+                    <p style="color: #64748b; font-size: 13px; text-align: center;">Yeh code Email aur WhatsApp par bheja gaya hai. Kripya ise kisi ke saath share na karein.</p>
                 </div>
             `
         };
 
         await transporter.sendMail(mailOptions);
 
-        // 💬 2. SEND SMS (Business Name: Zamindekho)
-        const smsMessage = `Welcome to Zamindekho! Your verification OTP is ${otp}. Do not share this with anyone.`;
-        /* PRO TIP: Twilio/MSG91 SMS Gateway Code here */
-
-        // 🟢 3. SEND WHATSAPP (Business Account: Zamindekho)
-        const whatsappMessage = `*Zamindekho*\n\nNamaste! 🙏\nAapka secure verification OTP hai: *${otp}*\n\nYeh code 10 minute tak valid hai.`;
-        /* PRO TIP: WhatsApp Cloud API Code here */
-
         // 📊 SIMULATION LOGS FOR BACKEND
         console.log(`\n=========================================`);
         console.log(`🚀 OMNICHANNEL OTP DISPATCHED FOR REGISTRATION`);
         console.log(`🏢 Brand: Zamindekho`);
-        console.log(`📱 SMS Sent to: ${phone}`);
-        console.log(`🟢 WhatsApp Sent to: ${phone}`);
+        if(whatsappSent) console.log(`🟢 WhatsApp Sent to: ${phone}`);
         console.log(`📧 Email Sent to: ${email}`);
         console.log(`🔑 OTP Code: ${otp}`);
         console.log(`=========================================\n`);
 
-        res.json({ success: true, message: "OTP WhatsApp, SMS aur Email par bhej diya gaya hai! ✅" });
+        res.json({ 
+            success: true, 
+            message: `OTP Email ${whatsappSent ? 'aur WhatsApp ' : ''}par bhej diya gaya hai! ✅` 
+        });
     } catch (e) {
         console.error("OTP Error:", e);
         res.status(500).json({ success: false, message: "OTP bhejne mein dikkat aayi." });
@@ -204,5 +220,3 @@ exports.updateProfile = async (req, res) => {
         res.json({ success: true, user: updatedUser });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 };
-
-// Note: Removed verifyOtpAndLogin since Auto-OTP Login is no longer required per new flow.
