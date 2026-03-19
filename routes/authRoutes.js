@@ -7,24 +7,23 @@ const authController = require("../controllers/authController");
 const { verifyToken } = require("../middleware/authMiddleware");
 
 // ==========================================
-// 🚀 1. OMNICHANNEL OTP & MAGIC LOGIN (Step 2)
+// 🚀 1. OTP DISPATCH (For Registration Only)
 // ==========================================
 
-// Route: Request OTP (Dispatches to Email, SMS, WhatsApp)
+// Route: Request OTP (Dispatches to Email, SMS, WhatsApp during Registration)
 router.post("/send-multichannel-otp", authController.sendMultichannelOtp);
 
-// Route: Verify OTP and Login (Creates Buyer account auto-magically if new)
-router.post("/verify-otp-login", authController.verifyOtpAndLogin);
+// 🛑 HATA DIYA GAYA: "/verify-otp-login" route ab yahan nahi hai kyunki ab direct Password se login hoga.
 
 
 // ==========================================
-// 📝 2. TRADITIONAL AUTHENTICATION (Forms)
+// 📝 2. STRICT AUTHENTICATION (Email + Password)
 // ==========================================
 
-// Route: Full Registration (Strictly for Brokers/Sellers with specific Roles & Passwords)
+// Route: Full Registration (Strict Verification + Password)
 router.post("/register", authController.register);
 
-// Route: Standard Email/Password Login (Legacy fallback)
+// Route: Standard Email/Password Login (Now the Primary Login Method)
 router.post("/login", authController.login);
 
 
@@ -49,7 +48,8 @@ router.get(
 
 router.get(
     "/google/callback",
-    passport.authenticate("google", { failureRedirect: "/login.html" }),
+    // session: false is important because we are using JWT tokens
+    passport.authenticate("google", { session: false, failureRedirect: "/login.html" }),
     authController.socialLoginCallback
 );
 
@@ -66,7 +66,8 @@ router.get(
 
 router.get(
     "/twitter/callback",
-    passport.authenticate("twitter", { failureRedirect: "/login.html" }),
+    // session: false is important because we are using JWT tokens
+    passport.authenticate("twitter", { session: false, failureRedirect: "/login.html" }),
     authController.socialLoginCallback
 );
 
