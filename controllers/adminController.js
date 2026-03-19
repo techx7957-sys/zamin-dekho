@@ -4,15 +4,35 @@ const User = require('../models/User');
 const Broker = require('../models/Broker');
 
 // ==========================================
-// 📊 1. GET ALL LEADS (Admin & Broker CRM View)
+// 👥 1. USER MANAGEMENT (Admin Only)
+// ==========================================
+exports.getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find({ role: { $ne: 'admin' } })
+                                .select('-password')
+                                .sort({ createdAt: -1 });
+        res.json({ success: true, count: users.length, users });
+    } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+};
+
+exports.toggleUserStatus = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ success: false, message: "User nahi mila!" });
+
+        user.isActive = !user.isActive; 
+        await user.save();
+        res.json({ success: true, message: `User account successfully ${user.isActive ? 'UNBLOCKED ✅' : 'BLOCKED ❌'}!` });
+    } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+};
+
+// ==========================================
+// 📊 2. GET ALL LEADS (Admin & Broker CRM View)
 // ==========================================
 exports.getAllLeads = async (req, res) => {
     try {
-        if (req.user.role !== 'admin' && req.user.role !== 'broker') {
-            return res.status(403).json({ success: false, message: "Aap authorized nahi hain!" });
-        }
-
         let query = {};
+        // Agar broker hai, toh sirf uski leads dikhao. Admin hai toh sabki dikhao.
         if (req.user.role === 'broker') {
             query.assignedBroker = req.user.id; 
         }
@@ -24,70 +44,47 @@ exports.getAllLeads = async (req, res) => {
             .sort({ createdAt: -1 });
 
         res.json({ success: true, count: leads.length, leads });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
+    } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 };
 
 // ==========================================
-// 📝 2. UPDATE LEAD STATUS & CRM PIPELINE
+// 📝 3. UPDATE LEAD STATUS & CRM PIPELINE
 // ==========================================
 exports.updateLeadStatus = async (req, res) => {
     try {
-        if (req.user.role !== 'admin' && req.user.role !== 'broker') {
-            return res.status(403).json({ success: false, message: "Aap authorized nahi hain!" });
-        }
-
         const { status, brokerNotes, scheduledVisitDate, nextFollowUpDate } = req.body;
 
         const lead = await Lead.findByIdAndUpdate(
             req.params.id, 
-            { 
-                status, 
-                brokerNotes,
-                scheduledVisitDate,
-                nextFollowUpDate 
-            }, 
+            { status, brokerNotes, scheduledVisitDate, nextFollowUpDate }, 
             { new: true }
         );
 
         if (!lead) return res.status(404).json({ success: false, message: "Lead nahi mili!" });
 
         res.json({ success: true, lead, message: `Lead updated to: ${status} ✅` });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
+    } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 };
 
 // ==========================================
-// 🕒 3. GET PENDING PROPERTIES (Approval Queue)
+// 🕒 4. GET PENDING PROPERTIES (Approval Queue)
 // ==========================================
 exports.getPendingProperties = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
-            return res.status(403).json({ success: false, message: "Only Admins can view pending properties!" });
-        }
-
         const properties = await Listing.find({ approvalStatus: 'Pending' })
             .populate('postedBy', 'fullName email phone')
             .sort({ createdAt: -1 });
 
         res.json({ success: true, count: properties.length, properties });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
+    } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 };
 
 // ==========================================
-// ✅ 4. APPROVE/REJECT LISTINGS (With Fraud Checks)
+// ✅ 5. APPROVE/REJECT LISTINGS (With Fraud Checks)
 // ==========================================
 exports.updatePropertyApproval = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
-            return res.status(403).json({ success: false, message: "Only Admins can approve listings!" });
-        }
-
-        const { status, adminNotes } = req.body; // Status can be 'Approved' or 'Rejected'
+        const { status, adminNotes } = req.body; 
 
         const listing = await Listing.findById(req.params.id).populate('postedBy');
         if (!listing) return res.status(404).json({ success: false, message: "Listing not found!" });
@@ -96,56 +93,44 @@ exports.updatePropertyApproval = async (req, res) => {
         listing.approvalStatus = status;
         if (adminNotes) listing.extraInfo = `${listing.extraInfo || ''} [Admin Note: ${adminNotes}]`;
 
-        // 🚨 QUALITY CONTROL (Step 39 Integration)
-        // Check if the broker who posted this is currently flagged
+        // 🚨 QUALITY CONTROL
         const broker = await Broker.findOne({ user: listing.postedBy._id });
-
         if (broker && broker.visibilityReduced) {
-            // Even if approved, we ensure it doesn't rank high in search results
             console.log(`[QC Alert] Property approved, but broker ${listing.postedBy.fullName} is flagged. Reducing visibility.`);
         }
 
         await listing.save();
         res.json({ success: true, message: `Listing is now ${status}! 🏠` });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
+    } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 };
 
 // ==========================================
-// 🚨 5. QUALITY CONTROL: GET FLAGGED BROKERS
+// 🚨 6. QUALITY CONTROL: GET FLAGGED BROKERS
 // ==========================================
 exports.getFlaggedBrokers = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: "Unauthorized" });
-
-        // Find brokers with low rating OR manually triggered for review
         const flaggedBrokers = await Broker.find({
             $or: [
-                { averageRating: { $lt: 3.0, $gt: 0 } }, // Ignore new brokers with 0 rating
+                { averageRating: { $lt: 3.0, $gt: 0 } }, 
                 { adminReviewTriggered: true }
             ]
         }).populate('user', 'fullName email phone');
 
         res.json({ success: true, flaggedBrokers });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
+    } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 };
 
 // ==========================================
-// ⚠️ 6. QUALITY CONTROL: ISSUE WARNING
+// ⚠️ 7. QUALITY CONTROL: ISSUE WARNING
 // ==========================================
 exports.issueBrokerWarning = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: "Unauthorized" });
-
         const broker = await Broker.findById(req.params.id).populate('user');
         if (!broker) return res.status(404).json({ success: false, message: "Broker not found" });
 
         broker.warningsIssued += 1;
 
-        // Auto-suspend logic: If a broker gets 3 warnings, their account is blocked
+        // Auto-suspend logic
         if (broker.warningsIssued >= 3) {
             await User.findByIdAndUpdate(broker.user._id, { isActive: false });
             return res.json({ 
@@ -156,18 +141,14 @@ exports.issueBrokerWarning = async (req, res) => {
 
         await broker.save();
         res.json({ success: true, message: `Official Warning Issued to ${broker.user.fullName}. Total Warnings: ${broker.warningsIssued} ⚠️` });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
+    } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 };
 
 // ==========================================
-// 👁️ 7. QUALITY CONTROL: TOGGLE VISIBILITY
+// 👁️ 8. QUALITY CONTROL: TOGGLE VISIBILITY
 // ==========================================
 exports.toggleVisibility = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: "Unauthorized" });
-
         const broker = await Broker.findById(req.params.id).populate('user');
         if (!broker) return res.status(404).json({ success: false, message: "Broker not found" });
 
@@ -178,21 +159,14 @@ exports.toggleVisibility = async (req, res) => {
             success: true, 
             message: `Broker ${broker.user.fullName}'s properties visibility is now ${broker.visibilityReduced ? 'Reduced (Shadowbanned)' : 'Normal'}.` 
         });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
+    } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 };
 
 // ==========================================
-// 📈 8. ADMIN DASHBOARD - MAIN STATS ENGINE
+// 📈 9. ADMIN DASHBOARD - MAIN STATS ENGINE
 // ==========================================
 exports.getDashboardStats = async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
-            return res.status(403).json({ success: false, message: "Not authorized!" });
-        }
-
-        // Parallel processing for fast response
         const [
             totalLeads, 
             tokenPaidDeals, 
@@ -202,7 +176,7 @@ exports.getDashboardStats = async (req, res) => {
             flaggedBrokersCount
         ] = await Promise.all([
             Lead.countDocuments(),
-            Lead.countDocuments({ status: 'Token Paid' }), // Tracking revenue pipeline
+            Lead.countDocuments({ status: 'Token Paid' }), 
             Lead.countDocuments({ status: 'Closed' }),
             Listing.countDocuments({ approvalStatus: 'Approved' }),
             Listing.countDocuments({ approvalStatus: 'Pending' }),
@@ -211,16 +185,7 @@ exports.getDashboardStats = async (req, res) => {
 
         res.json({
             success: true,
-            stats: {
-                totalLeads,
-                tokenPaidDeals, // Very important for business metrics
-                closedDeals,
-                activeListings,
-                pendingListings,
-                flaggedBrokersCount
-            }
+            stats: { totalLeads, tokenPaidDeals, closedDeals, activeListings, pendingListings, flaggedBrokersCount }
         });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
+    } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 };
