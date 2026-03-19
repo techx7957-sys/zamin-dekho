@@ -32,22 +32,35 @@ exports.sendMultichannelOtp = async (req, res) => {
 
         // 🟢 1. SEND WHATSAPP (Via Twilio Cloud API)
         try {
+            console.log("\n--- TWILIO DEBUG LOG ---");
+            console.log("Checking Twilio Credentials...");
+
+            if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+                console.error("❌ ERROR: Twilio Keys missing in .env file!");
+                throw new Error("Twilio config missing");
+            }
+
             const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
             // Format phone number to E.164 standard (e.g., +919876543210)
-            let formattedPhone = phone.startsWith('+') ? phone : (phone.startsWith('91') ? `+${phone}` : `+91${phone}`);
+            // Ensure no extra spaces or weird characters
+            let cleanPhone = phone.replace(/[^0-9+]/g, '');
+            let formattedPhone = cleanPhone.startsWith('+') ? cleanPhone : (cleanPhone.startsWith('91') ? `+${cleanPhone}` : `+91${cleanPhone}`);
+
+            console.log(`Sending WhatsApp to: ${formattedPhone} from ${process.env.TWILIO_WHATSAPP_NUMBER}`);
 
             await client.messages.create({
                 body: `*Zamindekho*\n\nNamaste! 🙏\nAapka secure verification OTP hai: *${otp}*\n\nYeh code 10 minute tak valid hai.`,
                 from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`, 
                 to: `whatsapp:${formattedPhone}`
             });
-            console.log(`🟢 Twilio WhatsApp OTP Sent to ${formattedPhone}`);
+            console.log(`🟢 Twilio WhatsApp OTP Sent Successfully to ${formattedPhone}!`);
             whatsappSent = true;
         } catch (whatsappError) {
-            console.error("WhatsApp Sending Error:", whatsappError.message);
+            console.error("❌ WhatsApp Sending Error Detail:", whatsappError.message);
             // Agar WhatsApp fail ho jaye, toh hum error throw nahi karenge taaki Email send ho sake
         }
+        console.log("------------------------\n");
 
         // 📧 2. SEND EMAIL (Via Nodemailer with Branding)
         const transporter = nodemailer.createTransport({
