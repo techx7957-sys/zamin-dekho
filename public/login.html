@@ -44,9 +44,10 @@
         .input-block input:focus { outline: none; }
         .input-block input::placeholder { color: #cbd5e1; font-weight: 500;}
 
-        .btn-otp { background: #10b981; color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 800; width: 100%; transition: 0.3s; font-size: 16px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 5px 15px rgba(16, 185, 129, 0.2);}
-        .btn-otp:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3); }
-        .btn-otp:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+        /* Main Login Button (Now Green) */
+        .btn-login { background: #10b981; color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 800; width: 100%; transition: 0.3s; font-size: 16px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 5px 15px rgba(16, 185, 129, 0.2);}
+        .btn-login:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3); }
+        .btn-login:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
 
         .divider { display: flex; align-items: center; text-align: center; color: #94a3b8; font-size: 12px; font-weight: 700; margin: 25px 0; text-transform: uppercase; letter-spacing: 1px;}
         .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #e2e8f0; }
@@ -55,11 +56,6 @@
 
         .social-btn { border-radius: 12px; padding: 12px; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; border: 1px solid #e2e8f0; text-decoration: none; color: #1e293b; margin-bottom: 12px;}
         .social-btn:hover { background: #f8fafc; border-color: #cbd5e1; color: #1e293b;}
-
-        /* Smart OTP Input Boxes */
-        .otp-group { display: flex; gap: 8px; justify-content: center; margin-bottom: 25px; }
-        .otp-input { width: 48px; height: 58px; text-align: center; font-size: 24px; font-weight: 800; border-radius: 12px; border: 2px solid #e2e8f0; background: #f1f5f9; outline: none; transition: 0.2s; color: #0f172a;}
-        .otp-input:focus { border-color: #10b981; background: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15);}
 
         /* Toast Alert */
         .msg-toast { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 12px; font-weight: 700; z-index: 1050; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: slideIn 0.3s ease-out; }
@@ -79,70 +75,40 @@
     <div class="login-card">
         <div class="text-center mb-4">
             <h2 class="fw-bold text-success mb-1"><i class="fas fa-leaf me-1"></i> ZAMIN DEKHO</h2>
-            <p class="text-muted small fw-bold">India's Smartest Land Marketplace</p>
+            <p class="text-muted small fw-bold">Login to your account</p>
         </div>
 
-        <div id="step1">
-            <label class="form-label text-center mb-3">Login to your account</label>
+        <form id="loginForm" onsubmit="event.preventDefault(); submitLogin();">
 
             <div class="input-block">
                 <i class="fas fa-envelope field-icon"></i>
-                <input type="email" id="loginEmail" placeholder="Enter your email address" required>
+                <input type="email" id="loginEmail" placeholder="Email Address" required>
             </div>
 
             <div class="input-block">
-                <i class="fas fa-phone field-icon"></i>
-                <input type="tel" id="loginPhone" placeholder="Phone Number (e.g. 9876543210)" maxlength="10" required>
+                <i class="fas fa-lock field-icon"></i>
+                <input type="password" id="loginPassword" placeholder="Password" required>
             </div>
 
-            <button class="btn-otp" onclick="requestMultichannelOTP()" id="btnRequest">
-                Send Secure OTP <i class="fas fa-arrow-right"></i>
+            <button type="submit" class="btn-login" id="btnLogin">
+                Login
             </button>
 
-            <div class="divider">OR CONTINUE WITH</div>
+        </form>
 
-            <a href="/api/auth/google" class="social-btn">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="18" alt="Google"> Continue with Google
-            </a>
-            <a href="/api/auth/twitter" class="social-btn" style="background: #0f172a; color: white; border: none;">
-                <i class="fab fa-x-twitter"></i> Continue with X
-            </a>
+        <div class="divider">OR CONTINUE WITH</div>
 
-            <div class="footer-link">
-                <span>Don't have an account? </span>
-                <a href="register.html">Register Here</a>
-            </div>
+        <a href="/api/auth/google" class="social-btn">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="18" alt="Google"> Continue with Google
+        </a>
+        <a href="/api/auth/twitter" class="social-btn" style="background: #0f172a; color: white; border: none;">
+            <i class="fab fa-x-twitter"></i> Continue with X
+        </a>
+
+        <div class="footer-link">
+            <span>Don't have an account? </span>
+            <a href="register.html">Register Here</a>
         </div>
-
-        <div id="step2" style="display:none;">
-            <div class="text-center mb-4">
-                <p class="text-success fw-bold small"><i class="fas fa-shield-check"></i> OTP sent successfully!</p>
-                <h5 class="fw-bold">Enter Verification Code</h5>
-            </div>
-
-            <div class="otp-group" onpaste="handleOtpPaste(event)">
-                <input type="text" maxlength="1" class="otp-input" id="otp1" onkeyup="handleOtpInput(event, 'otp1', 'otp2', '')">
-                <input type="text" maxlength="1" class="otp-input" id="otp2" onkeyup="handleOtpInput(event, 'otp2', 'otp3', 'otp1')">
-                <input type="text" maxlength="1" class="otp-input" id="otp3" onkeyup="handleOtpInput(event, 'otp3', 'otp4', 'otp2')">
-                <input type="text" maxlength="1" class="otp-input" id="otp4" onkeyup="handleOtpInput(event, 'otp4', 'otp5', 'otp3')">
-                <input type="text" maxlength="1" class="otp-input" id="otp5" onkeyup="handleOtpInput(event, 'otp5', 'otp6', 'otp4')">
-                <input type="text" maxlength="1" class="otp-input" id="otp6" onkeyup="handleOtpInput(event, 'otp6', '', 'otp5')">
-            </div>
-
-            <button class="btn-otp" onclick="verifyOTPAndLogin()" id="btnVerify">
-                <i class="fas fa-lock"></i> Verify & Login
-            </button>
-
-            <div class="text-center mt-4">
-                <button class="btn btn-link btn-sm text-muted fw-bold text-decoration-none" onclick="location.reload()">
-                    <i class="fas fa-arrow-left me-1"></i> Change Details
-                </button>
-            </div>
-        </div>
-
-        <p class="text-center small mt-4 mb-0 text-muted" style="font-size: 11px;">
-            By continuing, you agree to our <a href="#" class="text-success fw-bold text-decoration-none">Terms of Service</a>.
-        </p>
     </div>
 
     <script>
@@ -156,91 +122,32 @@
             setTimeout(() => { toast.style.display = 'none'; }, 4000);
         }
 
-        // 🧠 Smart OTP Input Handling
-        function handleOtpInput(e, currentId, nextId, prevId) {
-            const current = document.getElementById(currentId);
-            if (e.key === 'Backspace') {
-                if (current.value === '' && prevId !== '') document.getElementById(prevId).focus();
-            } else if (current.value.length === 1 && nextId !== '') {
-                document.getElementById(nextId).focus();
-            }
-        }
-
-        function handleOtpPaste(e) {
-            e.preventDefault();
-            const pasteData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6).split('');
-            if (pasteData.length === 6) {
-                for (let i = 0; i < 6; i++) {
-                    document.getElementById('otp' + (i + 1)).value = pasteData[i];
-                }
-                document.getElementById('btnVerify').focus();
-            }
-        }
-
-        async function requestMultichannelOTP() {
+        // Direct Login with Email and Password
+        async function submitLogin() {
             const email = document.getElementById('loginEmail').value;
-            const phone = document.getElementById('loginPhone').value;
-            const btn = document.getElementById('btnRequest');
+            const password = document.getElementById('loginPassword').value;
+            const btn = document.getElementById('btnLogin');
 
-            if(!email || !phone || phone.length < 10) return showToast("Enter valid Email & Phone Number!", "error");
+            if(!email || !password) return showToast("Enter Email and Password!", "error");
 
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Dispatching OTP...';
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Logging in...';
 
             try {
-                const res = await fetch(`${API_URL}/send-multichannel-otp`, {
+                const res = await fetch(`${API_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, phone })
+                    body: JSON.stringify({ email, password })
                 });
                 const data = await res.json();
 
                 if(data.success) {
-                    showToast(data.message, "success");
-
-                    setTimeout(() => {
-                        document.getElementById('step1').style.display = 'none';
-                        document.getElementById('step2').style.display = 'block';
-                        document.getElementById('otp1').focus();
-                    }, 800);
-                } else {
-                    showToast(data.message, "error");
-                    btn.disabled = false;
-                    btn.innerHTML = 'Send Secure OTP <i class="fas fa-arrow-right"></i>';
-                }
-            } catch (err) {
-                showToast("Connection failed. Try again.", "error");
-                btn.disabled = false;
-                btn.innerHTML = 'Send Secure OTP <i class="fas fa-arrow-right"></i>';
-            }
-        }
-
-        async function verifyOTPAndLogin() {
-            const email = document.getElementById('loginEmail').value;
-            const btn = document.getElementById('btnVerify');
-
-            let otp = "";
-            for(let i=1; i<=6; i++) otp += document.getElementById(`otp${i}`).value;
-
-            if(otp.length < 6) return showToast("Enter full 6-digit OTP!", "error");
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Securing Session...';
-
-            try {
-                const res = await fetch(`${API_URL}/verify-otp-login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, otp })
-                });
-                const data = await res.json();
-
-                if(data.success) {
-                    showToast("Verified! Welcome to Zamin Dekho.", "success");
+                    showToast("Login Successful! Welcome back.", "success");
                     localStorage.setItem('zamin_token', data.token);
                     localStorage.setItem('zamin_user', encodeURIComponent(JSON.stringify(data.user)));
 
                     setTimeout(() => {
+                        // Role Based Redirection
                         if(data.user.role === 'admin' || data.user.role === 'broker') {
                             window.location.href = 'dashboard.html';
                         } else {
@@ -248,14 +155,14 @@
                         }
                     }, 1000);
                 } else {
-                    showToast(data.message || "Invalid OTP", "error");
+                    showToast(data.message || "Invalid Email or Password", "error");
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-lock"></i> Verify & Login';
+                    btn.innerHTML = 'Login';
                 }
             } catch (err) {
-                showToast("Verification failed.", "error");
+                showToast("Connection failed. Try again.", "error");
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-lock"></i> Verify & Login';
+                btn.innerHTML = 'Login';
             }
         }
 
