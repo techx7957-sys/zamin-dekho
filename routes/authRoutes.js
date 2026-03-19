@@ -4,7 +4,7 @@ const passport = require("passport");
 
 // Controllers & Middleware
 const authController = require("../controllers/authController");
-const { verifyToken } = require("../middlewares/authMiddleware"); // 🌟 FIX: folder name updated to 'middlewares'
+const { verifyToken } = require("../middleware/authMiddleware");// 🌟 FIX: folder name updated to 'middlewares'
 
 // ==========================================
 // 🚀 1. OTP DISPATCH (For Registration Only)

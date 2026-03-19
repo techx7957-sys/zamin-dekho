@@ -3,7 +3,7 @@ const router = express.Router();
 const adminController = require("../controllers/adminController");
 
 // Security Middleware
-const { verifyToken, authorizeRoles } = require("../middleware/authMiddleware");
+const { verifyToken, authorizeRoles } = require('../middleware/authMiddleware');
 
 // ==========================================
 // 📊 1. DASHBOARD & REVENUE STATS
