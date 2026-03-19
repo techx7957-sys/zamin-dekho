@@ -206,7 +206,6 @@
                     return; 
                 }
 
-                // Hide tabs that brokers shouldn't see
                 if(user.role === 'broker') {
                     document.getElementById('approvalTabNav').style.display = 'none';
                     document.querySelector('[data-bs-target="#alertsTab"]').parentElement.style.display = 'none';
@@ -225,6 +224,10 @@
             function switchTitle(title) { document.getElementById("pageTitle").innerText = title; }
 
             function refreshData() {
+                // Ensure loading spinners show initially on refresh
+                document.getElementById("transactionsTableBody").innerHTML = `<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-success"></div></td></tr>`;
+                document.getElementById("leadsTableBody").innerHTML = `<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`;
+
                 fetchLeadsData();
                 loadPendingProperties();
                 loadAdManager();
@@ -232,23 +235,44 @@
             }
 
             // ==========================================
-            // 🚀 1. CRM & LEADS LOGIC
+            // 🚀 1. CRM & LEADS LOGIC (Fixed Spinners)
             // ==========================================
             async function fetchLeadsData() {
+                const tbodyTransactions = document.getElementById("transactionsTableBody");
+                const tbodyLeads = document.getElementById("leadsTableBody");
+
                 try {
                     const res = await fetch(`${ADMIN_API}/leads`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` } });
                     const data = await res.json();
+
                     if (data.success) {
                         renderDashboard(data.leads);
                         renderCRMLeads(data.leads); 
+                    } else {
+                        // Fallback if data.success is false
+                        renderDashboard([]);
+                        renderCRMLeads([]);
                     }
-                } catch (e) { console.log(e); }
+                } catch (e) { 
+                    console.log(e); 
+                    // Stop spinners and show error/empty state if API fails
+                    tbodyTransactions.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No recent transactions found.</td></tr>`;
+                    tbodyLeads.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No leads available.</td></tr>`;
+                }
             }
 
             function renderDashboard(leads) {
                 document.getElementById("totalLeadsStat").innerText = leads.length;
                 let totalRev = 0;
                 const txnTbody = document.getElementById("transactionsTableBody");
+
+                // If there are no leads or it's an empty array, stop spinner immediately
+                if(!leads || leads.length === 0) {
+                     txnTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted fw-bold">No recent transactions found.</td></tr>`;
+                     document.getElementById("totalRevenue").innerText = `₹ 0`;
+                     return;
+                }
+
                 const payments = leads.filter((l) => l.transactionId);
 
                 if (payments.length > 0) {
@@ -257,15 +281,15 @@
                         return `<tr><td>${new Date(p.createdAt).toLocaleDateString()}</td><td class="fw-bold">${p.buyer ? p.buyer.fullName : 'Guest'}</td><td>${p.property ? p.property.landName : 'Plot'}</td><td class="text-success fw-bold">₹${(p.tokenAmount || 100000).toLocaleString()}</td><td>${p.transactionId}</td><td><span class="badge bg-success">Paid</span></td></tr>`;
                     }).join("");
                 } else {
-                    txnTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No transactions found.</td></tr>`;
+                    txnTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted fw-bold">No recent transactions found.</td></tr>`;
                 }
                 document.getElementById("totalRevenue").innerText = `₹ ${totalRev.toLocaleString()}`;
             }
 
             function renderCRMLeads(leads) {
                 const tbody = document.getElementById("leadsTableBody");
-                if(leads.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No leads available.</td></tr>`;
+                if(!leads || leads.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted fw-bold">No leads available at the moment.</td></tr>`;
                     return;
                 }
 
@@ -290,7 +314,7 @@
                 `).join("");
             }
 
-            // 🌟 NAYA: Implemented Lead Status Update
+            // Lead Status Update
             async function updateLeadStatus(leadId) {
                 const status = document.getElementById(`st-${leadId}`).value;
                 try {
@@ -317,7 +341,7 @@
                     const res = await fetch(`${ADMIN_API}/quality-alerts`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` } });
                     const data = await res.json();
 
-                    if (data.success && data.flaggedBrokers.length > 0) {
+                    if (data.success && data.flaggedBrokers && data.flaggedBrokers.length > 0) {
                         document.getElementById('alertCount').innerText = data.flaggedBrokers.length;
                         document.getElementById('alertStat').innerText = data.flaggedBrokers.length;
                         container.innerHTML = data.flaggedBrokers.map(broker => `
@@ -341,7 +365,9 @@
                     } else {
                         container.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-shield-check fs-1 d-block mb-3 text-success"></i> All brokers are performing well. No alerts.</div>`;
                     }
-                } catch (e) { console.log(e); }
+                } catch (e) { 
+                    container.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-shield-check fs-1 d-block mb-3 text-success"></i> All clear.</div>`;
+                }
             }
 
             async function sendWarning(id) {
@@ -360,14 +386,14 @@
             }
 
             // ==========================================
-            // 🚀 3. OTHER ADMIN FUNCTIONS
+            // 🚀 3. OTHER ADMIN FUNCTIONS (Fixed Spinners)
             // ==========================================
             async function loadPendingProperties() {
                 const container = document.getElementById("approvalsContainer");
                 try {
                     const res = await fetch(`${ADMIN_API}/pending-properties`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
                     const data = await res.json();
-                    if (data.success && data.properties.length > 0) {
+                    if (data.success && data.properties && data.properties.length > 0) {
                         container.innerHTML = data.properties.map((prop) => `
                             <div class="col-md-4"><div class="approve-card">
                                 <img src="${prop.imageUrl || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600'}" class="approve-img">
@@ -381,10 +407,11 @@
                     } else {
                         container.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-check-circle fs-1 d-block mb-3 text-success"></i> No pending properties to review.</div>`;
                     }
-                } catch (e) { }
+                } catch (e) { 
+                    container.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-check-circle fs-1 d-block mb-3 text-success"></i> No pending properties to review.</div>`;
+                }
             }
 
-            // 🌟 NAYA: Implemented Property Approval System
             async function updatePropertyStatus(propId, status) {
                 try {
                     const res = await fetch(`${ADMIN_API}/approve-property/${propId}`, {
@@ -407,14 +434,16 @@
                 try {
                     const res = await fetch(`/api/listings/all`);
                     const data = await res.json();
-                    if (data.success && data.listings.length > 0) {
+                    if (data.success && data.listings && data.listings.length > 0) {
                         tbody.innerHTML = data.listings.map((item) => `
                             <tr><td class="fw-bold">${item.landName}</td><td>${item.category}</td><td class="text-success">₹${Number(item.landPrice).toLocaleString()}</td><td>${item.address}</td><td><button class="btn-feature" onclick="this.classList.toggle('active'); this.innerText = this.classList.contains('active') ? 'Boosted!' : 'Boost';"><i class="fas fa-bolt"></i> Boost</button></td></tr>
                         `).join("");
                     } else {
-                        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No active listings found.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted fw-bold">No active listings found.</td></tr>`;
                     }
-                } catch (e) { }
+                } catch (e) { 
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted fw-bold">No active listings found.</td></tr>`;
+                }
             }
 
             function startSecureCall(n, p) { document.getElementById('callBuyerName').innerText = n; document.getElementById('callProperty').innerText = p; document.getElementById('callingOverlay').style.display = 'flex'; }
