@@ -41,15 +41,6 @@
         .btn-otp:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); }
         .btn-otp:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
 
-        /* 🌟 Multichannel Icons UI */
-        .channel-header { display: flex; justify-content: center; gap: 20px; margin-bottom: 25px; }
-        .channel-pill { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: #64748b; transition: 0.3s; }
-        .channel-pill i { width: 45px; height: 45px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #94a3b8; transition: 0.3s; border: 1px solid #e2e8f0; }
-        .channel-pill.active i { background: #10b981; color: white; border-color: #059669; box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3); animation: pop 0.3s ease-out;}
-        .channel-pill.active { color: #10b981; }
-
-        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
-
         .divider { display: flex; align-items: center; text-align: center; color: #94a3b8; font-size: 12px; font-weight: 700; margin: 25px 0; text-transform: uppercase; letter-spacing: 1px;}
         .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #e2e8f0; }
         .divider:not(:empty)::before { margin-right: 1.5em; }
@@ -80,14 +71,8 @@
             <p class="text-muted small fw-bold">India's Smartest Land Marketplace</p>
         </div>
 
-        <div class="channel-header" id="channelHeader">
-            <div class="channel-pill" id="pillSms"><i class="fas fa-sms"></i>SMS</div>
-            <div class="channel-pill" id="pillWa"><i class="fab fa-whatsapp"></i>WhatsApp</div>
-            <div class="channel-pill" id="pillMail"><i class="fas fa-envelope"></i>Email</div>
-        </div>
-
         <div id="step1">
-            <label class="small fw-bold text-muted mb-2 text-uppercase">Login or Create Account</label>
+            <label class="small fw-bold text-muted mb-2 text-uppercase">Login to your account</label>
             <input type="email" id="loginEmail" class="form-control" placeholder="Enter your email address" required>
             <input type="tel" id="loginPhone" class="form-control" placeholder="Phone Number (e.g. 9876543210)" maxlength="10" required>
 
@@ -108,12 +93,11 @@
                 <span class="text-muted fw-medium">Don't have an account? </span>
                 <a href="register.html" class="text-primary fw-bold text-decoration-none" style="transition: 0.2s;">Register Here</a>
             </div>
-
         </div>
 
         <div id="step2" style="display:none;">
             <div class="text-center mb-4">
-                <p class="text-success fw-bold small"><i class="fas fa-shield-check"></i> OTP sent to all 3 channels!</p>
+                <p class="text-success fw-bold small"><i class="fas fa-shield-check"></i> OTP sent successfully!</p>
                 <h5 class="fw-bold">Enter Verification Code</h5>
             </div>
 
@@ -195,11 +179,6 @@
                 if(data.success) {
                     showToast(data.message, "success");
 
-                    // Light up the pills
-                    document.getElementById('pillSms').classList.add('active');
-                    setTimeout(() => document.getElementById('pillWa').classList.add('active'), 200);
-                    setTimeout(() => document.getElementById('pillMail').classList.add('active'), 400);
-
                     setTimeout(() => {
                         document.getElementById('step1').style.display = 'none';
                         document.getElementById('step2').style.display = 'block';
@@ -243,7 +222,6 @@
                     localStorage.setItem('zamin_user', encodeURIComponent(JSON.stringify(data.user)));
 
                     setTimeout(() => {
-                        // Role Based Redirection (Buyer -> Home, Broker/Admin -> Dashboard)
                         if(data.user.role === 'admin' || data.user.role === 'broker') {
                             window.location.href = 'dashboard.html';
                         } else {
