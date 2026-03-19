@@ -44,7 +44,7 @@
         .input-block input:focus { outline: none; }
         .input-block input::placeholder { color: #cbd5e1; font-weight: 500;}
 
-        /* Main Login Button (Now Green) */
+        /* Main Login Button */
         .btn-login { background: #10b981; color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 800; width: 100%; transition: 0.3s; font-size: 16px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 5px 15px rgba(16, 185, 129, 0.2);}
         .btn-login:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3); }
         .btn-login:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -119,11 +119,9 @@
             toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'} me-2"></i> ${msg}`;
             toast.className = `msg-toast msg-${type}`;
             toast.style.display = 'block';
-            // ⚡ Toast timeout reduced to 2000ms (2 seconds) for faster UI response
             setTimeout(() => { toast.style.display = 'none'; }, 2000);
         }
 
-        // Direct Login with Email and Password
         async function submitLogin() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
@@ -143,19 +141,16 @@
                 const data = await res.json();
 
                 if(data.success) {
-                    showToast("Login Successful!", "success");
+                    // Save Token
                     localStorage.setItem('zamin_token', data.token);
                     localStorage.setItem('zamin_user', encodeURIComponent(JSON.stringify(data.user)));
 
-                    // ⚡ SUPER FAST REDIRECT: Reduced to 200ms
-                    setTimeout(() => {
-                        // Role Based Redirection
-                        if(data.user.role === 'admin' || data.user.role === 'broker') {
-                            window.location.href = 'dashboard.html';
-                        } else {
-                            window.location.href = 'index.html';
-                        }
-                    }, 200);
+                    // ⚡ INSTANT REDIRECT (NO DELAY AT ALL)
+                    if(data.user.role === 'admin' || data.user.role === 'broker') {
+                        window.location.replace('dashboard.html');
+                    } else {
+                        window.location.replace('index.html');
+                    }
                 } else {
                     showToast(data.message || "Invalid Email or Password", "error");
                     btn.disabled = false;
@@ -168,7 +163,7 @@
             }
         }
 
-        // Catch Social Login Redirects
+        // Fast Social Login Check
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token');
@@ -177,13 +172,17 @@
             if(token && userStr) {
                 localStorage.setItem('zamin_token', token);
                 localStorage.setItem('zamin_user', userStr);
+
+                // Clear URL parameters
                 window.history.replaceState({}, document.title, window.location.pathname);
 
                 const userObj = JSON.parse(decodeURIComponent(userStr));
+
+                // ⚡ INSTANT REDIRECT (NO DELAY AT ALL)
                 if(userObj.role === 'admin' || userObj.role === 'broker') {
-                    window.location.href = 'dashboard.html';
+                    window.location.replace('dashboard.html');
                 } else {
-                    window.location.href = 'index.html';
+                    window.location.replace('index.html');
                 }
             }
         };
