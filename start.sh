@@ -16,7 +16,7 @@ done
 echo "Port 5000 is free, starting server..."
 
 # Run node in background so this shell can trap signals and kill node cleanly
-node "server zamin.js" &
+node server.js &
 NODE_PID=$!
 
 # Forward SIGTERM and SIGINT to node so it shuts down cleanly
