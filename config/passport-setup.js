@@ -28,7 +28,8 @@ passport.use(
         {
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            callbackURL: "https://zamin-dekho-m5iq.vercel.app/api/auth/google/callback",
+            // 🚀 FIX: Vercel ka link hata kar sirf relative path kar diya hai!
+            callbackURL: "/api/auth/google/callback",
             proxy: true,
         },
         async (accessToken, refreshToken, profile, done) => {
@@ -68,7 +69,8 @@ passport.use(
         {
             clientID: process.env.TWITTER_CLIENT_ID,
             clientSecret: process.env.TWITTER_CLIENT_SECRET,
-            callbackURL: "https://zamin-dekho-m5iq.vercel.app/api/auth/twitter/callback",
+            // 🚀 FIX: Vercel ka link hata kar sirf relative path kar diya hai!
+            callbackURL: "/api/auth/twitter/callback",
             clientType: "confidential",
             pkce: true,
             state: true,
