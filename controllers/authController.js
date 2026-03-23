@@ -42,8 +42,6 @@ exports.sendMultichannelOtp = async (req, res) => {
 
             const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-            // Format phone number to E.164 standard (e.g., +919876543210)
-            // Ensure no extra spaces or weird characters
             let cleanPhone = phone.replace(/[^0-9+]/g, '');
             let formattedPhone = cleanPhone.startsWith('+') ? cleanPhone : (cleanPhone.startsWith('91') ? `+${cleanPhone}` : `+91${cleanPhone}`);
 
@@ -58,7 +56,6 @@ exports.sendMultichannelOtp = async (req, res) => {
             whatsappSent = true;
         } catch (whatsappError) {
             console.error("❌ WhatsApp Sending Error Detail:", whatsappError.message);
-            // Agar WhatsApp fail ho jaye, toh hum error throw nahi karenge taaki Email send ho sake
         }
         console.log("------------------------\n");
 
@@ -71,7 +68,6 @@ exports.sendMultichannelOtp = async (req, res) => {
             }
         });
 
-        // 🏢 BRANDING: Sender Name set to "Zamindekho"
         const mailOptions = {
             from: `"Zamindekho" <${process.env.EMAIL_USER}>`,
             to: email,
@@ -91,15 +87,6 @@ exports.sendMultichannelOtp = async (req, res) => {
 
         await transporter.sendMail(mailOptions);
 
-        // 📊 SIMULATION LOGS FOR BACKEND
-        console.log(`\n=========================================`);
-        console.log(`🚀 OMNICHANNEL OTP DISPATCHED FOR REGISTRATION`);
-        console.log(`🏢 Brand: Zamindekho`);
-        if(whatsappSent) console.log(`🟢 WhatsApp Sent to: ${phone}`);
-        console.log(`📧 Email Sent to: ${email}`);
-        console.log(`🔑 OTP Code: ${otp}`);
-        console.log(`=========================================\n`);
-
         res.json({ 
             success: true, 
             message: `OTP Email ${whatsappSent ? 'aur WhatsApp ' : ''}par bhej diya gaya hai! ✅` 
@@ -117,12 +104,10 @@ exports.register = async (req, res) => {
     try {
         const { fullName, email, phone, password, role, otp } = req.body;
 
-        // Ensure all fields are provided
         if(!fullName || !email || !password || !otp) {
              return res.status(400).json({ success: false, message: "Sabhi details aur OTP zaroori hain!" });
         }
 
-        // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ success: false, message: "Account pehle se bana hua hai! Please Login karein." });
@@ -134,23 +119,21 @@ exports.register = async (req, res) => {
             return res.status(400).json({ success: false, message: "Galat ya Expired OTP! ❌" });
         }
 
-        // Encrypt Password
         const hashed = await bcrypt.hash(password, 10);
         const newUser = await User.create({ 
             fullName, 
             email, 
-            phone: record.phone, // Force use verified phone
+            phone: record.phone, 
             password: hashed, 
             role: role || 'buyer',
             isActive: true
         });
 
-        // If Broker, create Broker specific profile
         if (newUser.role === 'broker') {
             await Broker.create({ user: newUser._id });
         }
 
-        delete otpStore[email]; // Cleanup OTP memory
+        delete otpStore[email]; 
         res.status(201).json({ success: true, message: "Account Created Successfully! 🎉" });
 
     } catch (e) {
@@ -165,14 +148,12 @@ exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1. Find User
         const user = await User.findOne({ email });
 
         if (!user) {
             return res.status(400).json({ success: false, message: "Account not found! Kripya pehle Register karein." });
         }
 
-        // 2. Compare Passwords
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ success: false, message: "Galat Email ya Password! ❌" });
@@ -182,10 +163,8 @@ exports.login = async (req, res) => {
             return res.status(403).json({ success: false, message: "Aapka account Admin dwara block kiya gaya hai." });
         }
 
-        // 3. Issue Token
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-        // Return without password
         res.json({ 
             success: true, 
             token, 
@@ -198,11 +177,9 @@ exports.login = async (req, res) => {
 };
 
 // ==========================================
-// 🌐 4. SOCIAL & PROFILE UTILS
+// 🌐 4. SOCIAL & PROFILE UTILS (SMART REDIRECT FIX)
 // ==========================================
 exports.socialLoginCallback = async (req, res) => {
-    // NOTE: This assumes Passport.js is handling Google/X logic. 
-    // In Passport Strategy, ensure new social users are explicitly set to { role: 'buyer' }
     const token = jwt.sign({ id: req.user._id, role: req.user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
     const userData = encodeURIComponent(JSON.stringify({ 
         _id: req.user._id, 
@@ -211,7 +188,16 @@ exports.socialLoginCallback = async (req, res) => {
         email: req.user.email 
     }));
 
-    res.redirect(`/index.html?token=${token}&user=${userData}`);
+    // 🚀 DYNAMIC JUMP (Fallback is now localhost)
+    let returnBaseUrl = req.customRedirectUrl || "http://localhost:5000"; 
+
+    // Agar link ke aakhir mein extra '/' hai toh hata do, warna url double slash se tutega (//index.html)
+    if (returnBaseUrl.endsWith('/')) {
+        returnBaseUrl = returnBaseUrl.slice(0, -1);
+    }
+
+    // Ab user wahi wapas jayega jahan se aaya tha, token ke saath!
+    res.redirect(`${returnBaseUrl}/index.html?token=${token}&user=${userData}`);
 };
 
 exports.getMe = async (req, res) => {
@@ -232,4 +218,62 @@ exports.updateProfile = async (req, res) => {
 
         res.json({ success: true, user: updatedUser });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+};
+
+// ==========================================
+// 🚀 5. FLUTTER GOOGLE LOGIN (NEW ROUTE FOR APP)
+// ==========================================
+exports.verifyFlutterGoogleToken = async (req, res) => {
+    try {
+        const { token, email, name } = req.body;
+
+        if (!token || !email) {
+            return res.status(400).json({ success: false, message: "Token and email are required" });
+        }
+
+        // Check if user already exists in our database
+        let user = await User.findOne({ email: email });
+
+        if (!user) {
+            // First time login -> Register the user automatically
+            // Create a random dummy password so normal login doesn't break
+            const randomPassword = Math.random().toString(36).slice(-8);
+            const hashed = await bcrypt.hash(randomPassword, 10);
+
+            user = new User({
+                fullName: name || "Zamin User",
+                email: email,
+                role: 'buyer', // Default role
+                isActive: true, // Google users are auto-verified
+                password: hashed 
+            });
+            await user.save();
+        } else if (!user.isActive) {
+            return res.status(403).json({ success: false, message: "Aapka account Admin dwara block kiya gaya hai." });
+        }
+
+        // Generate our own Zamin Dekho JWT Token
+        const jwtToken = jwt.sign(
+            { id: user._id, role: user.role },
+            process.env.JWT_SECRET || "ZAMIN_SUPER_SECRET_KEY_123", // Fallback text just in case
+            { expiresIn: "7d" }
+        );
+
+        // Success! Send the token back to Flutter
+        res.status(200).json({
+            success: true,
+            message: "Google login successful",
+            token: jwtToken,
+            user: {
+                _id: user._id,
+                fullName: user.fullName,
+                role: user.role,
+                email: user.email
+            }
+        });
+
+    } catch (error) {
+        console.error("Flutter Google Auth Error:", error);
+        res.status(500).json({ success: false, message: "Server error during Google Authentication" });
+    }
 };

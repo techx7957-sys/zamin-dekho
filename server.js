@@ -28,10 +28,36 @@ const { verifyToken } = require("./middleware/authMiddleware");
 const app = express();
 
 // ==========================================
-// 🛡️ LAYER 1: BASIC SECURITY & PAYLOAD LIMITS
+// 🛡️ LAYER 1: BASIC SECURITY & ULTIMATE CORS FIX
 // ==========================================
 app.disable('x-powered-by'); // Hackers ko mat batao ki hum Express use kar rahe hain
-app.use(cors());
+
+// 🚀 1. PRIMARY CORS: Set to true so it echoes the request's origin (Needed for credentials)
+app.use(cors({
+    origin: true, 
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+    credentials: true,
+    optionsSuccessStatus: 204
+}));
+
+// 🚀 2. MANUAL CORS FALLBACK: Extra safety net for Replit and Flutter Web strictness
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+    res.header("Access-Control-Allow-Credentials", "true");
+
+    // Handle preflight requests
+    if (req.method === "OPTIONS") {
+        return res.status(200).end();
+    }
+    next();
+});
+
 app.use(express.json({ limit: "10mb" })); // Koi bada data bhej kar server hang na kare
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
