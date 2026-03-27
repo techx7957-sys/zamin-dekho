@@ -244,9 +244,14 @@
             </div>
 
             <div class="d-flex justify-content-between align-items-end mb-4 border-bottom border-2 pb-3 mt-4">
-                <div>
-                    <h3 class="fw-bold m-0 text-dark" id="resultsHeading">Newly Added Lands</h3>
-                    <p class="text-muted small fw-bold m-0 mt-1" id="resultSubtitle">100% verified listings from owners & brokers</p>
+                <div class="d-flex align-items-center">
+                    <span style="background: #10b981; color: white; border-radius: 50%; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 8px;">
+                        <i class="fas fa-star"></i>
+                    </span>
+                    <div>
+                        <h3 class="fw-bold m-0 text-dark" id="resultsHeading">Newly Added Lands</h3>
+                        <p class="text-muted small fw-bold m-0 mt-1" id="resultSubtitle">100% verified listings from owners & brokers</p>
+                    </div>
                 </div>
                 <span class="badge bg-primary px-3 py-2 rounded-pill fs-6 shadow-sm" id="resultCount">Searching...</span>
             </div>
@@ -313,7 +318,6 @@
 
         <script>
             const API_URL = "/api";
-            const BASE_SERVER_URL = "/";
 
             let userLat = null;
             let userLng = null;
@@ -435,9 +439,7 @@
                 );
             }
 
-            // 🚀 1. WEB-SAFE VOICE RECOGNITION UPGRADE (Fixes the issue in localhost/Chrome)
             let recognition;
-
             function initWebSpeech() {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 if (!SpeechRecognition) {
@@ -446,8 +448,8 @@
                 }
                 recognition = new SpeechRecognition();
                 recognition.lang = 'en-IN'; 
-                recognition.interimResults = true; // Enables real-time text updating
-                recognition.continuous = false;    // Stops automatically when the user pauses
+                recognition.interimResults = true; 
+                recognition.continuous = false;    
 
                 recognition.onstart = function() {
                     const input = document.getElementById('mainSearchInput');
@@ -463,7 +465,7 @@
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
                         finalTranscript += event.results[i][0].transcript;
                     }
-                    input.value = finalTranscript; // Real-time UI update!
+                    input.value = finalTranscript; 
                 };
 
                 recognition.onend = function() {
@@ -532,11 +534,12 @@
                 return arr;
             }
 
+            // 🚀 MASTER FIX: Bulletproof Vercel Image URLs
             function getCardHTML(item, badgeHTML = '') {
                 let imgSource = item.imageUrl;
                 if(imgSource && !imgSource.startsWith('http')) {
                     imgSource = imgSource.replace(/\\/g, '/'); 
-                    imgSource = BASE_SERVER_URL + (imgSource.startsWith('/') ? imgSource.substring(1) : imgSource);
+                    imgSource = window.location.origin + (imgSource.startsWith('/') ? imgSource : '/' + imgSource);
                 }
 
                 const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";

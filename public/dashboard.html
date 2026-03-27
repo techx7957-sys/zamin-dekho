@@ -284,7 +284,8 @@
 
     <script>
         const API_URL = "/api";
-        const BASE_SERVER_URL = "/";
+        // 🌟 VERCEL FIX: Always use absolute URLs dynamically derived from the window location.
+        const BASE_SERVER_URL = window.location.origin;
 
         // 🌟 CAMERA & GPS VARIABLES
         let stream = null;
@@ -369,7 +370,7 @@
         }
 
         // ==========================================
-        // 🌟 2. BULLETPROOF DATA FETCHING
+        // 🌟 2. BULLETPROOF DATA FETCHING & VERCEL IMAGE FIX
         // ==========================================
 
         async function loadSiteVisits() {
@@ -470,7 +471,12 @@
                         const item = lead.property;
                         if (!item) return ""; // Skip if property was deleted
 
+                        // 🌟 VERCEL FIX: Booking images
                         let imgSource = item.imageUrl || "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
+                        if(imgSource && !imgSource.startsWith('http')) {
+                            imgSource = imgSource.replace(/\\/g, '/');
+                            imgSource = window.location.origin + (imgSource.startsWith('/') ? imgSource : '/' + imgSource);
+                        }
 
                         // Rating Trigger
                         const brokerId = lead.assignedBroker ? lead.assignedBroker._id || lead.assignedBroker : null;
@@ -508,13 +514,14 @@
             }
         }
 
+        // 🌟 VERCEL FIX: Card generator images
         function generateCardHTML(item, isMyListing) {
-            if (!item) return ''; // Safety check for null items
+            if (!item) return ''; 
 
             let imgSource = item.imageUrl;
             if (imgSource && !imgSource.startsWith("http")) {
                 imgSource = imgSource.replace(/\\/g, "/");
-                imgSource = BASE_SERVER_URL + (imgSource.startsWith("/") ? imgSource.substring(1) : imgSource);
+                imgSource = window.location.origin + (imgSource.startsWith("/") ? imgSource : "/" + imgSource);
             }
             const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
             if (!imgSource) imgSource = fallbackImg;
@@ -718,9 +725,12 @@
                 } else {
                      Swal.fire({ title: 'Oops!', text: data.message, icon: 'warning' });
                 }
-            } catch (e) { Swal.fire("Server Error", "Could not upload image. Max limit 5MB.", "error"); }
+            } catch (e) { 
+                Swal.fire("Server Error", "Could not upload property data. Max media limit is 5MB.", "error"); 
+            }
 
-            btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i> POST PROPERTY FOR REVIEW';
+            btn.disabled = false; 
+            btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i> POST PROPERTY FOR REVIEW';
         }
 
         async function deleteListing(id) {
