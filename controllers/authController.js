@@ -5,6 +5,11 @@ const twilio = require('twilio'); // 🌟 ADDED: Twilio Package
 const User = require('../models/User');
 const Broker = require('../models/Broker');
 
+// 👑 ADMIN ACCESS SHIELD (Yahan apne emails daal do jo Admin banne chahiye)
+const ADMIN_EMAILS = [
+    "techx7957@gmail.com   // <-- Ise apne asli email se replace karo!
+];
+
 // Temporary Memory for OTP (Used for Registration only)
 let otpStore = {}; 
 
@@ -120,12 +125,16 @@ exports.register = async (req, res) => {
         }
 
         const hashed = await bcrypt.hash(password, 10);
+
+        // 👑 CHECK ADMIN EMAIL ON MANUAL REGISTRATION
+        const assignedRole = ADMIN_EMAILS.includes(email) ? 'admin' : (role || 'buyer');
+
         const newUser = await User.create({ 
             fullName, 
             email, 
             phone: record.phone, 
             password: hashed, 
-            role: role || 'buyer',
+            role: assignedRole,
             isActive: true
         });
 
@@ -181,14 +190,23 @@ exports.login = async (req, res) => {
 };
 
 // ==========================================
-// 🌐 4. SOCIAL & PROFILE UTILS (SMART REDIRECT FIX)
+// 🌐 4. SOCIAL & PROFILE UTILS (WEB FIX)
 // ==========================================
 exports.socialLoginCallback = async (req, res) => {
-    const token = jwt.sign({ id: req.user._id, role: req.user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    let userRole = req.user.role;
+
+    // 👑 MASTER FIX: Agar Admin ne Google/X se web par login kiya hai, toh usko Admin bana do!
+    if (ADMIN_EMAILS.includes(req.user.email) && userRole !== 'admin') {
+        await User.findByIdAndUpdate(req.user._id, { role: 'admin' });
+        userRole = 'admin';
+        req.user.role = 'admin'; 
+    }
+
+    const token = jwt.sign({ id: req.user._id, role: userRole }, process.env.JWT_SECRET, { expiresIn: '7d' });
     const userData = encodeURIComponent(JSON.stringify({ 
         _id: req.user._id, 
         fullName: req.user.fullName, 
-        role: req.user.role, 
+        role: userRole, 
         email: req.user.email 
     }));
 
@@ -208,7 +226,6 @@ exports.getMe = async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 };
 
-// 🚀 MASTER FIX: Update Profile now supports Bio and Address
 exports.updateProfile = async (req, res) => {
     try {
         const { fullName, phone, bio, address } = req.body;
@@ -229,7 +246,6 @@ exports.updateProfile = async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 };
 
-// 📸 MASTER FIX: New Avatar Upload Controller
 exports.uploadAvatar = async (req, res) => {
     try {
         if (!req.file) {
@@ -259,7 +275,7 @@ exports.uploadAvatar = async (req, res) => {
 };
 
 // ==========================================
-// 🚀 5. FLUTTER GOOGLE LOGIN (NEW ROUTE FOR APP)
+// 🚀 5. FLUTTER GOOGLE LOGIN (Mobile Shield)
 // ==========================================
 exports.verifyFlutterGoogleToken = async (req, res) => {
     try {
@@ -271,6 +287,9 @@ exports.verifyFlutterGoogleToken = async (req, res) => {
 
         let user = await User.findOne({ email: email });
 
+        // 👑 Check if the incoming email is the boss
+        const assignedRole = ADMIN_EMAILS.includes(email) ? 'admin' : 'buyer';
+
         if (!user) {
             const randomPassword = Math.random().toString(36).slice(-8);
             const hashed = await bcrypt.hash(randomPassword, 10);
@@ -278,13 +297,21 @@ exports.verifyFlutterGoogleToken = async (req, res) => {
             user = new User({
                 fullName: name || "Zamin User",
                 email: email,
-                role: 'buyer', 
+                role: assignedRole, 
                 isActive: true, 
                 password: hashed 
             });
             await user.save();
-        } else if (!user.isActive) {
-            return res.status(403).json({ success: false, message: "Aapka account Admin dwara block kiya gaya hai." });
+        } else {
+            // Agar purana user hai par admin nahi hai (aur list mein uska email hai) toh use upgrade kar do!
+            if (assignedRole === 'admin' && user.role !== 'admin') {
+                user.role = 'admin';
+                await user.save();
+            }
+
+            if (!user.isActive) {
+                return res.status(403).json({ success: false, message: "Aapka account Admin dwara block kiya gaya hai." });
+            }
         }
 
         const jwtToken = jwt.sign(
