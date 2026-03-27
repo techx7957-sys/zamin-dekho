@@ -197,23 +197,19 @@
             </div>
 
             <div class="tab-pane fade" id="visitsTab">
-                <div class="row g-4" id="visitsGrid">
-                    </div>
+                <div class="row g-4" id="visitsGrid"></div>
             </div>
 
             <div class="tab-pane fade" id="myListingsTab">
-                <div class="row g-4" id="myListingsGrid">
-                   </div>
+                <div class="row g-4" id="myListingsGrid"></div>
             </div>
 
             <div class="tab-pane fade" id="savedTab">
-                <div class="row g-4" id="savedGrid">
-                   </div>
+                <div class="row g-4" id="savedGrid"></div>
             </div>
 
             <div class="tab-pane fade" id="bookingsTab">
-                <div class="row g-4" id="bookingsGrid">
-                   </div>
+                <div class="row g-4" id="bookingsGrid"></div>
             </div>
         </div>
     </div>
@@ -284,10 +280,8 @@
 
     <script>
         const API_URL = "/api";
-        // 🌟 VERCEL FIX: Always use absolute URLs dynamically derived from the window location.
         const BASE_SERVER_URL = window.location.origin;
 
-        // 🌟 CAMERA & GPS VARIABLES
         let stream = null;
         let finalImageBlob = null;
         let captureLat = 0;
@@ -303,12 +297,14 @@
             updateNavbarUI();
             initCameraSystem(); 
 
+            // 🚀 MASTER FIX: Wake up Vercel and pre-fetch ALL data in background INSTANTLY
+            wakeServerAndPrefetch(token);
+
             const hash = window.location.hash;
             if (hash) switchTab(hash);
             else switchTab('#postTab');
         };
 
-        // 🚀 THE FIX: Forcibly Hide CRM Panel for Normal Users
         function updateNavbarUI() {
             try {
                 const user = JSON.parse(localStorage.getItem("zamin_user"));
@@ -318,7 +314,7 @@
                 if(user && (user.role === 'admin' || user.role === 'broker')) {
                     adminArea.innerHTML = `<a class="nav-link text-danger fw-bold" style="background: #fee2e2; padding: 8px 16px !important;" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
                 } else {
-                    adminArea.innerHTML = ''; // 🛑 Forcibly Hide for Buyer/Seller
+                    adminArea.innerHTML = ''; 
                 }
 
                 const firstName = user.fullName ? user.fullName.split(" ")[0] : "User";
@@ -338,31 +334,26 @@
         function logout() {
             localStorage.removeItem("zamin_token");
             localStorage.removeItem("zamin_user");
+            sessionStorage.clear(); // Clear caches on logout
             window.location.href = "login.html";
         }
 
-        // 🚀 BULLETPROOF TAB SWITCHER
         function switchTab(tabId) {
-            // 1. Sync Navbar
             document.querySelectorAll('#zaminNav .nav-link').forEach(link => link.classList.remove('active'));
             const activeNav = document.querySelector(`#zaminNav .nav-link[href="${tabId}"]`);
             if(activeNav) activeNav.classList.add('active');
 
-            // 2. Sync Dashboard Pills
             document.querySelectorAll('#dashboardTabs .nav-link').forEach(link => link.classList.remove('active'));
             const activePill = document.getElementById(`btn-${tabId.replace('#', '')}`);
             if(activePill) activePill.classList.add('active');
 
-            // 3. Show correct content panel
-            document.querySelectorAll('.tab-pane').forEach(pane => {
-                pane.classList.remove('show', 'active');
-            });
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('show', 'active'));
             const activePane = document.querySelector(tabId);
             if(activePane) activePane.classList.add('show', 'active');
 
             window.location.hash = tabId;
 
-            // 4. Safely trigger data load
+            // Trigger Data Load
             if (tabId === '#visitsTab') loadSiteVisits();
             else if (tabId === '#myListingsTab') loadMyListings();
             else if (tabId === '#savedTab') loadSavedListings();
@@ -370,151 +361,176 @@
         }
 
         // ==========================================
-        // 🌟 2. BULLETPROOF DATA FETCHING & VERCEL IMAGE FIX
+        // 🚀 BLAZING FAST BACKGROUND PRE-FETCHING
+        // ==========================================
+
+        function wakeServerAndPrefetch(token) {
+            const headers = { Authorization: `Bearer ${token}` };
+
+            // Helper to fetch and cache silently
+            const prefetchData = (endpoint, cacheKey, dataKey, renderLogic) => {
+                if(!sessionStorage.getItem(cacheKey)) {
+                    fetch(`${API_URL}/${endpoint}`, { headers })
+                    .then(res => res.json())
+                    .then(data => {
+                        let items = data[dataKey] || data.data || data.listings || [];
+                        if (items.length > 0) {
+                            const valid = items.filter(i => i !== null);
+                            sessionStorage.setItem(cacheKey, JSON.stringify(valid));
+                            // If user is already on this tab while background fetch completes, auto-render
+                            if(window.location.hash.includes(cacheKey.replace('cache_',''))) renderLogic(valid);
+                        } else {
+                            sessionStorage.setItem(cacheKey, "[]"); // Store empty state
+                            if(window.location.hash.includes(cacheKey.replace('cache_',''))) renderLogic([]);
+                        }
+                    }).catch(e=>{});
+                }
+            };
+
+            // Fetch all 4 sections in parallel
+            prefetchData('listings/my-listings', 'cache_myListings', 'listings', (data) => renderCards(data, document.getElementById("myListingsGrid"), true));
+            prefetchData('listings/saved-listings', 'cache_savedListings', 'listings', (data) => renderCards(data, document.getElementById("savedGrid"), false));
+            prefetchData('listings/my-bookings', 'cache_bookings', 'bookings', (data) => renderBookings(data, document.getElementById("bookingsGrid")));
+            prefetchData('leads/my-visits', 'cache_visits', 'visits', (data) => renderVisits(data, document.getElementById('visitsGrid')));
+        }
+
+        // ==========================================
+        // 📊 TAB RENDERERS (Uses Cache instantly)
         // ==========================================
 
         async function loadSiteVisits() {
             const grid = document.getElementById('visitsGrid');
-            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-primary" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Visits...</p></div>';
+            const cachedData = sessionStorage.getItem("cache_visits");
 
-            try {
-                const res = await fetch(`${API_URL}/leads/my-visits`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
-                const data = await res.json();
-
-                if (data.success && data.visits && data.visits.length > 0) {
-                    grid.innerHTML = data.visits.map(visit => {
-                        const prop = visit.property;
-                        return `
-                        <div class="col-lg-6 offset-lg-3">
-                            <div class="property-card visit-card p-4 shadow-sm mb-4">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span class="badge bg-primary px-3 py-2 fs-6 shadow-sm"><i class="fas fa-calendar-check me-1"></i> ${visit.status}</span>
-                                    <span class="text-muted fw-bold small bg-white px-2 py-1 border rounded">ID: #${visit._id.substring(visit._id.length - 6).toUpperCase()}</span>
-                                </div>
-                                <h3 class="fw-bold text-dark">${prop ? prop.landName : 'Verified Property'}</h3>
-                                <p class="text-muted mb-4 fw-medium"><i class="fas fa-map-marker-alt text-danger me-1 fs-5"></i> ${prop ? prop.address : 'Location locked. Awaiting your arrival.'}</p>
-
-                                <div class="bg-white p-3 rounded-4 mb-4 text-center border border-success border-opacity-25">
-                                    <p class="mb-1 fw-bold text-success"><i class="fas fa-shield-alt me-1"></i> Step 20: Dual Presence Protocol</p>
-                                    <span class="text-muted fw-medium" style="font-size: 13px;">Please be physically present at the property to unlock the encrypted Deal Room.</span>
-                                </div>
-
-                                <button class="btn-verify-gps" onclick="window.location.href='deal-room.html?lead=${visit._id}'">
-                                    <i class="fas fa-crosshairs me-2"></i> Access Deal Room (Verify GPS)
-                                </button>
-                            </div>
-                        </div>
-                        `;
-                    }).join("");
-                } else {
-                    grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-map-marked-alt fs-1 d-block mb-3 text-secondary opacity-50"></i> No upcoming site visits scheduled.</div>`;
-                }
-            } catch(e) {
-                grid.innerHTML = `<div class="text-center text-danger w-100 py-5 fw-bold"><i class="fas fa-exclamation-circle mb-2 fs-1"></i><br>Error connecting to Zamin servers.</div>`;
+            if (cachedData) {
+                renderVisits(JSON.parse(cachedData), grid);
+                return; // Instant Load, exit early
             }
+            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-primary" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Visits...</p></div>';
         }
 
         async function loadMyListings() {
             const grid = document.getElementById("myListingsGrid");
-            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-success" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Your Properties...</p></div>';
+            const cachedData = sessionStorage.getItem("cache_myListings");
 
-            try {
-                const res = await fetch(`${API_URL}/listings/my-listings`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
-                const data = await res.json();
-                const items = data.listings || data.data || [];
-
-                if (items.length > 0) {
-                    const validItems = items.filter(i => i !== null);
-                    grid.innerHTML = validItems.map((item) => generateCardHTML(item, true)).join("");
-                } else {
-                    grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-folder-open fs-1 d-block mb-3 opacity-50"></i> You haven't posted any properties yet.</div>`;
-                }
-            } catch (e) { 
-                grid.innerHTML = `<div class="text-center text-danger py-5 fw-bold"><i class="fas fa-exclamation-circle fs-2 mb-2"></i><br>Network Error! Please try again.</div>`; 
+            if (cachedData) {
+                renderCards(JSON.parse(cachedData), grid, true);
+                return; // Instant Load, exit early
             }
+            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-success" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Properties...</p></div>';
         }
 
         async function loadSavedListings() {
             const grid = document.getElementById("savedGrid");
-            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-danger" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Favorites...</p></div>';
+            const cachedData = sessionStorage.getItem("cache_savedListings");
 
-            try {
-                const res = await fetch(`${API_URL}/listings/saved-listings`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
-                const data = await res.json();
-                const items = data.listings || data.savedListings || data.favorites || data.data || [];
-
-                if (items.length > 0) {
-                    const validItems = items.filter(i => i !== null);
-                    if(validItems.length > 0) {
-                        grid.innerHTML = validItems.map((item) => generateCardHTML(item, false)).join("");
-                    } else {
-                        grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-heart-broken fs-1 d-block mb-3 opacity-50"></i> The properties you saved have been removed.</div>`;
-                    }
-                } else {
-                    grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-heart-broken fs-1 d-block mb-3 opacity-50"></i> No favorite properties saved yet.</div>`;
-                }
-            } catch (e) { 
-                grid.innerHTML = `<div class="text-center text-danger py-5 fw-bold"><i class="fas fa-exclamation-circle fs-2 mb-2"></i><br>Network Error! Please try again.</div>`; 
+            if (cachedData) {
+                renderCards(JSON.parse(cachedData), grid, false);
+                return; 
             }
+            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-danger" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Favorites...</p></div>';
         }
 
         async function loadMyBookings() {
             const grid = document.getElementById("bookingsGrid");
-            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-info" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Bookings...</p></div>';
+            const cachedData = sessionStorage.getItem("cache_bookings");
 
-            try {
-                const res = await fetch(`${API_URL}/listings/my-bookings`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
-                const data = await res.json();
-
-                if (data.bookings && data.bookings.length > 0) {
-                    grid.innerHTML = data.bookings.map((lead) => {
-                        const item = lead.property;
-                        if (!item) return ""; // Skip if property was deleted
-
-                        // 🌟 VERCEL FIX: Booking images
-                        let imgSource = item.imageUrl || "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
-                        if(imgSource && !imgSource.startsWith('http')) {
-                            imgSource = imgSource.replace(/\\/g, '/');
-                            imgSource = window.location.origin + (imgSource.startsWith('/') ? imgSource : '/' + imgSource);
-                        }
-
-                        // Rating Trigger
-                        const brokerId = lead.assignedBroker ? lead.assignedBroker._id || lead.assignedBroker : null;
-                        const rateBtn = brokerId ? `<button class="btn btn-warning btn-sm w-100 mt-2 fw-bold text-dark border-0 shadow-sm" onclick="openRateModal('${brokerId}')"><i class="fas fa-star me-1"></i> Rate Broker Service</button>` : '';
-
-                        return `
-                        <div class="col-lg-6">
-                            <div class="property-card" style="display:flex; flex-direction:row; height:auto; align-items: stretch; border: 2px solid #e2e8f0;">
-                                <div style="width: 160px; flex-shrink: 0; border-right: 1px solid #e2e8f0;">
-                                    <img src="${imgSource}" style="width: 100%; height: 100%; object-fit: cover;">
-                                </div>
-                                <div class="p-3 w-100 d-flex flex-column justify-content-between">
-                                    <div>
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <span class="badge bg-success mb-1 py-2 px-3 shadow-sm"><i class="fas fa-check-circle me-1"></i> ${lead.status || "Token Paid"}</span>
-                                            <h5 class="fw-bold text-success m-0" style="font-family:'JetBrains Mono', monospace;">₹ ${Number(lead.tokenAmount || 100000).toLocaleString("en-IN")}</h5>
-                                        </div>
-                                        <h6 class="fw-bold text-dark text-truncate mb-1 lh-base">${item.landName}</h6>
-                                        <p class="text-muted small mb-0 text-truncate"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address}</p>
-                                    </div>
-                                    <div class="mt-3 border-top pt-3">
-                                        <button class="btn btn-outline-dark btn-sm w-100 fw-bold" onclick="window.location.href='property.html?id=${item._id}'">View Property</button>
-                                        ${rateBtn}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        `;
-                    }).join("");
-                } else {
-                    grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-file-invoice-dollar fs-1 d-block mb-3 opacity-50"></i> You haven't booked any properties yet.</div>`;
-                }
-            } catch (e) { 
-                grid.innerHTML = `<div class="text-center text-danger w-100 py-5 fw-bold"><i class="fas fa-exclamation-circle fs-2 mb-2"></i><br>Error loading bookings.</div>`; 
+            if (cachedData) {
+                renderBookings(JSON.parse(cachedData), grid);
+                return; 
             }
+            grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-info" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Bookings...</p></div>';
         }
 
-        // 🌟 VERCEL FIX: Card generator images
+        // ==========================================
+        // 🧩 HTML GENERATORS
+        // ==========================================
+
+        function renderVisits(visits, grid) {
+            if(!visits || visits.length === 0) {
+                grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-map-marked-alt fs-1 d-block mb-3 text-secondary opacity-50"></i> No upcoming site visits scheduled.</div>`;
+                return;
+            }
+            grid.innerHTML = visits.map(visit => {
+                const prop = visit.property;
+                return `
+                <div class="col-lg-6 offset-lg-3">
+                    <div class="property-card visit-card p-4 shadow-sm mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-primary px-3 py-2 fs-6 shadow-sm"><i class="fas fa-calendar-check me-1"></i> ${visit.status}</span>
+                            <span class="text-muted fw-bold small bg-white px-2 py-1 border rounded">ID: #${visit._id.substring(visit._id.length - 6).toUpperCase()}</span>
+                        </div>
+                        <h3 class="fw-bold text-dark">${prop ? prop.landName : 'Verified Property'}</h3>
+                        <p class="text-muted mb-4 fw-medium"><i class="fas fa-map-marker-alt text-danger me-1 fs-5"></i> ${prop ? prop.address : 'Location locked. Awaiting your arrival.'}</p>
+
+                        <div class="bg-white p-3 rounded-4 mb-4 text-center border border-success border-opacity-25">
+                            <p class="mb-1 fw-bold text-success"><i class="fas fa-shield-alt me-1"></i> Step 20: Dual Presence Protocol</p>
+                            <span class="text-muted fw-medium" style="font-size: 13px;">Please be physically present at the property to unlock the encrypted Deal Room.</span>
+                        </div>
+
+                        <button class="btn-verify-gps" onclick="window.location.href='deal-room.html?lead=${visit._id}'">
+                            <i class="fas fa-crosshairs me-2"></i> Access Deal Room (Verify GPS)
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join("");
+        }
+
+        function renderCards(items, grid, isMyListing) {
+            if(!items || items.length === 0) {
+                const icon = isMyListing ? 'fa-folder-open' : 'fa-heart-broken';
+                const msg = isMyListing ? "You haven't posted any properties yet." : "No favorite properties saved yet.";
+                grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas ${icon} fs-1 d-block mb-3 opacity-50"></i> ${msg}</div>`;
+                return;
+            }
+            grid.innerHTML = items.map(item => generateCardHTML(item, isMyListing)).join("");
+        }
+
+        function renderBookings(bookings, grid) {
+            if(!bookings || bookings.length === 0) {
+                grid.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-file-invoice-dollar fs-1 d-block mb-3 opacity-50"></i> You haven't booked any properties yet.</div>`;
+                return;
+            }
+            grid.innerHTML = bookings.map((lead) => {
+                const item = lead.property;
+                if (!item) return ""; 
+
+                let imgSource = item.imageUrl || "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
+                if(imgSource && !imgSource.startsWith('http')) {
+                    imgSource = imgSource.replace(/\\/g, '/');
+                    imgSource = window.location.origin + (imgSource.startsWith('/') ? imgSource : '/' + imgSource);
+                }
+
+                const brokerId = lead.assignedBroker ? lead.assignedBroker._id || lead.assignedBroker : null;
+                const rateBtn = brokerId ? `<button class="btn btn-warning btn-sm w-100 mt-2 fw-bold text-dark border-0 shadow-sm" onclick="openRateModal('${brokerId}')"><i class="fas fa-star me-1"></i> Rate Broker Service</button>` : '';
+
+                return `
+                <div class="col-lg-6">
+                    <div class="property-card" style="display:flex; flex-direction:row; height:auto; align-items: stretch; border: 2px solid #e2e8f0;">
+                        <div style="width: 160px; flex-shrink: 0; border-right: 1px solid #e2e8f0;">
+                            <img src="${imgSource}" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <div class="p-3 w-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span class="badge bg-success mb-1 py-2 px-3 shadow-sm"><i class="fas fa-check-circle me-1"></i> ${lead.status || "Token Paid"}</span>
+                                    <h5 class="fw-bold text-success m-0" style="font-family:'JetBrains Mono', monospace;">₹ ${Number(lead.tokenAmount || 100000).toLocaleString("en-IN")}</h5>
+                                </div>
+                                <h6 class="fw-bold text-dark text-truncate mb-1 lh-base">${item.landName}</h6>
+                                <p class="text-muted small mb-0 text-truncate"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address}</p>
+                            </div>
+                            <div class="mt-3 border-top pt-3">
+                                <button class="btn btn-outline-dark btn-sm w-100 fw-bold" onclick="window.location.href='property.html?id=${item._id}'">View Property</button>
+                                ${rateBtn}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join("");
+        }
+
         function generateCardHTML(item, isMyListing) {
             if (!item) return ''; 
 
@@ -583,14 +599,12 @@
 
             startBtn.onclick = async () => {
                 try {
-                    // Try getting GPS while opening camera
                     if (navigator.geolocation) {
                         navigator.geolocation.getCurrentPosition(
                             pos => { captureLat = pos.coords.latitude; captureLng = pos.coords.longitude; },
-                            err => console.log("GPS restricted during capture")
+                            err => console.log("GPS restricted")
                         );
                     }
-
                     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
                     video.srcObject = stream;
                     camContainer.style.display = 'block';
@@ -613,7 +627,6 @@
                 const now = new Date();
                 const timeStr = now.toLocaleString('en-IN');
 
-                // Add Watermark
                 context.font = "bold 25px Arial";
                 context.fillStyle = "rgba(255, 255, 255, 0.9)";
                 context.shadowColor = "black";
@@ -686,7 +699,6 @@
             formData.append("roadConnectivity", document.getElementById("road-connectivity").value);
             formData.append("extraInfo", document.getElementById("extra-info").value);
 
-            // Send Image & GPS Data
             if (finalImageBlob) {
                 formData.append("image", finalImageBlob, "verified_property.jpg");
                 formData.append("capturedInApp", "true");
@@ -707,21 +719,15 @@
                 const data = await res.json();
 
                 if (data.success) {
+                    sessionStorage.removeItem("cache_myListings"); // Clear cache so new property shows
                     Swal.fire({
                         title: 'Success!',
                         text: data.message || "Property submitted for Admin Review! ✅",
                         icon: 'success',
                         confirmButtonColor: '#10b981'
-                    }).then(() => {
-                        window.location.reload(); 
-                    });
+                    }).then(() => { window.location.reload(); });
                 } else if (data.isFraud) {
-                    Swal.fire({
-                        title: '🚨 FRAUD DETECTED',
-                        text: data.message,
-                        icon: 'error',
-                        confirmButtonColor: '#ef4444'
-                    });
+                    Swal.fire({ title: '🚨 FRAUD DETECTED', text: data.message, icon: 'error', confirmButtonColor: '#ef4444' });
                 } else {
                      Swal.fire({ title: 'Oops!', text: data.message, icon: 'warning' });
                 }
@@ -739,8 +745,11 @@
                 try {
                     const res = await fetch(`${API_URL}/listings/delete/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
                     const data = await res.json();
-                    if (data.success) { Swal.fire('Deleted!', '', 'success'); loadMyListings(); }
-                    else Swal.fire('Error', data.message, 'error');
+                    if (data.success) { 
+                        sessionStorage.removeItem("cache_myListings"); // Clear cache
+                        Swal.fire('Deleted!', '', 'success'); 
+                        loadMyListings(); // Will hit API since cache is cleared
+                    } else Swal.fire('Error', data.message, 'error');
                 } catch (e) { Swal.fire("Error", "Network issue.", "error"); }
             }
         }
