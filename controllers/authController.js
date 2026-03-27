@@ -165,10 +165,14 @@ exports.login = async (req, res) => {
 
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
+        // 🚀 MASTER FIX: Return Full User Object (without password) so Flutter Profile Screen fills completely
+        const userObj = user.toObject();
+        delete userObj.password;
+
         res.json({ 
             success: true, 
             token, 
-            user: { _id: user._id, fullName: user.fullName, role: user.role, email: user.email } 
+            user: userObj 
         });
 
     } catch (e) {
@@ -188,15 +192,12 @@ exports.socialLoginCallback = async (req, res) => {
         email: req.user.email 
     }));
 
-    // 🚀 DYNAMIC JUMP (Fallback is now localhost)
     let returnBaseUrl = req.customRedirectUrl || "http://localhost:5000"; 
 
-    // Agar link ke aakhir mein extra '/' hai toh hata do, warna url double slash se tutega (//index.html)
     if (returnBaseUrl.endsWith('/')) {
         returnBaseUrl = returnBaseUrl.slice(0, -1);
     }
 
-    // Ab user wahi wapas jayega jahan se aaya tha, token ke saath!
     res.redirect(`${returnBaseUrl}/index.html?token=${token}&user=${userData}`);
 };
 
@@ -207,17 +208,54 @@ exports.getMe = async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 };
 
+// 🚀 MASTER FIX: Update Profile now supports Bio and Address
 exports.updateProfile = async (req, res) => {
     try {
-        const { fullName, phone } = req.body;
+        const { fullName, phone, bio, address } = req.body;
+
+        let updateData = {};
+        if (fullName !== undefined) updateData.fullName = fullName;
+        if (phone !== undefined) updateData.phone = phone;
+        if (bio !== undefined) updateData.bio = bio;
+        if (address !== undefined) updateData.address = address;
+
         const updatedUser = await User.findByIdAndUpdate(
             req.user.id, 
-            { fullName, phone }, 
+            { $set: updateData }, 
             { new: true }
         ).select('-password');
 
-        res.json({ success: true, user: updatedUser });
+        res.json({ success: true, message: "Profile updated successfully!", user: updatedUser });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+};
+
+// 📸 MASTER FIX: New Avatar Upload Controller
+exports.uploadAvatar = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: "Koi photo upload nahi hui!" });
+        }
+
+        // Dynamically create URL based on Server Host (Replit/Vercel/Local)
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+        const host = req.headers.host;
+        const avatarUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+
+        const updatedUser = await User.findByIdAndUpdate(
+            req.user.id,
+            { avatar: avatarUrl },
+            { new: true }
+        ).select('-password');
+
+        res.json({ 
+            success: true, 
+            message: "Profile Photo Updated! 📸", 
+            avatarUrl: avatarUrl, 
+            user: updatedUser 
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
 };
 
 // ==========================================
@@ -231,20 +269,17 @@ exports.verifyFlutterGoogleToken = async (req, res) => {
             return res.status(400).json({ success: false, message: "Token and email are required" });
         }
 
-        // Check if user already exists in our database
         let user = await User.findOne({ email: email });
 
         if (!user) {
-            // First time login -> Register the user automatically
-            // Create a random dummy password so normal login doesn't break
             const randomPassword = Math.random().toString(36).slice(-8);
             const hashed = await bcrypt.hash(randomPassword, 10);
 
             user = new User({
                 fullName: name || "Zamin User",
                 email: email,
-                role: 'buyer', // Default role
-                isActive: true, // Google users are auto-verified
+                role: 'buyer', 
+                isActive: true, 
                 password: hashed 
             });
             await user.save();
@@ -252,24 +287,21 @@ exports.verifyFlutterGoogleToken = async (req, res) => {
             return res.status(403).json({ success: false, message: "Aapka account Admin dwara block kiya gaya hai." });
         }
 
-        // Generate our own Zamin Dekho JWT Token
         const jwtToken = jwt.sign(
             { id: user._id, role: user.role },
-            process.env.JWT_SECRET || "ZAMIN_SUPER_SECRET_KEY_123", // Fallback text just in case
+            process.env.JWT_SECRET || "ZAMIN_SUPER_SECRET_KEY_123", 
             { expiresIn: "7d" }
         );
 
-        // Success! Send the token back to Flutter
+        // 🚀 MASTER FIX: Return Full User Object (without password)
+        const userObj = user.toObject();
+        delete userObj.password;
+
         res.status(200).json({
             success: true,
             message: "Google login successful",
             token: jwtToken,
-            user: {
-                _id: user._id,
-                fullName: user.fullName,
-                role: user.role,
-                email: user.email
-            }
+            user: userObj
         });
 
     } catch (error) {

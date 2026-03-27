@@ -398,7 +398,6 @@
                 userLng = null;
                 document.getElementById('gpsIcon').classList.remove('gps-active');
 
-                // 🌟 NAYA: Reset karne par saare premium sections wapas dikhao
                 document.getElementById('homeSections').style.display = 'block';
                 document.getElementById('resultsHeading').innerText = `Newly Added Lands`;
             }
@@ -436,31 +435,63 @@
                 );
             }
 
-            function startVoice() {
-                const input = document.getElementById('mainSearchInput');
-                const micIcon = document.getElementById('micIcon');
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (!SpeechRecognition) return Swal.fire("Error", "Voice search needs Google Chrome.", "error");
+            // 🚀 1. WEB-SAFE VOICE RECOGNITION UPGRADE (Fixes the issue in localhost/Chrome)
+            let recognition;
 
-                const recognition = new SpeechRecognition();
-                recognition.lang = 'en-IN'; recognition.interimResults = true; 
+            function initWebSpeech() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    Swal.fire("Error", "Voice search is not supported by your browser. Please try Chrome.", "error");
+                    return false;
+                }
+                recognition = new SpeechRecognition();
+                recognition.lang = 'en-IN'; 
+                recognition.interimResults = true; // Enables real-time text updating
+                recognition.continuous = false;    // Stops automatically when the user pauses
+
                 recognition.onstart = function() {
-                    input.value = ""; input.placeholder = "Listening... Speak now 🎙️";
+                    const input = document.getElementById('mainSearchInput');
+                    const micIcon = document.getElementById('micIcon');
+                    input.value = ""; 
+                    input.placeholder = "Listening... Speak now 🎙️";
                     micIcon.classList.add('mic-active');
                 };
+
                 recognition.onresult = function(event) {
+                    const input = document.getElementById('mainSearchInput');
                     let finalTranscript = '';
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
                         finalTranscript += event.results[i][0].transcript;
                     }
-                    input.value = finalTranscript;
+                    input.value = finalTranscript; // Real-time UI update!
                 };
+
                 recognition.onend = function() {
-                    updateCategoryUI(); micIcon.classList.remove('mic-active');
+                    const input = document.getElementById('mainSearchInput');
+                    const micIcon = document.getElementById('micIcon');
+                    updateCategoryUI(); 
+                    micIcon.classList.remove('mic-active');
                     if(input.value.trim() !== "") executeAdvancedSearch(); 
                 };
-                recognition.onerror = function() { micIcon.classList.remove('mic-active'); updateCategoryUI(); };
-                recognition.start();
+
+                recognition.onerror = function() { 
+                    const micIcon = document.getElementById('micIcon');
+                    micIcon.classList.remove('mic-active'); 
+                    updateCategoryUI(); 
+                };
+
+                return true;
+            }
+
+            function startVoice() {
+                if (!recognition) {
+                    if (!initWebSpeech()) return;
+                }
+                try {
+                    recognition.start();
+                } catch(e) {
+                    recognition.stop();
+                }
             }
 
             async function executeAdvancedSearch() {
@@ -473,7 +504,6 @@
 
                 toggleFilterPanel(false);
 
-                // 🌟 NAYA: Search karte hi home sections hide kar do
                 document.getElementById('homeSections').style.display = 'none';
 
                 document.getElementById('resultsHeading').innerText = `Search Results`;
@@ -493,7 +523,6 @@
                 fetchAll(`${API_URL}/listings/search?${query}`);
             }
 
-            // 🌟 NAYA: Data Shuffle Function (UI ko alive dikhane ke liye)
             function shuffleArray(array) {
                 let arr = [...array];
                 for (let i = arr.length - 1; i > 0; i--) {
@@ -503,7 +532,6 @@
                 return arr;
             }
 
-            // 🌟 NAYA: Card Generate Helper
             function getCardHTML(item, badgeHTML = '') {
                 let imgSource = item.imageUrl;
                 if(imgSource && !imgSource.startsWith('http')) {
@@ -570,12 +598,10 @@
 
                         let allItems = [...data.listings];
 
-                        // Populate Main Grid (Newly Added / Search Results)
                         allItems.forEach(item => {
                             mainGrid.innerHTML += `<div class="col-lg-4 col-md-6">${getCardHTML(item)}</div>`;
                         });
 
-                        // 🌟 NAYA: Populate Premium Rows using Shuffled Data
                         if(!isSearch) {
                             const renderHorizontal = (items, gridElement, badgeHTML) => {
                                 gridElement.innerHTML = items.length ? items.map(item => {
@@ -601,7 +627,6 @@
                 } catch(e) { mainGrid.innerHTML = `<div class="text-center w-100 py-5"><h4 class="text-danger fw-bold"><i class="fas fa-wifi me-2"></i>Server Offline or Network Error</h4></div>`; }
             }
 
-            // Edit Profile Logic
             let tempAvatarBase64 = null;
 
             function enableProfileEdit() {
@@ -676,7 +701,6 @@
                 }
             }
 
-            // 🚀 THE FIX: Sirf Broker aur Admin ko CRM Panel dikhega, baakiyo ke liye hide
             function updateNavbarUI() {
                 const token = localStorage.getItem('zamin_token');
                 const authArea = document.getElementById('authArea');
@@ -685,30 +709,31 @@
                 if (token) {
                     document.querySelectorAll('.auth-required-link').forEach(el => el.classList.remove('d-none'));
                     try {
-                        const user = JSON.parse(localStorage.getItem('zamin_user'));
+                        const userStr = localStorage.getItem('zamin_user');
+                        const user = userStr ? JSON.parse(userStr) : null;
 
                         if(user && (user.role === 'admin' || user.role === 'broker')) {
                             adminArea.innerHTML = `<a class="nav-link text-danger fw-bold" style="background: #fee2e2; border-radius: 8px; padding: 8px 16px !important;" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
                         } else {
-                            adminArea.innerHTML = ''; // 🛑 Forcibly Hide for Buyer/Seller
+                            adminArea.innerHTML = ''; 
                         }
 
-                        const firstName = user.fullName ? user.fullName.split(' ')[0] : 'User';
+                        const firstName = (user && user.fullName) ? user.fullName.split(' ')[0] : 'User';
 
-                        document.getElementById('modalUserName').innerText = user.fullName || 'User';
-                        document.getElementById('modalUserEmail').innerText = user.email || 'No email';
+                        document.getElementById('modalUserName').innerText = (user && user.fullName) ? user.fullName : 'User';
+                        document.getElementById('modalUserEmail').innerText = (user && user.email) ? user.email : 'No email';
 
-                        const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'User')}&background=10b981&color=fff&size=120`;
+                        const avatarUrl = (user && user.avatar) ? user.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent((user && user.fullName) ? user.fullName : 'User')}&background=10b981&color=fff&size=120`;
                         document.getElementById('modalUserAvatar').src = avatarUrl;
 
                         const roleBadge = document.getElementById('modalUserRole');
-                        roleBadge.innerText = user.role || 'Buyer';
-                        if(user.role === 'admin') { roleBadge.className = 'badge bg-danger shadow-sm'; }
-                        else if(user.role === 'broker') { roleBadge.className = 'badge bg-warning text-dark shadow-sm'; }
-                        else if(user.role === 'seller') { roleBadge.className = 'badge bg-success shadow-sm'; }
+                        roleBadge.innerText = (user && user.role) ? user.role : 'Buyer';
+                        if(user && user.role === 'admin') { roleBadge.className = 'badge bg-danger shadow-sm'; }
+                        else if(user && user.role === 'broker') { roleBadge.className = 'badge bg-warning text-dark shadow-sm'; }
+                        else if(user && user.role === 'seller') { roleBadge.className = 'badge bg-success shadow-sm'; }
                         else { roleBadge.className = 'badge bg-primary shadow-sm'; }
 
-                        document.getElementById('modalUserId').innerText = user._id ? `#${user._id.substring(user._id.length - 6)}` : 'N/A';
+                        document.getElementById('modalUserId').innerText = (user && user._id) ? `#${user._id.substring(user._id.length - 6)}` : 'N/A';
 
                         authArea.innerHTML = `
                             <button data-bs-toggle="modal" data-bs-target="#userProfileModal" class="user-id-btn me-2">
@@ -716,7 +741,9 @@
                             </button>
                             <button onclick="logout()" class="logout-btn-premium"><i class="fas fa-sign-out-alt"></i> Logout</button>
                         `;
-                    } catch(e) {}
+                    } catch(e) {
+                         console.error("Error parsing user data:", e);
+                    }
                 } else { 
                     authArea.innerHTML = `<a href="login.html" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm" style="background:#10b981;"><i class="fas fa-user me-2"></i> Login to Explore</a>`; 
                 }

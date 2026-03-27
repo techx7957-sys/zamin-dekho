@@ -1,10 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const passport = require("passport");
+const multer = require("multer"); // 🚀 MASTER FIX: Added Multer for Image Parsing
 
 // Controllers & Middleware
 const authController = require("../controllers/authController");
-const { verifyToken } = require("../middleware/authMiddleware"); // 🌟 FIX: folder name updated to 'middlewares'
+const { verifyToken } = require("../middleware/authMiddleware"); 
+
+// 📸 SETUP MULTER (Flutter se aayi photo ko server pe save karne ke liye)
+const upload = multer({ dest: 'uploads/' });
 
 // ==========================================
 // 🚀 1. OTP DISPATCH (For Registration Only)
@@ -30,24 +34,27 @@ router.post("/login", authController.login);
 // Route: Get Current Logged-in User Data (Used by Dashboard & Checkout)
 router.get("/me", verifyToken, authController.getMe);
 
-// Route: Update Profile (Name, Avatar, Phone)
+// Route: Update Profile (Name, Bio, Phone, Address)
 router.put("/update-profile", verifyToken, authController.updateProfile);
 
+// 🚀 MASTER FIX: Naya Route Profile Photo Upload karne ke liye
+router.put("/update-avatar", verifyToken, upload.single('avatar'), authController.uploadAvatar);
+
 // ==========================================
-// 🌐 4. ULTIMATE GOOGLE OAUTH 2.0 ROUTES (STATE PARAMETER FIX)
+// 🌐 4. ULTIMATE GOOGLE OAUTH 2.0 ROUTES 
 // ==========================================
 
-// 🚀 NAYA ROUTE: Flutter app se direct Google Token lene aur verify karne ke liye
+// 🚀 Route: Flutter app se direct Google Token lene aur verify karne ke liye
 router.post("/google", authController.verifyFlutterGoogleToken);
 
 // 🟢 STEP 1: Google ko apna "Return Ticket" (clientUrl) do
 router.get(
     "/google",
     (req, res, next) => {
-        // 🚀 DEFAULT FALLBACK AB LOCALHOST HAI! (Agar link break hua toh Vercel nahi jayega)
+        // 🚀 DEFAULT FALLBACK AB LOCALHOST HAI!
         const returnAddress = req.query.clientUrl || "http://localhost:5000";
 
-        // 🚀 'state' parameter ka use karke ticket Google ki pocket mein daal do (No memory loss!)
+        // 'state' parameter ka use karke ticket Google ki pocket mein daal do
         passport.authenticate("google", { 
             scope: ["profile", "email"],
             state: returnAddress 
@@ -60,12 +67,12 @@ router.get(
     "/google/callback",
     passport.authenticate("google", {
         session: false,
-        failureRedirect: "http://localhost:5000/login.html", // 🚀 Fallback update
+        failureRedirect: "http://localhost:5000/login.html", 
     }),
     (req, res, next) => {
         // 🚀 DEFAULT FALLBACK AB LOCALHOST HAI!
         req.customRedirectUrl = req.query.state || "http://localhost:5000";
-        next(); // Ab authController apna token banayega aur wahi redirect karega
+        next(); 
     },
     authController.socialLoginCallback
 );

@@ -3,13 +3,13 @@
 // ==========================================
 
 // 🌟 FIX: Vercel-ready Dynamic URLs
+// Ab localhost ya kisi port ki zaroorat nahi, Vercel pe ye automatically connect ho jayega!
 const API_BASE = "/api";
 const FRONTEND_URL = window.location.origin; 
 
 // ==========================================
 // 1. 🌟 THE MASTER INITIALIZER 🌟
 // ==========================================
-// FIX: Dono page-load events ko ek sath joda gaya hai speed ke liye
 window.addEventListener('DOMContentLoaded', () => {
     handleSocialLogin();
     updateNavbar();
@@ -30,13 +30,13 @@ function handleSocialLogin() {
             localStorage.setItem('zamin_user', decodeURIComponent(user));
         }
 
-        // 3. Clean the URL (Security ke liye token hata do screen se)
+        // 3. Clean the URL (Security ke liye token hata do browser history se)
         window.history.replaceState({}, document.title, window.location.pathname);
 
         // 4. Show Success Toast
         showToast("Login Successful! Welcome to Zamin Dekho 🚀", "success");
 
-        // 5. 🌟 FIX: Reload ki jagah seedha Dashboard par bhejo!
+        // 5. 🌟 FIX: Seedha Dashboard par bhejo!
         setTimeout(() => {
             window.location.href = 'dashboard.html';
         }, 1500); 
@@ -44,7 +44,7 @@ function handleSocialLogin() {
 }
 
 // ==========================================
-// 2. AUTHENTICATION UTILITIES
+// 2. AUTHENTICATION & DATA UTILITIES
 // ==========================================
 
 // Get Token from LocalStorage
@@ -72,7 +72,7 @@ function logout() {
     localStorage.removeItem('zamin_token');
     localStorage.removeItem('zamin_user');
 
-    // Redirect gracefully
+    // Redirect gracefully to login page
     window.location.href = 'login.html';
 }
 
@@ -81,6 +81,21 @@ function requireAuth() {
     if (!getToken()) {
         window.location.href = 'login.html';
     }
+}
+
+// 🌟 MASTER FIX: GLOBAL IMAGE RESOLVER (For Vercel & Multer Uploads)
+function resolveImageUrl(url) {
+    const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
+    if (!url) return fallbackImg;
+
+    // Agar external link hai (Google Profile Pic ya Unsplash)
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+    // Agar local upload path hai (/uploads/image.jpg)
+    let cleanUrl = url.replace(/\\/g, '/'); // Windows backslash fix
+    cleanUrl = cleanUrl.startsWith('/') ? cleanUrl : '/' + cleanUrl;
+
+    return FRONTEND_URL + cleanUrl;
 }
 
 // ==========================================
@@ -167,19 +182,29 @@ function updateNavbar() {
         const loginLinks = document.querySelectorAll('a[href="login.html"]');
 
         loginLinks.forEach(link => {
-            // Check agar admin hai toh Admin Panel par bhejo, warna normal Dashboard par
-            if (user && user.role === 'admin') {
+            // 🌟 MASTER FIX: Check agar Admin ya BROKER hai toh CRM/Admin Panel par bhejo
+            if (user && (user.role === 'admin' || user.role === 'broker')) {
                 link.href = "admin.html";
-                link.innerHTML = '🛡️ Admin Panel';
-                link.style.backgroundColor = "#dc2626"; // Red for admin
+                link.innerHTML = '<i class="fas fa-shield-alt me-1"></i> CRM Panel';
+                link.style.backgroundColor = "#fee2e2"; // Light Red/Pink bg
+                link.style.color = "#dc2626"; // Red text
+                link.style.border = "1px solid #fca5a5";
             } else {
+                // Normal Buyer / Seller ke liye
                 link.href = "dashboard.html"; 
-                link.innerHTML = '👤 My Dashboard'; 
-                link.style.backgroundColor = "#166534"; // Green for users
+                link.innerHTML = '<i class="fas fa-user-circle me-1"></i> My Dashboard'; 
+                link.style.backgroundColor = "#10b981"; // Green bg
+                link.style.color = "white";
+                link.style.border = "none";
             }
-            link.style.color = "white";
-            link.style.padding = "8px 16px";
-            link.style.borderRadius = "6px";
+
+            // Apply common modern styling
+            link.style.padding = "8px 18px";
+            link.style.borderRadius = "8px";
+            link.style.fontWeight = "700";
+            link.style.transition = "0.3s";
+            link.style.textDecoration = "none";
+            link.style.display = "inline-block";
         });
     }
 }

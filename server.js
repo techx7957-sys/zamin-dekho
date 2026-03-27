@@ -6,7 +6,7 @@ const fs = require("fs");
 const session = require("express-session");
 const passport = require("passport");
 
-// 🌟 THE VERCEL FIX: dotenv ko sirf local par chalao
+// 🌟 ALWAYS load dotenv locally, Vercel provides env vars automatically
 if (process.env.NODE_ENV !== 'production') {
     require("dotenv").config();
 }
@@ -21,7 +21,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const brokerRoutes = require("./routes/brokerRoutes"); 
 const paymentRoutes = require("./routes/paymentRoutes"); 
 
-// Controller Imports for routes that don't have a dedicated router yet
+// Controller Imports
 const leadController = require("./controllers/leadController"); 
 const { verifyToken } = require("./middleware/authMiddleware");
 
@@ -30,36 +30,23 @@ const app = express();
 // ==========================================
 // 🛡️ LAYER 1: BASIC SECURITY & ULTIMATE CORS FIX
 // ==========================================
-app.disable('x-powered-by'); // Hackers ko mat batao ki hum Express use kar rahe hain
+app.disable('x-powered-by'); 
 
-// 🚀 1. PRIMARY CORS: Set to true so it echoes the request's origin (Needed for credentials)
+// 🚀 1. THE VERCEL CORS FIX: 
+// Removed manual headers. This dynamic configuration handles Flutter Web, Android, and Vercel perfectly without double-header crashes.
 app.use(cors({
-    origin: true, 
+    origin: function (origin, callback) {
+        // Allow all origins (great for Flutter testing & Vercel)
+        callback(null, true);
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
     credentials: true,
-    optionsSuccessStatus: 204
+    optionsSuccessStatus: 200 // Vercel prefers 200 over 204 for preflight
 }));
 
-// 🚀 2. MANUAL CORS FALLBACK: Extra safety net for Replit and Flutter Web strictness
-app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-    }
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-    res.header("Access-Control-Allow-Credentials", "true");
-
-    // Handle preflight requests
-    if (req.method === "OPTIONS") {
-        return res.status(200).end();
-    }
-    next();
-});
-
-app.use(express.json({ limit: "10mb" })); // Koi bada data bhej kar server hang na kare
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json({ limit: "50mb" })); // Increased limit slightly for Flutter image uploads
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 // Session middleware
 app.use(
@@ -103,15 +90,16 @@ app.post('/api/leads/verify-gps/:id', verifyToken, leadController.verifyGPS);
 // ==========================================
 // 🛡️ LAYER 2: ANTI-HACK & FILE PROTECTION
 // ==========================================
-app.get("*", (req, res) => {
-    // 1. API route not found handler
-    if (req.originalUrl.startsWith("/api/")) {
-        return res.status(404).json({ success: false, message: "API Route Not Found" });
-    }
 
-    // 🚨 DIRECTORY TRAVERSAL PROTECTION (Koi hacker ../../ karke files na chura le)
+// 🚀 FIX: Strictly catch API 404s before the static file handler
+app.all("/api/*", (req, res) => {
+    return res.status(404).json({ success: false, message: "API Route Not Found" });
+});
+
+app.get("*", (req, res) => {
+    // 🚨 DIRECTORY TRAVERSAL PROTECTION
     if (req.path.includes('..') || req.path.includes('%00')) {
-        return res.status(403).send("🚨 Nice try! Access Denied by Zamin Dekho Firewall.");
+        return res.status(403).send("🚨 Access Denied by Zamin Dekho Firewall.");
     }
 
     let filePath = path.join(__dirname, "public", req.path);
@@ -121,7 +109,7 @@ app.get("*", (req, res) => {
     }
 
     // 🛡️ Block access to backend code/config files
-    const blockedFiles = [".env", "server.js", "package.json", "package-lock.json", "vercel.json"];
+    const blockedFiles = [".env", "server.js", "package.json", "package-lock.json", "vercel.json", "index.js"];
     const isBlocked = blockedFiles.some(file => filePath.endsWith(file));
 
     const inProtectedFolder = filePath.includes(path.join(__dirname, 'routes')) || 
@@ -143,35 +131,30 @@ app.get("*", (req, res) => {
     }
 });
 
-
 // ==========================================
 // 🛡️ LAYER 3: ANTI-CRASH SYSTEM (Global Error Handlers)
 // ==========================================
-
-// Agar express routes ke andar koi error aaye:
 app.use((err, req, res, next) => {
     console.error("🔥 Route Error Caught:", err.message);
     res.status(500).json({ success: false, message: "Internal Server Error! Engine is protected." });
 });
 
-// Agar background mein koi asnyc process fat jaye (Crash Preventer):
 process.on('uncaughtException', (err) => {
     console.error('🚨 UNCAUGHT EXCEPTION! System saved from crashing.', err);
-    // Server chalata rahega
 });
 
 process.on('unhandledRejection', (err) => {
     console.error('🚨 UNHANDLED REJECTION! System saved from crashing.', err);
-    // Server chalata rahega
 });
 
-
 // ==========================================
-// ⚡ PORT BINDING & SERVER START
+// ⚡ VERCEL EXPORT & LOCAL PORT BINDING
 // ==========================================
-const PORT = process.env.PORT || 5000;
 
-function startServer() {
+// 🚀 THE VERCEL FIX: Vercel sets `process.env.VERCEL` to "1". 
+// If we are on Vercel, DO NOT run app.listen(). Just export the app.
+if (!process.env.VERCEL) {
+    const PORT = process.env.PORT || 5000;
     const server = app.listen(PORT, "0.0.0.0", () => {
         console.log(`\n=========================================`);
         console.log(`🛡️ Zamin Dekho (SECURED) LIVE on port ${PORT}`);
@@ -180,19 +163,12 @@ function startServer() {
 
     server.on("error", (err) => {
         if (err.code === "EADDRINUSE") {
-            console.log(`⚠️ Port ${PORT} is busy, retrying in 3 seconds...`);
-            setTimeout(startServer, 3000);
+            console.log(`⚠️ Port ${PORT} is busy...`);
         } else {
             console.error("Server error:", err);
-            // Don't exit, keep trying
         }
     });
 }
 
-// Start the server locally
-if (process.env.NODE_ENV !== 'production') {
-  startServer();
-}
-
-// Vercel Serverless Environment Export
+// 🚀 CRITICAL FOR VERCEL: Export the app so Vercel Serverless can consume it
 module.exports = app;
