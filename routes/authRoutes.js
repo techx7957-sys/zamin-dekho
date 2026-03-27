@@ -41,7 +41,7 @@ router.put("/update-profile", verifyToken, authController.updateProfile);
 router.put("/update-avatar", verifyToken, upload.single('avatar'), authController.uploadAvatar);
 
 // ==========================================
-// 🌐 4. ULTIMATE GOOGLE OAUTH 2.0 ROUTES 
+// 🌐 4. ULTIMATE GOOGLE OAUTH 2.0 ROUTES (DYNAMIC FIX)
 // ==========================================
 
 // 🚀 Route: Flutter app se direct Google Token lene aur verify karne ke liye
@@ -51,8 +51,12 @@ router.post("/google", authController.verifyFlutterGoogleToken);
 router.get(
     "/google",
     (req, res, next) => {
-        // 🚀 DEFAULT FALLBACK AB LOCALHOST HAI!
-        const returnAddress = req.query.clientUrl || "http://localhost:5000";
+        // 🚀 DYNAMIC FIX: Backend automatically detects if it's on Vercel or Localhost
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+        const host = req.headers.host;
+        const currentDomain = `${protocol}://${host}`;
+
+        const returnAddress = req.query.clientUrl || currentDomain;
 
         // 'state' parameter ka use karke ticket Google ki pocket mein daal do
         passport.authenticate("google", { 
@@ -65,14 +69,19 @@ router.get(
 // 🟢 STEP 2: Google se aane ke baad, wahi "Return Ticket" wapas controller ko do
 router.get(
     "/google/callback",
-    passport.authenticate("google", {
-        session: false,
-        failureRedirect: "http://localhost:5000/login.html", 
-    }),
     (req, res, next) => {
-        // 🚀 DEFAULT FALLBACK AB LOCALHOST HAI!
-        req.customRedirectUrl = req.query.state || "http://localhost:5000";
-        next(); 
+        // 🚀 DYNAMIC FIX: Catch the dynamic domain for failure/success redirects
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+        const host = req.headers.host;
+        const currentDomain = `${protocol}://${host}`;
+
+        passport.authenticate("google", {
+            session: false,
+            failureRedirect: `${currentDomain}/login.html`, // Fail hone par wapas same domain ke login pe bhejo
+        })(req, res, () => {
+            req.customRedirectUrl = req.query.state || currentDomain;
+            next(); 
+        });
     },
     authController.socialLoginCallback
 );
