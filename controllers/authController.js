@@ -1,13 +1,13 @@
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const twilio = require('twilio'); // 🌟 ADDED: Twilio Package
+const twilio = require('twilio'); 
 const User = require('../models/User');
 const Broker = require('../models/Broker');
 
-// 👑 ADMIN ACCESS SHIELD (Yahan apne emails daal do jo Admin banne chahiye)
+// 👑 ADMIN ACCESS SHIELD (Array Properly Closed)
 const ADMIN_EMAILS = [
-    "techx7957@gmail.com   // <-- Ise apne asli email se replace karo!
+    "techx7957@gmail.com" 
 ];
 
 // Temporary Memory for OTP (Used for Registration only)
