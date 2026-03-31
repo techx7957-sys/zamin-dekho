@@ -8,6 +8,9 @@ const Broker = require('../models/Broker');
 // ==========================================
 exports.getAllUsers = async (req, res) => {
     try {
+        // 🛡️ SECURITY FIX: Strict Admin Check
+        if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: "Access Denied. Admins only." });
+
         const users = await User.find({ role: { $ne: 'admin' } })
                                 .select('-password')
                                 .sort({ createdAt: -1 });
@@ -17,6 +20,9 @@ exports.getAllUsers = async (req, res) => {
 
 exports.toggleUserStatus = async (req, res) => {
     try {
+        // 🛡️ SECURITY FIX: Only Admin can block/unblock users
+        if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: "Access Denied. Admins only." });
+
         const user = await User.findById(req.params.id);
         if (!user) return res.status(404).json({ success: false, message: "User nahi mila!" });
 
@@ -35,6 +41,9 @@ exports.getAllLeads = async (req, res) => {
         // Agar broker hai, toh sirf uski leads dikhao. Admin hai toh sabki dikhao.
         if (req.user.role === 'broker') {
             query.assignedBroker = req.user.id; 
+        } else if (req.user.role !== 'admin') {
+            // 🛡️ SECURITY FIX: Normal buyers cannot view all leads
+            return res.status(403).json({ success: false, message: "Access Denied." });
         }
 
         const leads = await Lead.find(query)
@@ -52,6 +61,9 @@ exports.getAllLeads = async (req, res) => {
 // ==========================================
 exports.updateLeadStatus = async (req, res) => {
     try {
+        // 🛡️ SECURITY FIX: Only Admin/Broker can update lead status
+        if (req.user.role === 'buyer') return res.status(403).json({ success: false, message: "Access Denied." });
+
         const { status, brokerNotes, scheduledVisitDate, nextFollowUpDate } = req.body;
 
         const lead = await Lead.findByIdAndUpdate(
@@ -71,6 +83,9 @@ exports.updateLeadStatus = async (req, res) => {
 // ==========================================
 exports.getPendingProperties = async (req, res) => {
     try {
+        // 🛡️ SECURITY FIX: Strict Admin Check
+        if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: "Access Denied. Admins only." });
+
         const properties = await Listing.find({ approvalStatus: 'Pending' })
             .populate('postedBy', 'fullName email phone')
             .sort({ createdAt: -1 });
@@ -84,6 +99,9 @@ exports.getPendingProperties = async (req, res) => {
 // ==========================================
 exports.updatePropertyApproval = async (req, res) => {
     try {
+        // 🛡️ SECURITY FIX: Strict Admin Check (Prevent buyers from approving their own listings)
+        if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: "Access Denied. Admins only." });
+
         const { status, adminNotes } = req.body; 
 
         const listing = await Listing.findById(req.params.id).populate('postedBy');
@@ -109,6 +127,9 @@ exports.updatePropertyApproval = async (req, res) => {
 // ==========================================
 exports.getFlaggedBrokers = async (req, res) => {
     try {
+        // 🛡️ SECURITY FIX: Strict Admin Check
+        if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: "Access Denied. Admins only." });
+
         const flaggedBrokers = await Broker.find({
             $or: [
                 { averageRating: { $lt: 3.0, $gt: 0 } }, 
@@ -125,6 +146,9 @@ exports.getFlaggedBrokers = async (req, res) => {
 // ==========================================
 exports.issueBrokerWarning = async (req, res) => {
     try {
+        // 🛡️ SECURITY FIX: Strict Admin Check
+        if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: "Access Denied. Admins only." });
+
         const broker = await Broker.findById(req.params.id).populate('user');
         if (!broker) return res.status(404).json({ success: false, message: "Broker not found" });
 
@@ -149,6 +173,9 @@ exports.issueBrokerWarning = async (req, res) => {
 // ==========================================
 exports.toggleVisibility = async (req, res) => {
     try {
+        // 🛡️ SECURITY FIX: Strict Admin Check
+        if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: "Access Denied. Admins only." });
+
         const broker = await Broker.findById(req.params.id).populate('user');
         if (!broker) return res.status(404).json({ success: false, message: "Broker not found" });
 
@@ -167,6 +194,9 @@ exports.toggleVisibility = async (req, res) => {
 // ==========================================
 exports.getDashboardStats = async (req, res) => {
     try {
+        // 🛡️ SECURITY FIX: Strict Admin Check
+        if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: "Access Denied. Admins only." });
+
         const [
             totalLeads, 
             tokenPaidDeals, 

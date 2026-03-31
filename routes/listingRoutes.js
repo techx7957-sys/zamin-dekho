@@ -1,11 +1,27 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose"); // 🚀 MASTER FIX: Added Mongoose for ID validation
 const listingController = require("../controllers/listingController");
 
 // 🛡️ Middlewares
-const { verifyToken } = require("../middleware/authMiddleware"); 
+// 🌟 FIX: Added authorizeRoles to prevent Brokers from faking buyer actions
+const { verifyToken, authorizeRoles } = require("../middleware/authMiddleware"); 
 const upload = require("../middleware/upload"); // Multer configuration for Images/Videos
-const { scanMediaContent } = require('../middleware/aiMediaScanner');// 🌟 NAYA: AI Scanner Import kiya
+const { scanMediaContent } = require('../middleware/aiMediaScanner');
+
+// ==========================================
+// 🛡️ ANTI-CRASH SHIELD (URL Parameter Validator)
+// ==========================================
+// Ye shield check karegi ki ID sachi mein MongoDB ki ID hai ya koi malicious text
+const validateObjectId = (req, res, next) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({ 
+            success: false, 
+            message: "🚨 Security Alert: Invalid Property ID format!" 
+        });
+    }
+    next();
+};
 
 // ==========================================
 // 🌍 1. PUBLIC ROUTES (Sab ke liye)
@@ -22,12 +38,12 @@ router.get("/all", listingController.getAllListings);
 // 🔒 2. PROTECTED ROUTES (Sirf logged-in users)
 // ==========================================
 
-// 🌟 FIX: Nayi Property Add karna (With In-App Camera/Video Upload & AI Scan)
+// Nayi Property Add karna (With In-App Camera/Video Upload & AI Scan)
 router.post(
   "/create",
   verifyToken,
   upload.single("image"), // Handles both image and video buffers
-  scanMediaContent,       // 🚀 THE FIX: Purane scanImageContent ko scanMediaContent kar diya
+  scanMediaContent,       // AI Content Moderation Shield
   listingController.createListing
 );
 
@@ -35,25 +51,53 @@ router.post(
 router.get("/my-listings", verifyToken, listingController.getMyListings);
 
 // Property Delete karna
-router.delete("/delete/:id", verifyToken, listingController.deleteListing);
+router.delete(
+    "/delete/:id", 
+    verifyToken, 
+    validateObjectId, // 🛡️ ID Check
+    listingController.deleteListing
+);
 
 
 // ==========================================
 // 🛒 3. BUYER ACTIONS (Inquiries, Bookings & Favorites)
 // ==========================================
 
-// 🌟 NAYA: Request Site Visit (Generates a CRM Lead)
-router.post("/buy-request/:id", verifyToken, listingController.submitBuyRequest);
+// Request Site Visit (Generates a CRM Lead)
+router.post(
+    "/buy-request/:id", 
+    verifyToken, 
+    authorizeRoles("buyer", "admin"), // 🔒 STRICT: Brokers apni property khud book nahi kar sakte
+    validateObjectId, // 🛡️ ID Check
+    listingController.submitBuyRequest
+);
 
-// 🌟 NAYA: Get Buyer's Token Paid Bookings (For Dashboard)
-router.get("/my-bookings", verifyToken, listingController.getMyBookings);
+// Get Buyer's Token Paid Bookings (For Dashboard)
+router.get(
+    "/my-bookings", 
+    verifyToken, 
+    authorizeRoles("buyer", "admin"), // 🔒 STRICT
+    listingController.getMyBookings
+);
 
 // Favorites Management
 router.get("/saved-listings", verifyToken, listingController.getSavedListings);
-router.post("/toggle-save/:id", verifyToken, listingController.toggleSave);
 
-// Direct Booking Route (Legacy fallback, primarily handled by Payment Gateway now)
-router.post("/book/:id", verifyToken, listingController.processBooking);
+router.post(
+    "/toggle-save/:id", 
+    verifyToken, 
+    validateObjectId, // 🛡️ ID Check
+    listingController.toggleSave
+);
+
+// Direct Booking Route (Legacy fallback)
+router.post(
+    "/book/:id", 
+    verifyToken, 
+    authorizeRoles("buyer", "admin"), // 🔒 STRICT: Fake bookings rokne ke liye
+    validateObjectId, // 🛡️ ID Check
+    listingController.processBooking
+);
 
 
 // ==========================================
@@ -61,7 +105,10 @@ router.post("/book/:id", verifyToken, listingController.processBooking);
 // ==========================================
 
 // Single Property Details: Sab dekh sakte hain
-// (Note: Hamesha dynamic '/:id' route sabse niche hona chahiye warna /search jaisi chizein isme fas jayengi)
-router.get("/:id", listingController.getListingById); 
+router.get(
+    "/:id", 
+    validateObjectId, // 🛡️ ID Check (Bohot zaroori kyunki ye public route hai)
+    listingController.getListingById
+); 
 
 module.exports = router;

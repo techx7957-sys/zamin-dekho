@@ -159,16 +159,28 @@
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+        <script src="script.js"></script> 
+
         <script>
-            const API_URL = "/api";
-            const BASE_SERVER_URL = "/";
             let propertyData = null;
+
+            // 🛡️ SECURITY FIX 1: HTML Sanitizer Function
+            // Ye kisi bhi script tag ko execute hone se rokega
+            function escapeHTML(str) {
+                if (!str) return "";
+                return str.toString()
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
 
             async function loadProperty() {
                 const urlParams = new URLSearchParams(window.location.search);
                 const propId = urlParams.get("id");
                 const contentDiv = document.getElementById("propertyContent");
-                const token = localStorage.getItem("zamin_token");
+                const token = getToken(); // 🔒 Connected to script.js
 
                 if (!propId) {
                     contentDiv.innerHTML = `<div class="text-center text-danger py-5"><i class="fas fa-search-minus fs-1 mb-3"></i><h2>Property ID Missing!</h2><a href="index.html" class="btn btn-primary mt-3 rounded-pill px-4 fw-bold">Go Back to Search</a></div>`;
@@ -179,7 +191,8 @@
                     let fetchConfig = {};
                     if (token) fetchConfig.headers = { Authorization: `Bearer ${token}` };
 
-                    const res = await fetch(`${API_URL}/listings/${propId}`, fetchConfig);
+                    // 🔒 Connected to script.js API_BASE
+                    const res = await fetch(`${API_BASE}/listings/${propId}`, fetchConfig);
                     const data = await res.json();
 
                     if (data.success) {
@@ -194,19 +207,24 @@
             }
 
             function renderProperty(item) {
-                let imgSource = item.imageUrl;
-                if (imgSource && !imgSource.startsWith("http")) {
-                    imgSource = imgSource.replace(/\\/g, "/");
-                    imgSource = BASE_SERVER_URL + (imgSource.startsWith("/") ? imgSource.substring(1) : imgSource);
-                }
-                const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
-                if (!imgSource) imgSource = fallbackImg;
+                // 🛡️ SECURITY FIX 2: Sanitize all user-generated content before injecting into HTML
+                const safeTitle = escapeHTML(item.landName);
+                const safeAddress = escapeHTML(item.address);
+                const safeCategory = escapeHTML(item.category);
+                const safePropType = escapeHTML(item.propertyType);
+                const safeSize = escapeHTML(item.landSize);
+                const safeLength = escapeHTML(item.length);
+                const safeBreadth = escapeHTML(item.breadth);
+                const safeRoad = escapeHTML(item.roadConnectivity);
+                const safeExtraInfo = escapeHTML(item.extraInfo);
 
+                // 🔒 Utilizes Global Image Resolver
+                const imgSource = resolveImageUrl(item.imageUrl);
                 const isVideo = imgSource.match(/\.(mp4|webm|ogg)$/i) || imgSource.includes('video/upload');
-                // 🌟 FIX: Added 'playsinline' so video doesn't force fullscreen on iPhones
+
                 const mediaHTML = isVideo 
                     ? `<video src="${imgSource}" class="prop-main-img mb-4" controls autoplay muted loop playsinline></video>`
-                    : `<img src="${imgSource}" onerror="this.src='${fallbackImg}'" class="prop-main-img mb-4" alt="Property Image">`;
+                    : `<img src="${imgSource}" onerror="this.src='https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200'" class="prop-main-img mb-4" alt="Property Image">`;
 
                 document.getElementById("propertyContent").innerHTML = `
                 <div class="row g-4">
@@ -216,30 +234,30 @@
                         <div class="detail-box">
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                                 <div>
-                                    <span class="badge bg-dark px-3 py-2 rounded-pill text-uppercase shadow-sm" style="letter-spacing: 1px;">${item.category}</span>
-                                    ${item.propertyType ? `<span class="badge bg-secondary px-3 py-2 rounded-pill shadow-sm ms-2">${item.propertyType}</span>` : ''}
+                                    <span class="badge bg-dark px-3 py-2 rounded-pill text-uppercase shadow-sm" style="letter-spacing: 1px;">${safeCategory}</span>
+                                    ${safePropType ? `<span class="badge bg-secondary px-3 py-2 rounded-pill shadow-sm ms-2">${safePropType}</span>` : ''}
                                 </div>
                                 ${item.isMediaAuthentic ? `<span class="badge bg-primary text-white px-3 py-2 rounded-pill shadow-sm"><i class="fas fa-shield-check me-1"></i> Verified In-App Capture</span>` : ''}
                             </div>
 
-                            <h1 class="prop-title">${item.landName}</h1>
-                            <p class="prop-address"><i class="fas fa-map-marker-alt text-danger fs-5"></i> ${item.address}</p>
+                            <h1 class="prop-title">${safeTitle}</h1>
+                            <p class="prop-address"><i class="fas fa-map-marker-alt text-danger fs-5"></i> ${safeAddress}</p>
 
                             <hr class="my-4 border-secondary opacity-25">
 
                             <h4 class="fw-bold mb-4 text-dark"><i class="fas fa-list-ul text-primary me-2"></i> Overview</h4>
                             <div class="d-flex flex-wrap">
                                 <div class="feature-pill"><i class="fas fa-shield-alt text-success"></i> 100% Verified</div>
-                                ${item.landSize && item.landSize !== "Not Specified" ? `<div class="feature-pill"><i class="fas fa-vector-square"></i> Area: ${item.landSize}</div>` : ""}
-                                ${item.length ? `<div class="feature-pill"><i class="fas fa-ruler-horizontal"></i> Length: ${item.length}</div>` : ""}
-                                ${item.breadth ? `<div class="feature-pill"><i class="fas fa-ruler-vertical"></i> Width: ${item.breadth}</div>` : ""}
-                                ${item.roadConnectivity && item.roadConnectivity !== "Not Specified" ? `<div class="feature-pill"><i class="fas fa-road text-secondary"></i> ${item.roadConnectivity}</div>` : ""}
+                                ${safeSize && safeSize !== "Not Specified" ? `<div class="feature-pill"><i class="fas fa-vector-square"></i> Area: ${safeSize}</div>` : ""}
+                                ${safeLength ? `<div class="feature-pill"><i class="fas fa-ruler-horizontal"></i> Length: ${safeLength}</div>` : ""}
+                                ${safeBreadth ? `<div class="feature-pill"><i class="fas fa-ruler-vertical"></i> Width: ${safeBreadth}</div>` : ""}
+                                ${safeRoad && safeRoad !== "Not Specified" ? `<div class="feature-pill"><i class="fas fa-road text-secondary"></i> ${safeRoad}</div>` : ""}
                                 <div class="feature-pill"><i class="fas fa-chart-line text-warning"></i> High Growth Area</div>
                             </div>
 
                             <h4 class="fw-bold mt-5 mb-3 text-dark"><i class="fas fa-align-left text-primary me-2"></i> Property Description</h4>
                             <p class="text-muted fw-medium" style="font-size:16px; line-height:1.8;">
-                                ${item.extraInfo || "A premium property located in a highly sought-after area. Perfect for investment or immediate use. Contact us for physical site visits and document verification."}
+                                ${safeExtraInfo || "A premium property located in a highly sought-after area. Perfect for investment or immediate use. Contact us for physical site visits and document verification."}
                             </p>
 
                             <h4 class="fw-bold mt-5 mb-3 text-dark"><i class="fas fa-file-contract text-primary me-2"></i> Legal Documents</h4>
@@ -316,7 +334,7 @@
             `;
 
                 // Initialize interactive elements after injection
-                initSatelliteMap(item.address, item.location, item.landName);
+                initSatelliteMap(item.address, item.location, safeTitle);
                 runAIPrediction(item.landPrice);
             }
 
@@ -400,7 +418,7 @@
                         color: '#10b981', weight: 3, fillColor: '#10b981', fillOpacity: 0.3
                     }).addTo(map);
 
-                    // 🌟 FIX: Show actual property name in the map popup
+                    // 🛡️ SECURITY FIX 3: Popup uses safe landName to prevent XSS
                     const popupContent = `
                         <div class="text-center" style="min-width: 140px;">
                             <b class="text-dark fs-6 font-monospace d-block text-truncate" style="max-width: 200px;" title="${landName}">${landName || 'ZAMIN RADAR'}</b>
@@ -427,7 +445,7 @@
             // 🌟 3A. REDIRECT TO CHECKOUT
             // ==========================================
             function goToCheckout(propertyId) {
-                const token = localStorage.getItem("zamin_token");
+                const token = getToken();
                 if (!token) {
                     Swal.fire("Authentication Required", "Please login to secure this property.", "warning").then(() => window.location.href = `login.html`);
                     return;
@@ -439,7 +457,7 @@
             // 🌟 3B. THE INQUIRY ENGINE (Lead Generation)
             // ==========================================
             async function triggerBuyFlow(propertyId) {
-                const token = localStorage.getItem("zamin_token");
+                const token = getToken();
                 const buyBtn = document.getElementById("buyBtn");
                 const contactBlock = document.getElementById("contactBlock");
 
@@ -452,7 +470,7 @@
                 buyBtn.disabled = true;
 
                 try {
-                    const res = await fetch(`${API_URL}/listings/buy-request/${propertyId}`, {
+                    const res = await fetch(`${API_BASE}/listings/buy-request/${propertyId}`, {
                         method: "POST",
                         headers: { Authorization: `Bearer ${token}` },
                     });
@@ -498,7 +516,7 @@
                 document.getElementById('nameEditContainer').classList.add('d-none');
                 document.getElementById('avatarEditBtn').classList.add('d-none'); 
 
-                const user = JSON.parse(localStorage.getItem('zamin_user') || "{}");
+                const user = getUser() || {};
                 const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'User')}&background=10b981&color=fff&size=120`;
                 document.getElementById('modalUserAvatar').src = avatarUrl;
                 tempAvatarBase64 = null;
@@ -524,11 +542,11 @@
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
                 btn.disabled = true;
 
-                const token = localStorage.getItem('zamin_token');
-                let user = JSON.parse(localStorage.getItem('zamin_user'));
+                const token = getToken();
+                let user = getUser();
 
                 try {
-                    const response = await fetch(`${API_URL}/auth/update-profile`, {
+                    const response = await fetch(`${API_BASE}/auth/update-profile`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                         body: JSON.stringify({ fullName: newName, avatar: tempAvatarBase64 || user.avatar })
@@ -538,29 +556,30 @@
                     if (data.success) {
                         user.fullName = newName;
                         if(tempAvatarBase64) user.avatar = tempAvatarBase64;
-                        localStorage.setItem('zamin_user', JSON.stringify(user));
-                        updateNavbarUI();
+                        localStorage.setItem('zamin_user', encodeURIComponent(JSON.stringify(user)));
+                        updateCustomNavbarUI();
                         cancelProfileEdit(); 
-                        Swal.fire("Updated", "Profile saved successfully", "success");
+                        showToast("Profile saved successfully", "success");
                     } else { Swal.fire("Error", data.message, "error"); }
                 } catch (error) { Swal.fire("Error", "Network connection failed.", "error"); } 
                 finally { btn.innerHTML = '<i class="fas fa-save me-1"></i> Save'; btn.disabled = false; }
             }
 
-            function updateNavbarUI() {
-                const token = localStorage.getItem("zamin_token");
+            function updateCustomNavbarUI() {
+                const token = getToken();
                 const authArea = document.getElementById("authArea");
                 const adminArea = document.getElementById("adminLinkArea");
 
                 if (token) {
                     document.querySelectorAll('.auth-required-link').forEach(el => el.classList.remove('d-none'));
                     try {
-                        const user = JSON.parse(localStorage.getItem("zamin_user"));
+                        const user = getUser();
                         if (user.role === "admin" || user.role === "broker") {
                             adminArea.innerHTML = `<a class="nav-link text-danger fw-bold" style="background: #fee2e2;" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
                         }
 
                         const firstName = user.fullName ? user.fullName.split(" ")[0] : "User";
+                        // Using innerText is safe from XSS!
                         document.getElementById('modalUserName').innerText = user.fullName || 'User';
                         document.getElementById('modalUserEmail').innerText = user.email || 'No email';
 
@@ -578,7 +597,7 @@
 
                         authArea.innerHTML = `
                             <button data-bs-toggle="modal" data-bs-target="#userProfileModal" class="user-id-btn me-2">
-                                <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> ${firstName}
+                                <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> ${escapeHTML(firstName)}
                             </button>
                             <button onclick="logout()" class="logout-btn-premium"><i class="fas fa-sign-out-alt"></i> Logout</button>
                         `;
@@ -588,21 +607,12 @@
                 }
             }
 
-            function catchSocialLogin() {
-                const urlParams = new URLSearchParams(window.location.search);
-                const token = urlParams.get('token');
-                const user = urlParams.get('user');
-
-                if (token) {
-                    localStorage.setItem('zamin_token', token);
-                    if (user) localStorage.setItem('zamin_user', decodeURIComponent(user));
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-            }
-
-            function logout() { localStorage.removeItem("zamin_token"); localStorage.removeItem("zamin_user"); window.location.reload(); }
-
-            window.onload = () => { catchSocialLogin(); updateNavbarUI(); loadProperty(); };
+            // 🌟 100% CONNECTED LOGIC
+            // Note: Social login is handled automatically by global script.js
+            window.onload = () => { 
+                updateCustomNavbarUI(); 
+                loadProperty(); 
+            };
         </script>
     </body>
 </html>

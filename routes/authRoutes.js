@@ -1,14 +1,15 @@
 const express = require("express");
 const router = express.Router();
 const passport = require("passport");
-const multer = require("multer"); // 🚀 MASTER FIX: Added Multer for Image Parsing
 
 // Controllers & Middleware
 const authController = require("../controllers/authController");
 const { verifyToken } = require("../middleware/authMiddleware"); 
 
-// 📸 SETUP MULTER (Flutter se aayi photo ko server pe save karne ke liye)
-const upload = multer({ dest: 'uploads/' });
+// 🛡️ SECURITY FIX 1: Removed local "dest: uploads/". 
+// Import your heavily protected Cloudinary Middleware here!
+// (Assuming you saved the previous Cloudinary code in a file named uploadMiddleware.js)
+const upload = require("../middleware/upload"); 
 
 // ==========================================
 // 🚀 1. OTP DISPATCH (For Registration Only)
@@ -37,11 +38,11 @@ router.get("/me", verifyToken, authController.getMe);
 // Route: Update Profile (Name, Bio, Phone, Address)
 router.put("/update-profile", verifyToken, authController.updateProfile);
 
-// 🚀 MASTER FIX: Naya Route Profile Photo Upload karne ke liye
+// 🚀 MASTER FIX: Ab photo Vercel ki jagah direct Cloudinary par jayegi (Anti-Crash)
 router.put("/update-avatar", verifyToken, upload.single('avatar'), authController.uploadAvatar);
 
 // ==========================================
-// 🌐 4. ULTIMATE GOOGLE OAUTH 2.0 ROUTES (DYNAMIC FIX)
+// 🌐 4. ULTIMATE GOOGLE OAUTH 2.0 ROUTES (HACK-PROOF)
 // ==========================================
 
 // 🚀 Route: Flutter app se direct Google Token lene aur verify karne ke liye
@@ -51,12 +52,9 @@ router.post("/google", authController.verifyFlutterGoogleToken);
 router.get(
     "/google",
     (req, res, next) => {
-        // 🚀 DYNAMIC FIX: Backend automatically detects if it's on Vercel or Localhost
-        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-        const host = req.headers.host;
-        const currentDomain = `${protocol}://${host}`;
-
-        const returnAddress = req.query.clientUrl || currentDomain;
+        // 🛡️ SECURITY FIX 2: Never trust req.headers.host (Prevents Open Redirect Hacks)
+        const safeDomain = process.env.BASE_URL || "http://localhost:5000";
+        const returnAddress = req.query.clientUrl || safeDomain;
 
         // 'state' parameter ka use karke ticket Google ki pocket mein daal do
         passport.authenticate("google", { 
@@ -70,16 +68,20 @@ router.get(
 router.get(
     "/google/callback",
     (req, res, next) => {
-        // 🚀 DYNAMIC FIX: Catch the dynamic domain for failure/success redirects
-        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-        const host = req.headers.host;
-        const currentDomain = `${protocol}://${host}`;
+        // 🛡️ SECURITY FIX 2: Strict Fallback Domain
+        const safeDomain = process.env.BASE_URL || "http://localhost:5000";
 
         passport.authenticate("google", {
             session: false,
-            failureRedirect: `${currentDomain}/login.html`, // Fail hone par wapas same domain ke login pe bhejo
+            failureRedirect: `${safeDomain}/login.html`, // Fail hone par wapas safe domain pe bhejo
         })(req, res, () => {
-            req.customRedirectUrl = req.query.state || currentDomain;
+            // Check if state is a valid relative or allowed absolute URL to prevent external redirects
+            let finalRedirect = req.query.state || safeDomain;
+            if (!finalRedirect.startsWith(safeDomain) && !finalRedirect.startsWith("/")) {
+                finalRedirect = safeDomain; // Force safe domain if someone tampered with state
+            }
+
+            req.customRedirectUrl = finalRedirect;
             next(); 
         });
     },

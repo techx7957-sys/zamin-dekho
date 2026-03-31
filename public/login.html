@@ -37,14 +37,19 @@
 
         .form-label { font-size: 13px; font-weight: 800; color: #64748b; margin-bottom: 8px; display: block; text-transform: uppercase; letter-spacing: 0.5px;}
 
-        .input-block { position: relative; border: 1px solid #cbd5e1; border-radius: 12px; background: #f8fafc; padding: 14px 14px 14px 45px; transition: 0.3s; display: flex; align-items: center; margin-bottom: 15px;}
+        /* 🌟 FIX: Updated padding for Eye Icon integration */
+        .input-block { position: relative; border: 1px solid #cbd5e1; border-radius: 12px; background: #f8fafc; padding: 14px 0 14px 45px; transition: 0.3s; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;}
         .input-block:focus-within { border-color: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); background: white; }
         .input-block i.field-icon { position: absolute; left: 16px; font-size: 18px; color: #94a3b8; transition: 0.3s;}
         .input-block input { border: none; background: transparent; padding: 0; margin: 0; font-size: 15px; color: #1e293b; width: 100%; font-weight: 500;}
         .input-block input:focus { outline: none; }
         .input-block input::placeholder { color: #cbd5e1; font-weight: 500;}
 
-        /* Main Login Button (Now Green) */
+        /* 🌟 NAYA: Password Eye Icon styles */
+        .password-eye { padding: 0 15px; cursor: pointer; color: #94a3b8; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
+        .password-eye:hover { color: #10b981; }
+
+        /* Main Login Button */
         .btn-login { background: #10b981; color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 800; width: 100%; transition: 0.3s; font-size: 16px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 5px 15px rgba(16, 185, 129, 0.2);}
         .btn-login:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3); }
         .btn-login:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -57,12 +62,6 @@
         .social-btn { border-radius: 12px; padding: 12px; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; border: 1px solid #e2e8f0; text-decoration: none; color: #1e293b; margin-bottom: 12px;}
         .social-btn:hover { background: #f8fafc; border-color: #cbd5e1; color: #1e293b;}
 
-        /* Toast Alert */
-        .msg-toast { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 12px; font-weight: 700; z-index: 1050; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); animation: slideIn 0.3s ease-out; }
-        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        .msg-success { background: #ecfdf5; color: #065f46; border-left: 5px solid #10b981; }
-        .msg-error { background: #fef2f2; color: #991b1b; border-left: 5px solid #ef4444; }
-
         .footer-link { text-align: center; margin-top: 25px; font-weight: 600; font-size: 14px; color: #64748b;}
         .footer-link a { color: #10b981; text-decoration: none; font-weight: 800; }
         .footer-link a:hover { text-decoration: underline; }
@@ -70,24 +69,22 @@
 </head>
 <body>
 
-    <div id="msgToast" class="msg-toast"></div>
-
     <div class="login-card">
         <div class="text-center mb-4">
             <h2 class="fw-bold text-success mb-1"><i class="fas fa-leaf me-1"></i> ZAMIN DEKHO</h2>
             <p class="text-muted small fw-bold">Login to your account</p>
         </div>
 
-        <form id="loginForm" onsubmit="event.preventDefault(); submitLogin();">
+        <form id="loginForm">
 
-            <div class="input-block">
-                <i class="fas fa-envelope field-icon"></i>
+            <div class="input-block" style="padding-right: 14px;"> <i class="fas fa-envelope field-icon"></i>
                 <input type="email" id="loginEmail" placeholder="Email Address" required>
             </div>
 
             <div class="input-block">
                 <i class="fas fa-lock field-icon"></i>
                 <input type="password" id="loginPassword" placeholder="Password" required>
+                <span class="password-eye" id="togglePassword"><i class="fas fa-eye"></i></span>
             </div>
 
             <button type="submit" class="btn-login" id="btnLogin">
@@ -111,49 +108,60 @@
         </div>
     </div>
 
+    <script src="script.js"></script> 
+
     <script>
-        const API_URL = "/api/auth";
+        // 🌟 NAYA: Password Visibility Toggle Logic
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('loginPassword');
 
-        function showToast(msg, type) {
-            const toast = document.getElementById('msgToast');
-            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'} me-2"></i> ${msg}`;
-            toast.className = `msg-toast msg-${type}`;
-            toast.style.display = 'block';
-            // Toast timeout at 2 seconds
-            setTimeout(() => { toast.style.display = 'none'; }, 2000);
-        }
+        togglePassword.addEventListener('click', function () {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+        });
 
-        async function submitLogin() {
-            const email = document.getElementById('loginEmail').value;
+        // 🚀 STANDARD LOGIN LOGIC
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
             const btn = document.getElementById('btnLogin');
 
-            if(!email || !password) return showToast("Enter Email and Password!", "error");
+            if(!email || !password) {
+                showToast("Enter Email and Password!", "error"); // 🔒 Uses safe showToast from script.js
+                return;
+            }
 
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Logging in...';
 
             try {
-                const res = await fetch(`${API_URL}/login`, {
+                // 🔒 Uses API_BASE from script.js
+                const res = await fetch(`${API_BASE}/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
                 });
+
                 const data = await res.json();
 
                 if(data.success) {
-                    // Save Token
+                    // Save Token & User Data
                     localStorage.setItem('zamin_token', data.token);
                     localStorage.setItem('zamin_user', encodeURIComponent(JSON.stringify(data.user)));
 
-                    // ⚡ STRICT 100ms DELAY FOR SMOOTH UI TRANSITION
+                    showToast("Login Successful! Redirecting...", "success");
+
+                    // ⚡ STRICT DELAY FOR SMOOTH UI TRANSITION
                     setTimeout(() => {
                         if(data.user.role === 'admin' || data.user.role === 'broker') {
                             window.location.replace('dashboard.html');
                         } else {
                             window.location.replace('index.html');
                         }
-                    }, 100);
+                    }, 1000);
 
                 } else {
                     showToast(data.message || "Invalid Email or Password", "error");
@@ -165,33 +173,11 @@
                 btn.disabled = false;
                 btn.innerHTML = 'Login';
             }
-        }
+        });
 
-        // Fast Social Login Check
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
-            const userStr = urlParams.get('user');
-
-            if(token && userStr) {
-                localStorage.setItem('zamin_token', token);
-                localStorage.setItem('zamin_user', userStr);
-
-                // Clear URL parameters
-                window.history.replaceState({}, document.title, window.location.pathname);
-
-                const userObj = JSON.parse(decodeURIComponent(userStr));
-
-                // ⚡ STRICT 100ms DELAY FOR SMOOTH UI TRANSITION
-                setTimeout(() => {
-                    if(userObj.role === 'admin' || userObj.role === 'broker') {
-                        window.location.replace('dashboard.html');
-                    } else {
-                        window.location.replace('index.html');
-                    }
-                }, 100);
-            }
-        };
+        // 🚨 NOTE: Social Login ka check humne yahan se HATA diya hai. 
+        // Kyunki 'script.js' mein 'handleSocialLogin()' function pehle se hi ye kaam 
+        // poori security ke sath automatically kar raha hai!
     </script>
 </body>
 </html>

@@ -228,7 +228,7 @@ exports.submitBuyRequest = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "Site Visit Request Sent!",
-            adminPhone: "+919876543210" 
+            adminPhone: process.env.ADMIN_PHONE || "Admin will contact you soon" // 🔒 Protected Phone
         });
     } catch (error) {
         res.status(500).json({ success: false, message: "Request failed." });
@@ -262,13 +262,17 @@ exports.getListingById = async (req, res) => {
         if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
             try {
                 const token = req.headers.authorization.split(" ")[1];
-                const decoded = jwt.verify(token, process.env.JWT_SECRET || "zamin-dekho-secret");
+
+                // 🔒 SECURE FIX: Removed the weak fallback string
+                if (!process.env.JWT_SECRET) throw new Error("JWT Secret Missing");
+
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
                 await User.findByIdAndUpdate(decoded.id, {
                     $addToSet: { recentlyViewed: listing._id }
                 });
             } catch (err) {
-                // Ignore token errors for public views
+                // Ignore token errors for public views, user just won't get history tracking
             }
         }
 

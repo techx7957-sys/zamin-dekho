@@ -14,7 +14,8 @@ const brokerSchema = new mongoose.Schema({
     agencyName: {
         type: String,
         trim: true,
-        default: "Independent Broker"
+        default: "Independent Broker",
+        maxlength: [100, "Agency name cannot exceed 100 characters"] // 🛡️ SECURITY FIX: Prevents DB Bloat
     },
 
     // ==========================================
@@ -23,15 +24,16 @@ const brokerSchema = new mongoose.Schema({
     reraNumber: {
         type: String,
         trim: true,
-        default: "Not Provided"
+        default: "Not Provided",
+        maxlength: [50, "RERA number too long"] // 🛡️ SECURITY FIX
     },
     isVerified: {
         type: Boolean,
         default: false 
     },
     kycDocuments: [{
-        documentName: String,
-        documentUrl: String 
+        documentName: { type: String, maxlength: 100 },
+        documentUrl: { type: String, maxlength: 1000 } 
     }],
 
     // ==========================================
@@ -39,10 +41,13 @@ const brokerSchema = new mongoose.Schema({
     // ==========================================
     experienceYears: {
         type: Number,
-        default: 0
+        default: 0,
+        min: [0, "Experience cannot be negative"], // 🛡️ SECURITY FIX
+        max: [100, "Invalid experience years"]
     },
     operatingAreas: [{
         type: String,
+        maxlength: 100
     }],
     specialization: [{
         type: String,
@@ -50,7 +55,9 @@ const brokerSchema = new mongoose.Schema({
     }],
     commissionRate: {
         type: Number, 
-        default: 2
+        default: 2,
+        min: [0, "Commission cannot be negative"], // 🛡️ SECURITY FIX: Financial calculation protection
+        max: [100, "Commission cannot exceed 100%"]
     },
 
     // ==========================================
@@ -58,12 +65,13 @@ const brokerSchema = new mongoose.Schema({
     // ==========================================
     ratings: [{
         buyer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        professionalBehavior: { type: Number, required: true }, // Factor 1
-        propertyAccuracy: { type: Number, required: true },     // Factor 2
-        helpfulness: { type: Number, required: true },          // Factor 3
-        communication: { type: Number, required: true },        // Factor 4
-        overall: { type: Number, required: true },
-        review: { type: String },
+        // 🛡️ SECURITY FIX: Clamp all ratings strictly between 1 and 5 to prevent math manipulation
+        professionalBehavior: { type: Number, required: true, min: 1, max: 5 }, 
+        propertyAccuracy: { type: Number, required: true, min: 1, max: 5 },     
+        helpfulness: { type: Number, required: true, min: 1, max: 5 },          
+        communication: { type: Number, required: true, min: 1, max: 5 },        
+        overall: { type: Number, required: true, min: 1, max: 5 },
+        review: { type: String, trim: true, maxlength: [1000, "Review is too long"] }, // Anti-Spam
         date: { type: Date, default: Date.now }
     }],
     averageRating: { 
@@ -78,14 +86,16 @@ const brokerSchema = new mongoose.Schema({
     // 5. QUALITY CONTROL SYSTEM (Step 40)
     // ==========================================
     performance: {
-        totalLeadsAssigned: { type: Number, default: 0 },
-        activeLeads: { type: Number, default: 0 },
-        dealsClosed: { type: Number, default: 0 },
-        dealSuccessRate: { type: Number, default: 0 } // (Deals / Leads) * 100
+        // 🛡️ SECURITY FIX: Prevent negative stats
+        totalLeadsAssigned: { type: Number, default: 0, min: 0 },
+        activeLeads: { type: Number, default: 0, min: 0 },
+        dealsClosed: { type: Number, default: 0, min: 0 },
+        dealSuccessRate: { type: Number, default: 0, min: 0, max: 100 } // (Deals / Leads) * 100
     },
     warningsIssued: { 
         type: Number, 
-        default: 0 
+        default: 0,
+        min: 0 
     },
     visibilityReduced: { 
         type: Boolean, 

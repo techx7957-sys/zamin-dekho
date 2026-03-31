@@ -33,10 +33,13 @@ try {
 // 🧠 SMART MEDIA SCANNER (Images + Videos)
 // ==========================================
 const scanMediaContent = async (req, res, next) => {
-    if (!req.file) return next();
+    // 🛡️ SECURITY FIX: Safe check for both req.file AND req.file.path (Crash Protection)
+    if (!req.file || !req.file.path) {
+        return next();
+    }
 
     const fileUrl = req.file.path;
-    const mimeType = req.file.mimetype; 
+    const mimeType = req.file.mimetype || ""; 
 
     console.log("🤖 Zamin AI Scanner analyzing media...");
 
@@ -65,7 +68,7 @@ const scanMediaContent = async (req, res, next) => {
                 if (isAdult || isViolent) {
                     return res.status(400).json({ 
                         success: false, 
-                        message: "🚨 Account Warning: Inappropriate content detected!" 
+                        message: "🚨 Account Warning: Inappropriate content detected! Your upload has been blocked." 
                     });
                 }
             }
@@ -93,8 +96,12 @@ const scanMediaContent = async (req, res, next) => {
 
         // 🎥 2. IF UPLOAD IS A REEL / VIDEO
         else if (mimeType.startsWith('video/')) {
-            console.log("🎥 Video detected. Checking size limit...");
-            if (req.file.size > 50 * 1024 * 1024) {
+            console.log("🎥 Video detected. File Size:", req.file.size || "Unknown (Streamed)");
+
+            // 🛡️ SECURITY FIX: Safe Size Fallback (0) in case Cloudinary stream hides size
+            const fileSize = req.file.size || 0; 
+
+            if (fileSize > 50 * 1024 * 1024) {
                 return res.status(400).json({ 
                     success: false, 
                     message: "🚨 Video file size must be less than 50MB." 
@@ -102,10 +109,13 @@ const scanMediaContent = async (req, res, next) => {
             }
         }
 
+        // Agar sab theek hai toh aage badho
         next();
 
     } catch (error) {
+        // 🛡️ UX FIX: Agar Google ka server down hai toh hum user ko block nahi karenge (Fail-Open Policy)
         console.error("🔥 AI Scan Execution Error:", error.message);
+        console.log("⚠️ AI Engine failed to scan, allowing file to upload to prevent UX block.");
         next(); 
     }
 };

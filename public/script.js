@@ -3,7 +3,6 @@
 // ==========================================
 
 // 🌟 FIX: Vercel-ready Dynamic URLs
-// Ab localhost ya kisi port ki zaroorat nahi, Vercel pe ye automatically connect ho jayega!
 const API_BASE = "/api";
 const FRONTEND_URL = window.location.origin; 
 
@@ -25,7 +24,7 @@ function handleSocialLogin() {
         // 1. Save Token
         localStorage.setItem('zamin_token', token);
 
-        // 2. Save User Data
+        // 2. Save User Data (Safely decoded)
         if (user) {
             localStorage.setItem('zamin_user', decodeURIComponent(user));
         }
@@ -36,7 +35,7 @@ function handleSocialLogin() {
         // 4. Show Success Toast
         showToast("Login Successful! Welcome to Zamin Dekho 🚀", "success");
 
-        // 5. 🌟 FIX: Seedha Dashboard par bhejo!
+        // 5. Seedha Dashboard par bhejo!
         setTimeout(() => {
             window.location.href = 'dashboard.html';
         }, 1500); 
@@ -44,7 +43,60 @@ function handleSocialLogin() {
 }
 
 // ==========================================
-// 2. AUTHENTICATION & DATA UTILITIES
+// 2. 🛡️ GLOBAL SECURITY & UTILITIES (NEW)
+// ==========================================
+
+// 🌟 THE ULTIMATE XSS SHIELD
+// Ye function kisi bhi hacker ke script tag ko normal text mein badal dega.
+window.escapeHTML = function(str) {
+    if (!str) return "";
+    return str.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+};
+
+// 🌟 GLOBAL API WRAPPER (Auto-Token & Auto-Logout)
+// Iska use karke future mein fetch() calls choti aur secure ho jayengi.
+window.apiFetch = async function(endpoint, options = {}) {
+    const token = getToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Agar image/file upload ho (FormData), toh Content-Type browser khud set karega
+    if (options.body instanceof FormData) {
+        delete headers['Content-Type'];
+    }
+
+    try {
+        // Endpoints ke aage pichhe ke slashes ko fix karta hai
+        const cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+        const response = await fetch(`${API_BASE}${cleanEndpoint}`, { ...options, headers });
+
+        // 🚨 SECURITY FIX: Agar Session Expire ho gaya ho (401), toh force logout!
+        if (response.status === 401) {
+            logout();
+            throw new Error("Session expired");
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error("API Call Failed:", error);
+        throw error;
+    }
+};
+
+
+// ==========================================
+// 3. AUTHENTICATION LOGIC
 // ==========================================
 
 // Get Token from LocalStorage
@@ -57,10 +109,15 @@ function getUser() {
     const userStr = localStorage.getItem('zamin_user');
     if (userStr) {
         try {
-            return JSON.parse(userStr);
+            return JSON.parse(decodeURIComponent(userStr));
         } catch (e) {
-            console.error("Error parsing user data");
-            return null;
+            try {
+                // Fallback if not URI encoded
+                return JSON.parse(userStr);
+            } catch(err) {
+                console.error("Error parsing user data");
+                return null;
+            }
         }
     }
     return null;
@@ -68,9 +125,10 @@ function getUser() {
 
 // Global Logout Function
 function logout() {
-    // Clear all local storage data
+    // 🛡️ SECURITY FIX: Clear both Local and Session storage completely
     localStorage.removeItem('zamin_token');
     localStorage.removeItem('zamin_user');
+    sessionStorage.clear();
 
     // Redirect gracefully to login page
     window.location.href = 'login.html';
@@ -83,28 +141,47 @@ function requireAuth() {
     }
 }
 
-// 🌟 MASTER FIX: GLOBAL IMAGE RESOLVER (For Vercel & Multer Uploads)
+// ==========================================
+// 4. DATA FORMATTING & RESOLVERS
+// ==========================================
+
+// 🌟 MASTER FIX: GLOBAL IMAGE RESOLVER
 function resolveImageUrl(url) {
     const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
     if (!url) return fallbackImg;
 
-    // Agar external link hai (Google Profile Pic ya Unsplash)
+    // Agar external link hai (Cloudinary, Google Profile Pic ya Unsplash)
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
 
-    // Agar local upload path hai (/uploads/image.jpg)
-    let cleanUrl = url.replace(/\\/g, '/'); // Windows backslash fix
+    // Agar local path hai, backslashes ko forward slashes mein badlo
+    let cleanUrl = url.replace(/\\/g, '/'); 
+
+    // 🛡️ Double slash bug fix (FRONTEND_URL ke baad extra slash avoid karna)
+    const base = FRONTEND_URL.endsWith('/') ? FRONTEND_URL.slice(0, -1) : FRONTEND_URL;
     cleanUrl = cleanUrl.startsWith('/') ? cleanUrl : '/' + cleanUrl;
 
-    return FRONTEND_URL + cleanUrl;
+    return base + cleanUrl;
 }
 
+// Format Price in Indian Rupees (₹) System
+function formatPrice(amount) {
+    if (!amount) return '0';
+    return Number(amount).toLocaleString('en-IN');
+}
+
+// Format Date nicely
+function formatDate(dateString) {
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString('en-IN', options);
+}
+
+
 // ==========================================
-// 3. UI UTILITIES (TOAST NOTIFICATIONS)
+// 5. UI UTILITIES (TOAST NOTIFICATIONS)
 // ==========================================
 
-// Dynamic Toast Notification System
+// Dynamic Toast Notification System (XSS Protected)
 function showToast(message, type = 'success') {
-    // Check if toast container exists, if not, create it
     let toastContainer = document.getElementById('global-toast');
 
     if (!toastContainer) {
@@ -123,22 +200,25 @@ function showToast(message, type = 'success') {
         document.body.appendChild(toastContainer);
     }
 
-    // Set colors based on type
+    // 🛡️ SECURITY FIX: Anti-XSS Shield
     if (type === 'error') {
         toastContainer.style.background = '#fee2e2';
         toastContainer.style.color = '#991b1b';
         toastContainer.style.borderLeft = '5px solid #991b1b';
-        toastContainer.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> ${message}`;
+        toastContainer.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> `;
     } else {
         toastContainer.style.background = '#dcfce7';
         toastContainer.style.color = '#166534';
         toastContainer.style.borderLeft = '5px solid #166534';
-        toastContainer.innerHTML = `<i class="fas fa-check-circle me-2"></i> ${message}`;
+        toastContainer.innerHTML = `<i class="fas fa-check-circle me-2"></i> `;
     }
+
+    // Append the message safely as a text node (Hacker ki script text ban jayegi, chalegi nahi)
+    const textNode = document.createTextNode(message);
+    toastContainer.appendChild(textNode);
 
     // Show and Hide Logic
     toastContainer.style.display = 'block';
-    // Small delay to allow CSS transition to trigger
     setTimeout(() => {
         toastContainer.style.opacity = '1';
         toastContainer.style.transform = 'translateY(0)';
@@ -150,55 +230,36 @@ function showToast(message, type = 'success') {
         toastContainer.style.transform = 'translateY(-20px)';
         setTimeout(() => {
             toastContainer.style.display = 'none';
-        }, 300); // Wait for fade out animation
+        }, 300);
     }, 4000);
 }
 
-// ==========================================
-// 4. FORMATTING UTILITIES
-// ==========================================
-
-// Format Price in Indian Rupees (₹) System
-function formatPrice(amount) {
-    if (!amount) return '0';
-    return Number(amount).toLocaleString('en-IN');
-}
-
-// Format Date nicely
-function formatDate(dateString) {
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('en-IN', options);
-}
 
 // ==========================================
-// 5. UI UPDATE LOGIC (NAVBAR)
+// 6. UI UPDATE LOGIC (NAVBAR)
 // ==========================================
 function updateNavbar() {
-    const token = getToken(); // Check if user is logged in
+    const token = getToken(); 
     const user = getUser();
 
     if (token) {
-        // Website par jahan bhi 'login.html' ka link hai, usko pakdo
         const loginLinks = document.querySelectorAll('a[href="login.html"]');
 
         loginLinks.forEach(link => {
-            // 🌟 MASTER FIX: Check agar Admin ya BROKER hai toh CRM/Admin Panel par bhejo
             if (user && (user.role === 'admin' || user.role === 'broker')) {
                 link.href = "admin.html";
                 link.innerHTML = '<i class="fas fa-shield-alt me-1"></i> CRM Panel';
-                link.style.backgroundColor = "#fee2e2"; // Light Red/Pink bg
-                link.style.color = "#dc2626"; // Red text
+                link.style.backgroundColor = "#fee2e2"; 
+                link.style.color = "#dc2626"; 
                 link.style.border = "1px solid #fca5a5";
             } else {
-                // Normal Buyer / Seller ke liye
                 link.href = "dashboard.html"; 
                 link.innerHTML = '<i class="fas fa-user-circle me-1"></i> My Dashboard'; 
-                link.style.backgroundColor = "#10b981"; // Green bg
+                link.style.backgroundColor = "#10b981"; 
                 link.style.color = "white";
                 link.style.border = "none";
             }
 
-            // Apply common modern styling
             link.style.padding = "8px 18px";
             link.style.borderRadius = "8px";
             link.style.fontWeight = "700";

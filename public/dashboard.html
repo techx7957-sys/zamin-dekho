@@ -278,20 +278,31 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script>
-        const API_URL = "/api";
-        const BASE_SERVER_URL = window.location.origin;
+    <script src="script.js"></script> 
 
+    <script>
         let stream = null;
         let finalImageBlob = null;
         let captureLat = 0;
         let captureLng = 0;
 
+        // 🛡️ SECURITY FIX 1: HTML Sanitizer Function
+        function escapeHTML(str) {
+            if (!str) return "";
+            return str.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         // ==========================================
         // 🌟 1. INIT & AUTH LOGIC
         // ==========================================
         window.onload = function () {
-            const token = localStorage.getItem("zamin_token");
+            // 🔒 Safe global function
+            const token = getToken();
             if (!token) { window.location.href = "login.html"; return; }
 
             updateNavbarUI();
@@ -307,7 +318,8 @@
 
         function updateNavbarUI() {
             try {
-                const user = JSON.parse(localStorage.getItem("zamin_user"));
+                // 🔒 Safe global function
+                const user = getUser();
                 const adminArea = document.getElementById('adminLinkArea');
                 const authArea = document.getElementById('authArea');
 
@@ -317,12 +329,13 @@
                     adminArea.innerHTML = ''; 
                 }
 
-                const firstName = user.fullName ? user.fullName.split(" ")[0] : "User";
-                const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName || 'User')}&background=10b981&color=fff&size=100`;
+                const firstName = user && user.fullName ? user.fullName.split(" ")[0] : "User";
+                const avatarUrl = user && user.avatar ? user.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=10b981&color=fff&size=100`;
 
+                // 🛡️ Escaped name rendering
                 authArea.innerHTML = `
                     <div class="user-id-btn me-2">
-                        <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> ${firstName}
+                        <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> ${escapeHTML(firstName)}
                     </div>
                     <button onclick="logout()" class="logout-btn-premium">
                         <i class="fas fa-sign-out-alt"></i> Logout
@@ -331,12 +344,7 @@
             } catch(e) {}
         }
 
-        function logout() {
-            localStorage.removeItem("zamin_token");
-            localStorage.removeItem("zamin_user");
-            sessionStorage.clear(); // Clear caches on logout
-            window.location.href = "login.html";
-        }
+        // 🚨 Note: Custom `logout()` function removed because `script.js` handles it globally & perfectly (clearing both localStorage and sessionStorage).
 
         function switchTab(tabId) {
             document.querySelectorAll('#zaminNav .nav-link').forEach(link => link.classList.remove('active'));
@@ -367,21 +375,16 @@
         function wakeServerAndPrefetch(token) {
             const headers = { Authorization: `Bearer ${token}` };
 
-            // Helper to fetch and cache silently
             const prefetchData = (endpoint, cacheKey, dataKey, renderLogic) => {
                 if(!sessionStorage.getItem(cacheKey)) {
-                    fetch(`${API_URL}/${endpoint}`, { headers })
+                    // 🔒 Uses global API_BASE
+                    fetch(`${API_BASE}/${endpoint}`, { headers })
                     .then(res => res.json())
                     .then(data => {
                         let items = data[dataKey] || data.data || data.listings || [];
-                        if (items.length > 0) {
-                            const valid = items.filter(i => i !== null);
-                            sessionStorage.setItem(cacheKey, JSON.stringify(valid));
-                            // If user is already on this tab while background fetch completes, auto-render
-                            if(window.location.hash.includes(cacheKey.replace('cache_',''))) renderLogic(valid);
-                        } else {
-                            sessionStorage.setItem(cacheKey, "[]"); // Store empty state
-                            if(window.location.hash.includes(cacheKey.replace('cache_',''))) renderLogic([]);
+                        sessionStorage.setItem(cacheKey, JSON.stringify(items)); 
+                        if(window.location.hash.includes(cacheKey.replace('cache_',''))) {
+                            renderLogic(items);
                         }
                     }).catch(e=>{});
                 }
@@ -395,7 +398,7 @@
         }
 
         // ==========================================
-        // 📊 TAB RENDERERS (Uses Cache instantly)
+        // 📊 TAB RENDERERS (With Active Fallback Fetching)
         // ==========================================
 
         async function loadSiteVisits() {
@@ -404,9 +407,20 @@
 
             if (cachedData) {
                 renderVisits(JSON.parse(cachedData), grid);
-                return; // Instant Load, exit early
+                return; 
             }
             grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-primary" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Visits...</p></div>';
+
+            try {
+                // 🔒 Utilizes Global Setup
+                const res = await fetch(`${API_BASE}/leads/my-visits`, { headers: { Authorization: `Bearer ${getToken()}` }});
+                const data = await res.json();
+                const items = data.visits || [];
+                sessionStorage.setItem("cache_visits", JSON.stringify(items));
+                renderVisits(items, grid);
+            } catch (e) {
+                grid.innerHTML = `<div class="text-center w-100 py-5 text-danger fw-bold"><i class="fas fa-exclamation-circle fs-1 mb-2"></i> Failed to load visits.</div>`;
+            }
         }
 
         async function loadMyListings() {
@@ -415,9 +429,19 @@
 
             if (cachedData) {
                 renderCards(JSON.parse(cachedData), grid, true);
-                return; // Instant Load, exit early
+                return; 
             }
             grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-success" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Properties...</p></div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/listings/my-listings`, { headers: { Authorization: `Bearer ${getToken()}` }});
+                const data = await res.json();
+                const items = data.listings || [];
+                sessionStorage.setItem("cache_myListings", JSON.stringify(items));
+                renderCards(items, grid, true);
+            } catch (e) {
+                grid.innerHTML = `<div class="text-center w-100 py-5 text-danger fw-bold"><i class="fas fa-exclamation-circle fs-1 mb-2"></i> Failed to load properties.</div>`;
+            }
         }
 
         async function loadSavedListings() {
@@ -429,6 +453,16 @@
                 return; 
             }
             grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-danger" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Favorites...</p></div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/listings/saved-listings`, { headers: { Authorization: `Bearer ${getToken()}` }});
+                const data = await res.json();
+                const items = data.listings || [];
+                sessionStorage.setItem("cache_savedListings", JSON.stringify(items));
+                renderCards(items, grid, false);
+            } catch (e) {
+                grid.innerHTML = `<div class="text-center w-100 py-5 text-danger fw-bold"><i class="fas fa-exclamation-circle fs-1 mb-2"></i> Failed to load favorites.</div>`;
+            }
         }
 
         async function loadMyBookings() {
@@ -440,6 +474,16 @@
                 return; 
             }
             grid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-info" role="status"></div><p class="mt-2 text-muted fw-bold small">Loading Bookings...</p></div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/listings/my-bookings`, { headers: { Authorization: `Bearer ${getToken()}` }});
+                const data = await res.json();
+                const items = data.bookings || [];
+                sessionStorage.setItem("cache_bookings", JSON.stringify(items));
+                renderBookings(items, grid);
+            } catch (e) {
+                grid.innerHTML = `<div class="text-center w-100 py-5 text-danger fw-bold"><i class="fas fa-exclamation-circle fs-1 mb-2"></i> Failed to load bookings.</div>`;
+            }
         }
 
         // ==========================================
@@ -453,15 +497,20 @@
             }
             grid.innerHTML = visits.map(visit => {
                 const prop = visit.property;
+                // 🛡️ SECURITY FIX: Escaping output rendering
+                const safeName = prop ? escapeHTML(prop.landName) : 'Verified Property';
+                const safeAddress = prop ? escapeHTML(prop.address) : 'Location locked. Awaiting your arrival.';
+                const safeStatus = escapeHTML(visit.status);
+
                 return `
                 <div class="col-lg-6 offset-lg-3">
                     <div class="property-card visit-card p-4 shadow-sm mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="badge bg-primary px-3 py-2 fs-6 shadow-sm"><i class="fas fa-calendar-check me-1"></i> ${visit.status}</span>
+                            <span class="badge bg-primary px-3 py-2 fs-6 shadow-sm"><i class="fas fa-calendar-check me-1"></i> ${safeStatus}</span>
                             <span class="text-muted fw-bold small bg-white px-2 py-1 border rounded">ID: #${visit._id.substring(visit._id.length - 6).toUpperCase()}</span>
                         </div>
-                        <h3 class="fw-bold text-dark">${prop ? prop.landName : 'Verified Property'}</h3>
-                        <p class="text-muted mb-4 fw-medium"><i class="fas fa-map-marker-alt text-danger me-1 fs-5"></i> ${prop ? prop.address : 'Location locked. Awaiting your arrival.'}</p>
+                        <h3 class="fw-bold text-dark">${safeName}</h3>
+                        <p class="text-muted mb-4 fw-medium"><i class="fas fa-map-marker-alt text-danger me-1 fs-5"></i> ${safeAddress}</p>
 
                         <div class="bg-white p-3 rounded-4 mb-4 text-center border border-success border-opacity-25">
                             <p class="mb-1 fw-bold text-success"><i class="fas fa-shield-alt me-1"></i> Step 20: Dual Presence Protocol</p>
@@ -496,14 +545,16 @@
                 const item = lead.property;
                 if (!item) return ""; 
 
-                let imgSource = item.imageUrl || "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
-                if(imgSource && !imgSource.startsWith('http')) {
-                    imgSource = imgSource.replace(/\\/g, '/');
-                    imgSource = window.location.origin + (imgSource.startsWith('/') ? imgSource : '/' + imgSource);
-                }
+                // 🔒 Safe global resolver
+                const imgSource = resolveImageUrl(item.imageUrl);
 
                 const brokerId = lead.assignedBroker ? lead.assignedBroker._id || lead.assignedBroker : null;
                 const rateBtn = brokerId ? `<button class="btn btn-warning btn-sm w-100 mt-2 fw-bold text-dark border-0 shadow-sm" onclick="openRateModal('${brokerId}')"><i class="fas fa-star me-1"></i> Rate Broker Service</button>` : '';
+
+                // 🛡️ SECURITY FIX: Apply escaping
+                const safeStatus = escapeHTML(lead.status || "Token Paid");
+                const safeName = escapeHTML(item.landName);
+                const safeAddress = escapeHTML(item.address);
 
                 return `
                 <div class="col-lg-6">
@@ -514,11 +565,11 @@
                         <div class="p-3 w-100 d-flex flex-column justify-content-between">
                             <div>
                                 <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <span class="badge bg-success mb-1 py-2 px-3 shadow-sm"><i class="fas fa-check-circle me-1"></i> ${lead.status || "Token Paid"}</span>
+                                    <span class="badge bg-success mb-1 py-2 px-3 shadow-sm"><i class="fas fa-check-circle me-1"></i> ${safeStatus}</span>
                                     <h5 class="fw-bold text-success m-0" style="font-family:'JetBrains Mono', monospace;">₹ ${Number(lead.tokenAmount || 100000).toLocaleString("en-IN")}</h5>
                                 </div>
-                                <h6 class="fw-bold text-dark text-truncate mb-1 lh-base">${item.landName}</h6>
-                                <p class="text-muted small mb-0 text-truncate"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address}</p>
+                                <h6 class="fw-bold text-dark text-truncate mb-1 lh-base">${safeName}</h6>
+                                <p class="text-muted small mb-0 text-truncate"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${safeAddress}</p>
                             </div>
                             <div class="mt-3 border-top pt-3">
                                 <button class="btn btn-outline-dark btn-sm w-100 fw-bold" onclick="window.location.href='property.html?id=${item._id}'">View Property</button>
@@ -534,24 +585,27 @@
         function generateCardHTML(item, isMyListing) {
             if (!item) return ''; 
 
-            let imgSource = item.imageUrl;
-            if (imgSource && !imgSource.startsWith("http")) {
-                imgSource = imgSource.replace(/\\/g, "/");
-                imgSource = window.location.origin + (imgSource.startsWith("/") ? imgSource : "/" + imgSource);
-            }
+            // 🔒 Connect to global resolver
+            const imgSource = resolveImageUrl(item.imageUrl);
             const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
-            if (!imgSource) imgSource = fallbackImg;
+
+            // 🛡️ SECURITY FIX: Add HTML Escaping
+            const safeLength = escapeHTML(item.length);
+            const safeBreadth = escapeHTML(item.breadth);
+            const safeSize = escapeHTML(item.landSize);
+            const safeName = escapeHTML(item.landName || 'Property');
+            const safeAddress = escapeHTML(item.address || 'India');
+            const safeStatus = escapeHTML(item.approvalStatus || 'Pending');
 
             let dimBadge = "";
-            if (item.length || item.breadth) dimBadge = `<span class="badge bg-light text-dark border ms-1"><i class="fas fa-ruler-combined text-primary me-1"></i> ${item.length || "-"} x ${item.breadth || "-"}</span>`;
+            if (safeLength || safeBreadth) dimBadge = `<span class="badge bg-light text-dark border ms-1"><i class="fas fa-ruler-combined text-primary me-1"></i> ${safeLength || "-"} x ${safeBreadth || "-"}</span>`;
 
             let badgeHTML = "";
             if (isMyListing) {
-                const status = item.approvalStatus || "Pending";
                 let statusClass = "status-pending";
-                if (status === "Approved") statusClass = "status-approved";
-                if (status === "Rejected") statusClass = "status-rejected";
-                badgeHTML = `<div class="status-badge ${statusClass}"><i class="fas ${status === "Approved" ? "fa-check-circle" : "fa-clock"} me-1"></i> ${status}</div>`;
+                if (safeStatus === "Approved") statusClass = "status-approved";
+                if (safeStatus === "Rejected") statusClass = "status-rejected";
+                badgeHTML = `<div class="status-badge ${statusClass}"><i class="fas ${safeStatus === "Approved" ? "fa-check-circle" : "fa-clock"} me-1"></i> ${safeStatus}</div>`;
             }
 
             return `
@@ -564,11 +618,11 @@
                             <h3 class="fw-bold text-success m-0" style="font-family: 'JetBrains Mono', monospace;">₹ ${Number(item.landPrice || 0).toLocaleString("en-IN")}</h3>
                         </div>
                         <div class="d-flex flex-wrap align-items-center mb-3">
-                            ${item.landSize && item.landSize !== "Not Specified" ? `<span class="badge bg-light text-dark border px-2 py-1"><i class="fas fa-vector-square text-primary me-1"></i> ${item.landSize}</span>` : ""}
+                            ${safeSize && safeSize !== "Not Specified" ? `<span class="badge bg-light text-dark border px-2 py-1"><i class="fas fa-vector-square text-primary me-1"></i> ${safeSize}</span>` : ""}
                             ${dimBadge}
                         </div>
-                        <h5 class="fw-bold text-dark text-truncate lh-base">${item.landName || 'Property'}</h5>
-                        <p class="text-muted small m-0 fw-medium"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address || 'India'}</p>
+                        <h5 class="fw-bold text-dark text-truncate lh-base">${safeName}</h5>
+                        <p class="text-muted small m-0 fw-medium"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${safeAddress}</p>
 
                         ${isMyListing ? `
                             <div class="card-actions mt-4 border-top pt-3">
@@ -689,15 +743,15 @@
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i> Encrypting & Uploading...';
 
             const formData = new FormData();
-            formData.append("landName", document.getElementById("land-name").value);
+            formData.append("landName", document.getElementById("land-name").value.trim());
             formData.append("landPrice", document.getElementById("land-price").value || 0);
-            formData.append("landSize", document.getElementById("land-size").value || "Not Specified");
-            formData.append("length", document.getElementById("land-length").value || "");
-            formData.append("breadth", document.getElementById("land-breadth").value || "");
+            formData.append("landSize", document.getElementById("land-size").value.trim() || "Not Specified");
+            formData.append("length", document.getElementById("land-length").value.trim() || "");
+            formData.append("breadth", document.getElementById("land-breadth").value.trim() || "");
             formData.append("category", document.getElementById("category").value);
-            formData.append("address", document.getElementById("address").value);
+            formData.append("address", document.getElementById("address").value.trim());
             formData.append("roadConnectivity", document.getElementById("road-connectivity").value);
-            formData.append("extraInfo", document.getElementById("extra-info").value);
+            formData.append("extraInfo", document.getElementById("extra-info").value.trim());
 
             if (finalImageBlob) {
                 formData.append("image", finalImageBlob, "verified_property.jpg");
@@ -711,9 +765,10 @@
             }
 
             try {
-                const res = await fetch(`${API_URL}/listings/create`, {
+                // 🔒 Connected to global API_BASE and getToken
+                const res = await fetch(`${API_BASE}/listings/create`, {
                     method: "POST",
-                    headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` },
+                    headers: { Authorization: `Bearer ${getToken()}` },
                     body: formData,
                 });
                 const data = await res.json();
@@ -743,7 +798,8 @@
             const result = await Swal.fire({ title: 'Remove Property?', text: "This action is permanent.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' });
             if (result.isConfirmed) {
                 try {
-                    const res = await fetch(`${API_URL}/listings/delete/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
+                    // 🔒 Connected to global API_BASE
+                    const res = await fetch(`${API_BASE}/listings/delete/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` }});
                     const data = await res.json();
                     if (data.success) { 
                         sessionStorage.removeItem("cache_myListings"); // Clear cache
@@ -755,7 +811,7 @@
         }
 
         // ==========================================
-        // 🌟 5. DETAILED RATING SUBMIT LOGIC (Step 38)
+        // 🌟 5. DETAILED RATING SUBMIT LOGIC
         // ==========================================
         let ratingModal;
         function openRateModal(brokerId) {
@@ -774,7 +830,8 @@
 
         async function submitRating() {
             const brokerId = document.getElementById('ratingBrokerId').value;
-            const review = document.getElementById('reviewText').value;
+            // 🛡️ SECURITY FIX: Escaping User Inputs
+            const review = escapeHTML(document.getElementById('reviewText').value.trim());
 
             const payload = {
                 brokerId,
@@ -785,12 +842,11 @@
                 review
             };
 
-            const token = localStorage.getItem("zamin_token");
-
             try {
-                const response = await fetch(`${API_URL}/broker/rate`, {
+                // 🔒 Used global API_BASE and getToken()
+                const response = await fetch(`${API_BASE}/broker/rate`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
                     body: JSON.stringify(payload)
                 });
 

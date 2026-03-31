@@ -6,31 +6,39 @@ const listingSchema = new mongoose.Schema({
     // ==========================================
     landName: {
         type: String,
-        required: true,
+        required: [true, "Property name is required"],
         trim: true,
+        maxlength: [150, "Name cannot exceed 150 characters"] // 🛡️ SECURITY FIX: DB Bloat Protection
     },
     landPrice: {
         type: Number,
-        required: true,
+        required: [true, "Property price is required"],
+        min: [0, "Price cannot be negative"], // 🛡️ SECURITY FIX: Prevents Negative Price Hack
         index: true // 🚀 FAST QUERY: For Price Filters
     },
     address: {
         type: String,
-        required: true,
+        required: [true, "Address is required"],
+        trim: true,
+        maxlength: [300, "Address is too long"] // 🛡️ SECURITY FIX
     },
     phone: {
         type: String,
-        default: "Not Provided", // Made optional to prevent errors if not passed
+        default: "Not Provided",
+        trim: true,
+        maxlength: [20, "Phone number format invalid"]
     },
     category: {
         type: String,
         enum: ["residential", "commercial", "agricultural", "industrial"],
         default: "residential",
-        index: true // 🚀 FAST QUERY: For Category Tabs
+        index: true 
     },
     propertyType: {
         type: String,
         default: "Land/Plot",
+        trim: true,
+        maxlength: 50
     },
 
     // ==========================================
@@ -44,7 +52,16 @@ const listingSchema = new mongoose.Schema({
         },
         coordinates: {
             type: [Number], // Must be [longitude, latitude]
-            default: [0, 0]
+            default: [0, 0],
+            // 🛡️ SECURITY FIX: Ensure exact 2 coordinates and valid earth bounds
+            validate: {
+                validator: function(v) {
+                    if (!v || v.length !== 2) return false;
+                    const [lng, lat] = v;
+                    return lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90;
+                },
+                message: "🚨 Invalid GPS Coordinates detected!"
+            }
         }
     },
 
@@ -54,34 +71,50 @@ const listingSchema = new mongoose.Schema({
     landSize: {
         type: String,
         default: "Not Specified",
+        trim: true,
+        maxlength: 50
     },
     length: {
         type: String,
         default: "",
+        trim: true,
+        maxlength: 50
     },
     breadth: {
         type: String,
         default: "",
+        trim: true,
+        maxlength: 50
     },
     bhk: {
         type: String,
         default: "N/A",
+        trim: true,
+        maxlength: 20
     },
     roadConnectivity: {
         type: String,
         default: "Not Specified",
+        trim: true,
+        maxlength: 100
     },
     ownershipType: {
         type: String,
         default: "Not Specified",
+        trim: true,
+        maxlength: 100
     },
     nearbyArea: {
         type: String,
         default: "Not Specified",
+        trim: true,
+        maxlength: 200
     },
     extraInfo: {
         type: String,
         default: "Verified listing by Zamin Dekho.",
+        trim: true,
+        maxlength: [2000, "Extra info cannot exceed 2000 characters"] // 🛡️ SECURITY FIX: Anti-Spam
     },
 
     // ==========================================
@@ -89,15 +122,19 @@ const listingSchema = new mongoose.Schema({
     // ==========================================
     imageUrl: {
         type: String,
-        required: true, // Main Image or Video URL
+        required: true, 
+        trim: true,
+        maxlength: [1000, "URL is too long"] // 🛡️ SECURITY FIX: Malicious URL Payload Protection
     },
     documentUrl: {
         type: String,
         default: "",
+        trim: true,
+        maxlength: 1000
     },
     isMediaAuthentic: {
         type: Boolean,
-        default: false // Becomes true ONLY if captured via our in-app camera
+        default: false 
     },
 
     // ==========================================
@@ -106,7 +143,7 @@ const listingSchema = new mongoose.Schema({
     approvalStatus: {
         type: String,
         enum: ["Pending", "Approved", "Rejected"],
-        default: "Pending", // 🌟 FIX: Default must be pending so Admin can review it
+        default: "Pending", 
         index: true 
     },
     bookingStatus: {
@@ -121,7 +158,6 @@ const listingSchema = new mongoose.Schema({
         required: true,
     }
 }, { 
-    // 🌟 FIX: Auto manages createdAt and updatedAt
     timestamps: true 
 });
 

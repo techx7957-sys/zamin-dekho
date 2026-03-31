@@ -194,14 +194,29 @@
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+        <script src="script.js"></script>
+
         <script>
+            // 🛡️ SECURITY FIX 1: HTML Sanitizer Function
+            function escapeHTML(str) {
+                if (!str) return "";
+                return str.toString()
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
             const ADMIN_API = "/api/admin";
 
             window.onload = function () {
-                const token = localStorage.getItem("zamin_token");
-                const user = JSON.parse(decodeURIComponent(localStorage.getItem("zamin_user") || "{}"));
+                // 🔒 Safe token fetching
+                const token = getToken();
+                const user = getUser();
 
-                if (!token || (user.role !== 'admin' && user.role !== 'broker')) { 
+                if (!token || !user || (user.role !== 'admin' && user.role !== 'broker')) { 
                     window.location.href = "login.html"; 
                     return; 
                 }
@@ -216,15 +231,13 @@
             };
 
             function logoutAdmin() {
-                localStorage.removeItem("zamin_token");
-                localStorage.removeItem("zamin_user");
-                window.location.href = "login.html";
+                // 🔒 Utilizes Global Setup
+                logout();
             }
 
             function switchTitle(title) { document.getElementById("pageTitle").innerText = title; }
 
             function refreshData() {
-                // Ensure loading spinners show initially on refresh
                 document.getElementById("transactionsTableBody").innerHTML = `<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-success"></div></td></tr>`;
                 document.getElementById("leadsTableBody").innerHTML = `<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`;
 
@@ -240,7 +253,7 @@
             // ==========================================
             async function fetchDashboardStats() {
                 try {
-                    const res = await fetch(`${ADMIN_API}/dashboard-stats`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
+                    const res = await fetch(`${API_BASE}/admin/dashboard-stats`, { headers: { Authorization: `Bearer ${getToken()}` }});
                     const data = await res.json();
                     if(data.success) {
                         document.getElementById("totalLeadsStat").innerText = data.stats.totalLeads;
@@ -258,7 +271,7 @@
                 const tbodyLeads = document.getElementById("leadsTableBody");
 
                 try {
-                    const res = await fetch(`${ADMIN_API}/leads`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` } });
+                    const res = await fetch(`${API_BASE}/admin/leads`, { headers: { Authorization: `Bearer ${getToken()}` } });
                     const data = await res.json();
 
                     if (data.success) {
@@ -290,11 +303,14 @@
                     txnTbody.innerHTML = payments.map((p) => {
                         const amount = p.tokenAmount || 100000;
                         totalRev += amount;
-                        // Enforcing India (en-IN) format for dates and currency
                         const dateStr = new Date(p.createdAt).toLocaleDateString('en-IN');
                         const amountStr = amount.toLocaleString('en-IN');
 
-                        return `<tr><td>${dateStr}</td><td class="fw-bold">${p.buyer ? p.buyer.fullName : 'Guest'}</td><td>${p.property ? p.property.landName : 'Property in India'}</td><td class="text-success fw-bold">₹${amountStr}</td><td>${p.transactionId}</td><td><span class="badge bg-success">Paid</span></td></tr>`;
+                        // 🛡️ SECURITY FIX 2: Escaping names and property names
+                        const safeBuyerName = p.buyer ? escapeHTML(p.buyer.fullName) : 'Guest';
+                        const safePropName = p.property ? escapeHTML(p.property.landName) : 'Property in India';
+
+                        return `<tr><td>${dateStr}</td><td class="fw-bold">${safeBuyerName}</td><td>${safePropName}</td><td class="text-success fw-bold">₹${amountStr}</td><td>${escapeHTML(p.transactionId)}</td><td><span class="badge bg-success">Paid</span></td></tr>`;
                     }).join("");
                 } else {
                     txnTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted fw-bold">No recent transactions found.</td></tr>`;
@@ -311,11 +327,17 @@
 
                 tbody.innerHTML = leads.map((lead) => {
                     const dateStr = new Date(lead.createdAt).toLocaleDateString('en-IN');
+
+                    // 🛡️ SECURITY FIX 3: Prevent injected scripts in Leads CRM
+                    const safeBuyerName = lead.buyer ? escapeHTML(lead.buyer.fullName) : "User";
+                    const safePhone = lead.buyer ? escapeHTML(lead.buyer.phone) : '';
+                    const safePropName = lead.property ? escapeHTML(lead.property.landName) : "Property";
+
                     return `
                     <tr>
                         <td>${dateStr}</td>
-                        <td><div class="fw-bold">${lead.buyer ? lead.buyer.fullName : "User"}</div><div class="small text-muted">${lead.buyer ? lead.buyer.phone : ''}</div></td>
-                        <td><div class="text-primary fw-bold text-truncate" style="max-width: 150px;">${lead.property ? lead.property.landName : "Property"}</div></td>
+                        <td><div class="fw-bold">${safeBuyerName}</div><div class="small text-muted">${safePhone}</div></td>
+                        <td><div class="text-primary fw-bold text-truncate" style="max-width: 150px;">${safePropName}</div></td>
                         <td>
                             <select class="form-select form-select-sm mb-1" id="st-${lead._id}">
                                 <option value="Pending" ${lead.status === "Pending" ? "selected" : ""}>⏳ Pending</option>
@@ -327,18 +349,17 @@
                             </select>
                             <button class="btn btn-save-note btn-sm mt-1" onclick="updateLeadStatus('${lead._id}')"><i class="fas fa-save"></i> Update</button>
                         </td>
-                        <td class="text-center"><button class="btn-call" onclick="startSecureCall('${lead.buyer ? lead.buyer.fullName : 'User'}', '${lead.property ? lead.property.landName : 'Property'}')"><i class="fas fa-phone-alt"></i> Call</button></td>
+                        <td class="text-center"><button class="btn-call" onclick="startSecureCall('${safeBuyerName.replace(/'/g, "\\'")}', '${safePropName.replace(/'/g, "\\'")}')"><i class="fas fa-phone-alt"></i> Call</button></td>
                     </tr>
                 `}).join("");
             }
 
-            // Lead Status Update (Fixed URL)
             async function updateLeadStatus(leadId) {
                 const status = document.getElementById(`st-${leadId}`).value;
                 try {
-                    const res = await fetch(`${ADMIN_API}/leads/${leadId}`, {
+                    const res = await fetch(`${API_BASE}/admin/leads/${leadId}`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem("zamin_token")}` },
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
                         body: JSON.stringify({ status })
                     });
                     const data = await res.json();
@@ -357,17 +378,20 @@
             async function fetchQualityAlerts() {
                 const container = document.getElementById('alertsContainer');
                 try {
-                    // Fixed URL
-                    const res = await fetch(`${ADMIN_API}/brokers/flagged`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` } });
+                    const res = await fetch(`${API_BASE}/admin/brokers/flagged`, { headers: { Authorization: `Bearer ${getToken()}` } });
                     const data = await res.json();
 
                     if (data.success && data.flaggedBrokers && data.flaggedBrokers.length > 0) {
-                        container.innerHTML = data.flaggedBrokers.map(broker => `
+                        container.innerHTML = data.flaggedBrokers.map(broker => {
+                            // 🛡️ SECURITY FIX 4: Sanitize user's name
+                            const safeBrokerName = escapeHTML(broker.user.fullName);
+
+                            return `
                             <div class="col-md-6">
                                 <div class="stat-card alert-card">
                                     <div class="w-100">
                                         <div class="d-flex justify-content-between">
-                                            <h5 class="fw-bold m-0">${broker.user.fullName}</h5>
+                                            <h5 class="fw-bold m-0">${safeBrokerName}</h5>
                                             <span class="badge bg-danger">Avg: ${broker.averageRating} ⭐</span>
                                         </div>
                                         <p class="small text-muted mt-1">Warnings: <b>${broker.warningsIssued}</b> | Visibility: <b>${broker.visibilityReduced ? 'Reduced' : 'Normal'}</b></p>
@@ -379,7 +403,7 @@
                                     </div>
                                 </div>
                             </div>
-                        `).join("");
+                        `}).join("");
                     } else {
                         container.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-shield-check fs-1 d-block mb-3 text-success"></i> All brokers are performing well. No alerts.</div>`;
                     }
@@ -388,18 +412,17 @@
                 }
             }
 
-            // Fixed URLs for PUT requests
             async function sendWarning(id) {
                 const result = await Swal.fire({ title: 'Issue Warning?', text: "This will add a strike to the broker's account.", icon: 'warning', showCancelButton: true, confirmButtonText: 'Yes, Issue Warning' });
                 if(!result.isConfirmed) return;
 
-                const res = await fetch(`${ADMIN_API}/brokers/${id}/warning`, { method: 'PUT', headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` } });
+                const res = await fetch(`${API_BASE}/admin/brokers/${id}/warning`, { method: 'PUT', headers: { Authorization: `Bearer ${getToken()}` } });
                 const data = await res.json();
                 if(data.success) { Swal.fire('Issued!', data.message, 'success'); fetchQualityAlerts(); fetchDashboardStats(); }
             }
 
             async function reduceVisibility(id) {
-                const res = await fetch(`${ADMIN_API}/brokers/${id}/visibility`, { method: 'PUT', headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` } });
+                const res = await fetch(`${API_BASE}/admin/brokers/${id}/visibility`, { method: 'PUT', headers: { Authorization: `Bearer ${getToken()}` } });
                 const data = await res.json();
                 if(data.success) { Swal.fire('Updated!', data.message, 'success'); fetchQualityAlerts(); }
             }
@@ -410,20 +433,24 @@
             async function loadPendingProperties() {
                 const container = document.getElementById("approvalsContainer");
                 try {
-                    // Fixed URL
-                    const res = await fetch(`${ADMIN_API}/properties/pending`, { headers: { Authorization: `Bearer ${localStorage.getItem("zamin_token")}` }});
+                    const res = await fetch(`${API_BASE}/admin/properties/pending`, { headers: { Authorization: `Bearer ${getToken()}` }});
                     const data = await res.json();
                     if (data.success && data.properties && data.properties.length > 0) {
-                        container.innerHTML = data.properties.map((prop) => `
+                        container.innerHTML = data.properties.map((prop) => {
+                            // 🔒 Securely load images
+                            const imgSource = resolveImageUrl(prop.imageUrl);
+                            const safePropName = escapeHTML(prop.landName);
+
+                            return `
                             <div class="col-md-4"><div class="approve-card">
-                                <img src="${prop.imageUrl || 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600'}" class="approve-img">
-                                <div class="p-3"><h6 class="fw-bold text-truncate">${prop.landName}</h6><h5 class="fw-bold text-success">₹${Number(prop.landPrice).toLocaleString('en-IN')}</h5></div>
+                                <img src="${imgSource}" onerror="this.src='https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600'" class="approve-img">
+                                <div class="p-3"><h6 class="fw-bold text-truncate">${safePropName}</h6><h5 class="fw-bold text-success">₹${Number(prop.landPrice).toLocaleString('en-IN')}</h5></div>
                                 <div class="approve-actions">
                                     <button class="btn-approve" onclick="updatePropertyStatus('${prop._id}', 'Approved')"><i class="fas fa-check"></i> Approve</button>
                                     <button class="btn-reject" onclick="updatePropertyStatus('${prop._id}', 'Rejected')"><i class="fas fa-times"></i> Reject</button>
                                 </div>
                             </div></div>
-                        `).join("");
+                        `}).join("");
                     } else {
                         container.innerHTML = `<div class="text-center w-100 py-5 text-muted fw-bold"><i class="fas fa-check-circle fs-1 d-block mb-3 text-success"></i> No pending properties to review.</div>`;
                     }
@@ -432,12 +459,11 @@
                 }
             }
 
-            // Fixed URL
             async function updatePropertyStatus(propId, status) {
                 try {
-                    const res = await fetch(`${ADMIN_API}/properties/${propId}/approve`, {
+                    const res = await fetch(`${API_BASE}/admin/properties/${propId}/approve`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem("zamin_token")}` },
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
                         body: JSON.stringify({ status, adminNotes: "Reviewed by Admin Dashboard" })
                     });
                     const data = await res.json();
@@ -454,13 +480,18 @@
             async function loadAdManager() {
                 const tbody = document.getElementById("adsTableBody");
                 try {
-                    const res = await fetch(`/api/listings/all`);
+                    const res = await fetch(`${API_BASE}/listings/all`);
                     const data = await res.json();
                     if (data.success && data.listings && data.listings.length > 0) {
                         tbody.innerHTML = data.listings.map((item) => {
                             const priceStr = Number(item.landPrice).toLocaleString('en-IN');
+                            // 🛡️ SECURITY FIX 5: Protect Ad manager table
+                            const safePropName = escapeHTML(item.landName);
+                            const safeLoc = escapeHTML(item.address || 'India');
+                            const safeCat = escapeHTML(item.category);
+
                             return `
-                            <tr><td class="fw-bold">${item.landName}</td><td>${item.category}</td><td class="text-success">₹${priceStr}</td><td>${item.address || 'India'}</td><td><button class="btn-feature" onclick="this.classList.toggle('active'); this.innerText = this.classList.contains('active') ? 'Boosted!' : 'Boost';"><i class="fas fa-bolt"></i> Boost</button></td></tr>
+                            <tr><td class="fw-bold">${safePropName}</td><td>${safeCat}</td><td class="text-success">₹${priceStr}</td><td>${safeLoc}</td><td><button class="btn-feature" onclick="this.classList.toggle('active'); this.innerText = this.classList.contains('active') ? 'Boosted!' : 'Boost';"><i class="fas fa-bolt"></i> Boost</button></td></tr>
                         `}).join("");
                     } else {
                         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted fw-bold">No active listings found.</td></tr>`;

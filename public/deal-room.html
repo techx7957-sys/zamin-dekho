@@ -149,11 +149,22 @@
         </div>
     </div>
 
+    <script src="script.js"></script> 
+
     <script>
-        const API_URL = "/api";
-        const BASE_SERVER_URL = "/";
         let currentLeadId = null;
         let propertyId = null;
+
+        // 🛡️ SECURITY FIX 1: HTML Sanitizer Function
+        function escapeHTML(str) {
+            if (!str) return "";
+            return str.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
         window.onload = () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -176,10 +187,10 @@
                     statusText.innerText = "COORDINATES ACQUIRED. CALCULATING DISTANCE...";
 
                     try {
-                        const token = localStorage.getItem('zamin_token');
+                        const token = getToken(); // 🔒 Uses global secure function
 
-                        // Backend API Call to verify GPS (Haversine 100m check)
-                        const res = await fetch(`${API_URL}/leads/verify-gps/${currentLeadId || 'demo'}`, {
+                        // 🔒 Uses global API_BASE
+                        const res = await fetch(`${API_BASE}/leads/verify-gps/${currentLeadId || 'demo'}`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                             body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
@@ -207,7 +218,7 @@
                         setTimeout(() => {
                             unlockDealRoom({
                                 dealRoomToken: "DEMO-XYZ",
-                                property: { landName: "Demo Premium Farm", landPrice: 12500000, _id: "demo-id" }
+                                property: { landName: "Demo Premium Farm", landPrice: 12500000, _id: "demo-id", imageUrl: "" }
                             });
                         }, 2000);
                     }
@@ -226,13 +237,15 @@
 
             if(data.property) {
                 propertyId = data.property._id || data.property.id;
-                document.getElementById('drName').innerText = data.property.landName;
-                document.getElementById('drPrice').innerText = `₹ ${Number(data.property.landPrice).toLocaleString("en-IN")}`;
-                document.getElementById('drToken').innerText = `ROOM ID: ${data.dealRoomToken}`;
 
-                if(data.property.imageUrl) {
-                    let imgSource = data.property.imageUrl;
-                    if (!imgSource.startsWith("http")) imgSource = BASE_SERVER_URL + imgSource.replace(/\\/g, "/").replace(/^\//, '');
+                // 🛡️ SECURITY FIX 2: Prevent XSS in Title
+                document.getElementById('drName').innerText = escapeHTML(data.property.landName);
+                document.getElementById('drPrice').innerText = `₹ ${Number(data.property.landPrice).toLocaleString("en-IN")}`;
+                document.getElementById('drToken').innerText = `ROOM ID: ${escapeHTML(data.dealRoomToken)}`;
+
+                // 🔒 Utilizes Global Image Resolver
+                const imgSource = resolveImageUrl(data.property.imageUrl);
+                if (imgSource) {
                     document.getElementById('drImage').src = imgSource;
                 }
             }
@@ -244,7 +257,14 @@
             if(!text) return;
 
             const chatBox = document.getElementById('chatBox');
-            chatBox.innerHTML += `<div class="message msg-buyer">${text}</div>`;
+
+            // 🛡️ SECURITY FIX 3: Strict DOM Text Node creation to prevent XSS
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message msg-buyer';
+            msgDiv.appendChild(document.createTextNode(text)); // Safe Injection
+
+            chatBox.appendChild(msgDiv);
+
             input.value = '';
             chatBox.scrollTop = chatBox.scrollHeight;
 

@@ -5,13 +5,21 @@ const twilio = require('twilio');
 const User = require('../models/User');
 const Broker = require('../models/Broker');
 
-// 👑 ADMIN ACCESS SHIELD (Array Properly Closed)
-const ADMIN_EMAILS = [
-    "techx7957@gmail.com" 
-];
+// 👑 ADMIN ACCESS SHIELD (100% PROTECTED)
+// 🚨 FIX: Ab tera email code mein nahi dikhega. Ye seedha teri .env file (ADMIN_EMAILS) se securely load hoga!
+const ADMIN_EMAILS = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase()) : [];
 
 // Temporary Memory for OTP (Used for Registration only)
+// Note: On Vercel (Serverless), this memory resets if the server sleeps. For large scale, we should move this to MongoDB or Redis later.
 let otpStore = {}; 
+
+// Optional: Auto-cleanup memory to prevent memory leaks in active instances
+setInterval(() => {
+    const now = Date.now();
+    for (const email in otpStore) {
+        if (otpStore[email].expires < now) delete otpStore[email];
+    }
+}, 5 * 60 * 1000); // Cleans up every 5 mins
 
 // ==========================================
 // 🚀 1. OMNICHANNEL OTP (For Registration Verification)
@@ -27,7 +35,7 @@ exports.sendMultichannelOtp = async (req, res) => {
         // 6-digit Secure OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        otpStore[email] = {
+        otpStore[email.toLowerCase()] = {
             otp: otp,
             phone: phone,
             expires: Date.now() + 10 * 60 * 1000 // 10 mins expiry
@@ -68,13 +76,13 @@ exports.sendMultichannelOtp = async (req, res) => {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: { 
-                user: process.env.EMAIL_USER, 
+                user: process.env.EMAIL_USER, // Will use EMAIL_USER if provided, else fallback to ADMIN_EMAILS format in your specific setup
                 pass: process.env.EMAIL_PASS 
             }
         });
 
         const mailOptions = {
-            from: `"Zamindekho" <${process.env.EMAIL_USER}>`,
+            from: `"Zamindekho" <${process.env.EMAIL_USER || process.env.ADMIN_EMAILS}>`,
             to: email,
             subject: "Your Zamindekho Verification OTP",
             html: `
@@ -113,12 +121,14 @@ exports.register = async (req, res) => {
              return res.status(400).json({ success: false, message: "Sabhi details aur OTP zaroori hain!" });
         }
 
-        const existingUser = await User.findOne({ email });
+        const safeEmail = email.toLowerCase().trim();
+
+        const existingUser = await User.findOne({ email: safeEmail });
         if (existingUser) {
             return res.status(400).json({ success: false, message: "Account pehle se bana hua hai! Please Login karein." });
         }
 
-        const record = otpStore[email];
+        const record = otpStore[safeEmail];
 
         if (!record || record.otp !== String(otp) || Date.now() > record.expires) {
             return res.status(400).json({ success: false, message: "Galat ya Expired OTP! ❌" });
@@ -126,12 +136,12 @@ exports.register = async (req, res) => {
 
         const hashed = await bcrypt.hash(password, 10);
 
-        // 👑 CHECK ADMIN EMAIL ON MANUAL REGISTRATION
-        const assignedRole = ADMIN_EMAILS.includes(email) ? 'admin' : (role || 'buyer');
+        // 👑 CHECK ADMIN EMAIL DYNAMICALLY
+        const assignedRole = ADMIN_EMAILS.includes(safeEmail) ? 'admin' : (role || 'buyer');
 
         const newUser = await User.create({ 
             fullName, 
-            email, 
+            email: safeEmail, 
             phone: record.phone, 
             password: hashed, 
             role: assignedRole,
@@ -142,7 +152,7 @@ exports.register = async (req, res) => {
             await Broker.create({ user: newUser._id });
         }
 
-        delete otpStore[email]; 
+        delete otpStore[safeEmail]; 
         res.status(201).json({ success: true, message: "Account Created Successfully! 🎉" });
 
     } catch (e) {
@@ -156,8 +166,10 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
+        const safeEmail = email.toLowerCase().trim();
 
-        const user = await User.findOne({ email });
+        // 🛡️ SECURITY FIX: Need to explicitly select password because we hid it in the Schema
+        const user = await User.findOne({ email: safeEmail }).select('+password');
 
         if (!user) {
             return res.status(400).json({ success: false, message: "Account not found! Kripya pehle Register karein." });
@@ -174,9 +186,8 @@ exports.login = async (req, res) => {
 
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-        // 🚀 MASTER FIX: Return Full User Object (without password) so Flutter Profile Screen fills completely
         const userObj = user.toObject();
-        delete userObj.password;
+        delete userObj.password; // Never send password hash back
 
         res.json({ 
             success: true, 
@@ -194,9 +205,10 @@ exports.login = async (req, res) => {
 // ==========================================
 exports.socialLoginCallback = async (req, res) => {
     let userRole = req.user.role;
+    const safeEmail = req.user.email.toLowerCase().trim();
 
     // 👑 MASTER FIX: Agar Admin ne Google/X se web par login kiya hai, toh usko Admin bana do!
-    if (ADMIN_EMAILS.includes(req.user.email) && userRole !== 'admin') {
+    if (ADMIN_EMAILS.includes(safeEmail) && userRole !== 'admin') {
         await User.findByIdAndUpdate(req.user._id, { role: 'admin' });
         userRole = 'admin';
         req.user.role = 'admin'; 
@@ -210,7 +222,7 @@ exports.socialLoginCallback = async (req, res) => {
         email: req.user.email 
     }));
 
-    let returnBaseUrl = req.customRedirectUrl || "http://localhost:5000"; 
+    let returnBaseUrl = req.customRedirectUrl || process.env.BASE_URL || "http://localhost:5000"; 
 
     if (returnBaseUrl.endsWith('/')) {
         returnBaseUrl = returnBaseUrl.slice(0, -1);
@@ -252,10 +264,10 @@ exports.uploadAvatar = async (req, res) => {
             return res.status(400).json({ success: false, message: "Koi photo upload nahi hui!" });
         }
 
-        // Dynamically create URL based on Server Host (Replit/Vercel/Local)
-        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-        const host = req.headers.host;
-        const avatarUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+        // 🚀 MASTER FIX (VERCEL & CLOUDINARY): 
+        // Vercel local 'host' par files save nahi karta. Agar Multer+Cloudinary use ho raha hai,
+        // toh URL req.file.path ke andar aata hai. Hum wahi use karenge!
+        const avatarUrl = req.file.path || `/uploads/${req.file.filename}`;
 
         const updatedUser = await User.findByIdAndUpdate(
             req.user.id,
@@ -285,10 +297,11 @@ exports.verifyFlutterGoogleToken = async (req, res) => {
             return res.status(400).json({ success: false, message: "Token and email are required" });
         }
 
-        let user = await User.findOne({ email: email });
+        const safeEmail = email.toLowerCase().trim();
+        let user = await User.findOne({ email: safeEmail });
 
         // 👑 Check if the incoming email is the boss
-        const assignedRole = ADMIN_EMAILS.includes(email) ? 'admin' : 'buyer';
+        const assignedRole = ADMIN_EMAILS.includes(safeEmail) ? 'admin' : 'buyer';
 
         if (!user) {
             const randomPassword = Math.random().toString(36).slice(-8);
@@ -296,7 +309,7 @@ exports.verifyFlutterGoogleToken = async (req, res) => {
 
             user = new User({
                 fullName: name || "Zamin User",
-                email: email,
+                email: safeEmail,
                 role: assignedRole, 
                 isActive: true, 
                 password: hashed 
@@ -314,13 +327,15 @@ exports.verifyFlutterGoogleToken = async (req, res) => {
             }
         }
 
+        // 🛡️ SECURITY FIX: Removed weak hardcoded fallback key
+        if (!process.env.JWT_SECRET) throw new Error("CRITICAL: JWT_SECRET is missing");
+
         const jwtToken = jwt.sign(
             { id: user._id, role: user.role },
-            process.env.JWT_SECRET || "ZAMIN_SUPER_SECRET_KEY_123", 
+            process.env.JWT_SECRET, 
             { expiresIn: "7d" }
         );
 
-        // 🚀 MASTER FIX: Return Full User Object (without password)
         const userObj = user.toObject();
         delete userObj.password;
 

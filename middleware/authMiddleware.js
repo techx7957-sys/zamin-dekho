@@ -1,58 +1,67 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
+// 🛡️ STRICT SECURITY CHECK: App should not process auth if JWT Secret is missing
+if (!process.env.JWT_SECRET) {
+    console.error("❌ CRITICAL ERROR: JWT_SECRET is missing in .env file!");
+}
+
 // ==========================================
 // 🛡️ 1. VERIFY JWT TOKEN (Protect Routes)
 // ==========================================
 exports.verifyToken = async (req, res, next) => {
     let token;
 
-    // 1. Check if Authorization header exists and starts with 'Bearer'
+    // 1. Safely extract the token if Authorization header exists
     if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
-        try {
-            // 2. Extract the token from the header
-            token = req.headers.authorization.split(" ")[1];
-
-            // 3. Verify the token using JWT_SECRET
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-            // 4. Fetch the user from the database
-            const currentUser = await User.findById(decoded.id).select("-password");
-
-            // 🌟 FIX 1: Zombie Token - Agar user database mein nahi hai, toh turant bahar nikalo
-            if (!currentUser) {
-                return res.status(401).json({
-                    success: false,
-                    message: "The user belonging to this token no longer exists. Please register again."
-                });
-            }
-
-            // 🌟 FIX 2: Banned User - Agar Admin ne is user ko block kar diya hai, toh access rok do!
-            if (!currentUser.isActive) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Aapka account admin dwara block kar diya gaya hai. Kripya support se sampark karein."
-                });
-            }
-
-            // 5. Attach safe user object to request and move forward
-            req.user = currentUser;
-            return next(); // ✅ FIX: Added 'return' here so it doesn't execute the bottom code
-
-        } catch (error) {
-            console.error("Token Verification Failed:", error.message);
-            return res.status(401).json({
-                success: false,
-                message: "Aapka session expire ho gaya hai ya token galat hai. Kripya dobara login karein."
-            });
-        }
+        token = req.headers.authorization.split(" ")[1];
     }
 
-    // 6. If no token is found at all
+    // 2. If no token is found at all (Empty or missing Bearer)
     if (!token) {
         return res.status(401).json({
             success: false,
             message: "Access Denied! Aap is action ke liye authorized nahi hain. Pehle login karein."
+        });
+    }
+
+    try {
+        // 🛡️ Extra Layer: Ensure Secret exists before verifying (Crash Protection)
+        if (!process.env.JWT_SECRET) {
+            throw new Error("Server Misconfiguration: JWT Secret Missing.");
+        }
+
+        // 3. Verify the token using JWT_SECRET
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        // 4. Fetch the user from the database
+        const currentUser = await User.findById(decoded.id).select("-password");
+
+        // 🌟 FIX 1: Zombie Token - Agar user database mein nahi hai, toh turant bahar nikalo
+        if (!currentUser) {
+            return res.status(401).json({
+                success: false,
+                message: "The user belonging to this token no longer exists. Please register again."
+            });
+        }
+
+        // 🌟 FIX 2: Banned User - Agar Admin ne is user ko block kar diya hai, toh access rok do!
+        if (!currentUser.isActive) {
+            return res.status(403).json({
+                success: false,
+                message: "Aapka account admin dwara block kar diya gaya hai. Kripya support se sampark karein."
+            });
+        }
+
+        // 5. Attach safe user object to request and move forward
+        req.user = currentUser;
+        return next(); 
+
+    } catch (error) {
+        console.error("Token Verification Failed:", error.message);
+        return res.status(401).json({
+            success: false,
+            message: "Aapka session expire ho gaya hai ya token galat hai. Kripya dobara login karein."
         });
     }
 };

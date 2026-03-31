@@ -11,7 +11,7 @@ exports.getBrokerStats = async (req, res) => {
             return res.status(403).json({ success: false, message: "Access Denied. Broker only." });
         }
 
-        const brokerUserId = req.user.id; // Corrected: Use req.user.id from JWT
+        const brokerUserId = req.user.id; 
 
         // Database Queries (Parallel processing for speed)
         const [totalListings, totalAssignedLeads, activeLeads, closedDeals, brokerProfile] = await Promise.all([
@@ -98,11 +98,20 @@ exports.getBrokerProfile = async (req, res) => {
 // ==========================================
 // ⭐ 5. THE RATING ENGINE (PRD Step 38)
 // ==========================================
-// NOTE: Ye function Buyer call karega jab wo Broker ko rate karna chahega
 exports.rateBroker = async (req, res) => {
     try {
+        // 🔒 SECURITY FIX: Only Buyers/Admins can rate. Brokers cannot rate other brokers (Anti-Spam)
+        if (req.user.role === 'broker') {
+            return res.status(403).json({ success: false, message: "Brokers cannot rate other brokers." });
+        }
+
         const { brokerId, professionalBehavior, propertyAccuracy, helpfulness, communication, review } = req.body;
         const buyerId = req.user.id;
+
+        // 🔒 SECURITY FIX: Validate that all inputs are numbers and exist
+        if (!brokerId || !professionalBehavior || !propertyAccuracy || !helpfulness || !communication) {
+             return res.status(400).json({ success: false, message: "Incomplete rating data." });
+        }
 
         // Find the specific broker
         let broker = await Broker.findOne({ user: brokerId });
@@ -112,7 +121,7 @@ exports.rateBroker = async (req, res) => {
             broker = new Broker({ user: brokerId, isVerified: true });
         }
 
-        // Calculate Average for this specific rating
+        // Calculate Average for this specific rating (Safe Number parsing)
         const currentOverall = (
             Number(professionalBehavior) + 
             Number(propertyAccuracy) + 

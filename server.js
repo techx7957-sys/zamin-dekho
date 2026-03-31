@@ -5,10 +5,18 @@ const path = require("path");
 const fs = require("fs");
 const session = require("express-session");
 const passport = require("passport");
+const helmet = require("helmet"); // 🛡️ NAYA: Security Headers
+const rateLimit = require("express-rate-limit"); // 🛡️ NAYA: Anti-Spam / DDoS Protection
 
 // 🌟 ALWAYS load dotenv locally, Vercel provides env vars automatically
 if (process.env.NODE_ENV !== 'production') {
     require("dotenv").config();
+}
+
+// 🛡️ CRITICAL SECURITY CHECK: Ensure essential environment variables exist
+if (!process.env.MONGO_URI || !process.env.JWT_SECRET) {
+    console.error("❌ CRITICAL ERROR: MONGO_URI or JWT_SECRET is missing in .env!");
+    process.exit(1); // Stop server immediately to prevent insecure state
 }
 
 // Load Passport strategies BEFORE routes
@@ -32,28 +40,44 @@ const app = express();
 // ==========================================
 app.disable('x-powered-by'); 
 
-// 🚀 1. THE VERCEL CORS FIX: 
-// Removed manual headers. This dynamic configuration handles Flutter Web, Android, and Vercel perfectly without double-header crashes.
+// 🛡️ HELMET: Hide Express internals and secure HTTP headers
+// (Configured to allow images from Cloudinary and cross-origin requests for Flutter)
+app.use(helmet({
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: false // Disabled temporarily if it blocks external images/scripts on frontend
+}));
+
+// 🚀 1. THE VERCEL CORS FIX
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow all origins (great for Flutter testing & Vercel)
         callback(null, true);
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
     credentials: true,
-    optionsSuccessStatus: 200 // Vercel prefers 200 over 204 for preflight
+    optionsSuccessStatus: 200 
 }));
 
-app.use(express.json({ limit: "50mb" })); // Increased limit slightly for Flutter image uploads
+app.use(express.json({ limit: "50mb" })); 
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+// 🛡️ RATE LIMITER: Prevent DDoS and Spam Attacks (Max 150 requests per 10 mins per IP)
+const apiLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000, // 10 minutes
+    max: 150, 
+    message: { success: false, message: "🚨 Too many requests from this IP, please try again after 10 minutes." }
+});
 
 // Session middleware
 app.use(
     session({
-        secret: process.env.JWT_SECRET || "zamin-dekho-secret-shield",
+        secret: process.env.JWT_SECRET, // 🛡️ SECURITY FIX: Removed weak hardcoded fallback
         resave: false,
         saveUninitialized: false,
+        cookie: {
+            secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+            httpOnly: true
+        }
     })
 );
 
@@ -74,8 +98,10 @@ mongoose
     .catch((err) => console.log("❌ MongoDB Connection Error:", err));
 
 // ==========================================
-// 🚀 API ROUTES ENGINE 
+// 🚀 API ROUTES ENGINE (Protected by Rate Limiter)
 // ==========================================
+app.use("/api/", apiLimiter); // 🛡️ Applied Spam Filter to all API routes
+
 app.use("/api/auth", authRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/admin", adminRoutes);
@@ -151,8 +177,7 @@ process.on('unhandledRejection', (err) => {
 // ⚡ VERCEL EXPORT & LOCAL PORT BINDING
 // ==========================================
 
-// 🚀 THE VERCEL FIX: Vercel sets `process.env.VERCEL` to "1". 
-// If we are on Vercel, DO NOT run app.listen(). Just export the app.
+// 🚀 THE VERCEL FIX
 if (!process.env.VERCEL) {
     const PORT = process.env.PORT || 5000;
     const server = app.listen(PORT, "0.0.0.0", () => {

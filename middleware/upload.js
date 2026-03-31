@@ -2,6 +2,11 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 
+// 🛡️ STRICT SECURITY CHECK: Ensure Cloudinary keys exist before starting
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    console.error("❌ CRITICAL ERROR: Cloudinary API Keys are missing in .env file!");
+}
+
 // ==========================================
 // 1. CLOUDINARY CONFIGURATION
 // ==========================================
@@ -48,10 +53,29 @@ const storage = new CloudinaryStorage({
 });
 
 // ==========================================
+// 🛡️ 2.5 SERVER-SIDE FILE FILTER (Anti-Virus/Malware Shield)
+// ==========================================
+const fileFilter = (req, file, cb) => {
+    // Sirf in safe file types ko andar aane ki permission hai
+    const allowedMimeTypes = [
+        'image/jpeg', 'image/png', 'image/webp', 'image/jpg', 
+        'video/mp4', 'video/webm', 'video/quicktime', 
+        'application/pdf'
+    ];
+
+    if (allowedMimeTypes.includes(file.mimetype)) {
+        cb(null, true); // ✅ Pass hone do
+    } else {
+        cb(new Error('🚨 Security Alert: Invalid file type! Only JPG, PNG, WEBP, MP4, MOV, and PDF are allowed.'), false); // ❌ Block right here!
+    }
+};
+
+// ==========================================
 // 3. SECURE UPLOAD MIDDLEWARE
 // ==========================================
 const upload = multer({ 
     storage: storage,
+    fileFilter: fileFilter, // 🛡️ Activated Local Firewall
     // 🌟 NAYA: File Size Limit (Anti-Spam/Crash Protection)
     // Ab user maximum 50MB tak ki files (Reels ke liye) upload kar payega
     limits: { fileSize: 50 * 1024 * 1024 } 

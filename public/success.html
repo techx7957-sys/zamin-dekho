@@ -101,7 +101,20 @@
     </div>
 </div>
 
+<script src="script.js"></script> 
+
 <script>
+    // 🛡️ SECURITY FIX 1: Provide a fallback HTML Sanitizer just in case script.js fails to load
+    function safeEscape(str) {
+        if (!str) return "";
+        return str.toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     window.onload = function() {
         // Confetti Celebration
         confetti({
@@ -113,9 +126,15 @@
 
         // Get data from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        const txnId = urlParams.get('txn') || `ZMN-TXN-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
-        const propName = urlParams.get('prop') || "Premium Property Plot";
-        let amount = urlParams.get('amt') || "1,00,000";
+
+        // 🛡️ SECURITY FIX 2: Sanitize URL Parameters (Reflected XSS Protection)
+        let rawTxn = urlParams.get('txn');
+        let rawProp = urlParams.get('prop');
+        let rawAmt = urlParams.get('amt');
+
+        const txnId = rawTxn ? safeEscape(rawTxn) : `ZMN-TXN-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
+        const propName = rawProp ? safeEscape(decodeURIComponent(rawProp)) : "Premium Property Plot";
+        let amount = rawAmt ? safeEscape(rawAmt) : "1,00,000";
 
         // Ensure ₹ symbol is added if not present
         if (!amount.includes("₹")) {
@@ -123,7 +142,7 @@
         }
 
         document.getElementById('resTxn').innerText = txnId;
-        document.getElementById('resProperty').innerText = decodeURIComponent(propName);
+        document.getElementById('resProperty').innerText = propName;
         document.getElementById('resAmount').innerText = amount;
         document.getElementById('resDate').innerText = new Date().toLocaleString('en-IN', {
             day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'

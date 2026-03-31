@@ -23,11 +23,17 @@ router.get('/profile', verifyToken, authorizeRoles('broker'), brokerController.g
 
 
 // ==========================================
-// ⭐ 2. QUALITY CONTROL & FEEDBACK (For Buyers)
+// ⭐ 2. QUALITY CONTROL & FEEDBACK (Defense in Depth)
 // ==========================================
 
-// 🌟 NAYA: Route to submit Broker Rating (Connected to Frontend Dashboard Modal)
-// Note: This route is accessible by any authenticated user (Buyer/Seller) to rate a broker.
-router.post('/rate', verifyToken, brokerController.rateBroker);
+// 🛡️ SECURITY FIX: Router-Level Gatekeeper Added!
+// Ab API request controller tak tabhi jayegi jab user sachi mein 'buyer' ya 'admin' hoga. 
+// Koi aur role (jaise 'broker') darwaze se hi wapas bhej diya jayega!
+router.post(
+    '/rate', 
+    verifyToken, 
+    authorizeRoles('buyer', 'admin'), // 🔒 Strict Gatekeeper Check
+    brokerController.rateBroker
+);
 
 module.exports = router;

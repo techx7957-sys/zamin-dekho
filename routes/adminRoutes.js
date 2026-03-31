@@ -1,9 +1,23 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose"); // 🚀 MASTER FIX: Added Mongoose for ID validation
 const adminController = require("../controllers/adminController");
 
 // Security Middleware
 const { verifyToken, authorizeRoles } = require('../middleware/authMiddleware');
+
+// ==========================================
+// 🛡️ ANTI-CRASH SHIELD (URL Parameter Validator)
+// ==========================================
+const validateObjectId = (req, res, next) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({ 
+            success: false, 
+            message: "🚨 Security Alert: Invalid ID format detected in URL!" 
+        });
+    }
+    next();
+};
 
 // ==========================================
 // 📊 1. DASHBOARD & REVENUE STATS
@@ -34,6 +48,7 @@ router.put(
   "/lead/:id",
   verifyToken,
   authorizeRoles("admin", "broker"),
+  validateObjectId, // 🛡️ Added ID Shield
   adminController.updateLeadStatus
 );
 
@@ -55,6 +70,7 @@ router.put(
   "/approve-property/:id",
   verifyToken,
   authorizeRoles("admin"),
+  validateObjectId, // 🛡️ Added ID Shield
   adminController.updatePropertyApproval
 );
 
@@ -75,6 +91,7 @@ router.post(
   "/broker-warning/:id",
   verifyToken,
   authorizeRoles("admin"),
+  validateObjectId, // 🛡️ Added ID Shield
   adminController.issueBrokerWarning
 );
 
@@ -83,6 +100,7 @@ router.put(
   "/toggle-visibility/:id",
   verifyToken,
   authorizeRoles("admin"),
+  validateObjectId, // 🛡️ Added ID Shield
   adminController.toggleVisibility
 );
 

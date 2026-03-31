@@ -6,28 +6,35 @@ const userSchema = new mongoose.Schema({
     // ==========================================
     fullName: { 
         type: String, 
-        required: true,
-        trim: true
+        required: [true, "Full name is required"],
+        trim: true,
+        maxlength: [100, "Name cannot exceed 100 characters"] // 🛡️ SECURITY FIX: DB Bloat Protection
     },
     email: { 
         type: String, 
-        required: true, 
+        required: [true, "Email is required"], 
         unique: true,
         trim: true,
         lowercase: true,
+        match: [/^\S+@\S+\.\S+$/, "Please use a valid email address"], // 🛡️ SECURITY FIX: Email Format Validation
         index: true // 🚀 FAST QUERY: Makes Login & OTP searches lightning fast
     },
     phone: { 
         type: String, 
         default: "",
+        trim: true,
+        maxlength: [20, "Phone number is too long"], // 🛡️ SECURITY FIX: Limit phone string
         index: true // 🚀 FAST QUERY: For Mobile Login
     },
     password: { 
-        type: String 
+        type: String,
+        select: false // 🚨 CRITICAL SECURITY FIX: Password hash will NEVER be sent to the frontend automatically!
     },
     avatar: { // 🌟 NAYA: Added to support Profile Photo uploads from Frontend
         type: String,
-        default: ""
+        default: "",
+        trim: true,
+        maxlength: [1000, "Avatar URL is too long"] // 🛡️ SECURITY FIX: Prevents malicious URL payloads
     },
     role: { 
         type: String, 

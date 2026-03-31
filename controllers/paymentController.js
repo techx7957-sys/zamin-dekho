@@ -1,14 +1,19 @@
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 
-// 🌟 Models (Paths are correct since this file is in the root folder)
+// 🌟 Models
 const Lead = require("../models/Lead");
 const Listing = require("../models/Listing");
 
-// Initialize Razorpay
+// 🛡️ STRICT SECURITY CHECK: Check if keys exist before initializing
+if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    console.error("❌ CRITICAL ERROR: Razorpay API Keys are missing in .env file!");
+}
+
+// Initialize Razorpay (Strictly using .env variables)
 const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || "dummy_key", // Fallback to avoid crash if env missing
-    key_secret: process.env.RAZORPAY_KEY_SECRET || "dummy_secret",
+    key_id: process.env.RAZORPAY_KEY_ID, 
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 // ==========================================
@@ -50,6 +55,11 @@ exports.verifyAndBook = async (req, res) => {
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature, propertyId, paymentMethod } = req.body;
 
+        // 🛡️ Extra Layer: Ensure Secret exists before hashing
+        if (!process.env.RAZORPAY_KEY_SECRET) {
+            throw new Error("Server Misconfiguration: Payment Secret Missing.");
+        }
+
         // 🔒 Signature Verification (Anti-Fraud)
         const body = razorpay_order_id + "|" + razorpay_payment_id;
         const expectedSignature = crypto
@@ -61,7 +71,7 @@ exports.verifyAndBook = async (req, res) => {
 
             // 1. Lock the Property (Smart Reservation - Step 28)
             await Listing.findByIdAndUpdate(propertyId, { 
-                bookingStatus: "Reserved" // Fixed: Changed from approvalStatus to bookingStatus
+                bookingStatus: "Reserved" 
             });
 
             // 2. Update or Create Lead (Upsert Logic to prevent duplicates)
@@ -92,6 +102,7 @@ exports.verifyAndBook = async (req, res) => {
             res.status(400).json({ success: false, message: "Invalid Payment Signature! Fraud detected. 🚨" });
         }
     } catch (error) {
+        console.error("Payment Verification Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

@@ -42,7 +42,9 @@ const LeadSchema = new mongoose.Schema({
     // ==========================================
     brokerNotes: {
         type: String,
-        default: ""
+        default: "",
+        trim: true, // 🛡️ SECURITY FIX: Extra spaces hata dega
+        maxlength: [2000, "Notes cannot exceed 2000 characters"] // 🛡️ SECURITY FIX: DB Bloat Protection
     },
     scheduledVisitDate: {
         type: Date
@@ -64,7 +66,8 @@ const LeadSchema = new mongoose.Schema({
     // ==========================================
     tokenAmount: {
         type: Number,
-        default: 0 
+        default: 0,
+        min: [0, "Token amount cannot be negative"] // 🛡️ SECURITY FIX: Negative Hack Protection
     },
     paymentStatus: {
         type: String,
@@ -73,11 +76,15 @@ const LeadSchema = new mongoose.Schema({
     },
     transactionId: {
         type: String, // Razorpay or internal Transaction ID
-        default: ""
+        default: "",
+        trim: true,
+        maxlength: 100 // 🛡️ SECURITY FIX: Anti-Spam
     },
     paymentMethod: {
         type: String, 
-        default: ""
+        default: "",
+        trim: true,
+        maxlength: 50
     },
     bookingDate: {
         type: Date 
