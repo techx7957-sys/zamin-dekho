@@ -49,7 +49,7 @@ function handleSocialLogin() {
 // 🌟 THE ULTIMATE XSS SHIELD
 // Ye function kisi bhi hacker ke script tag ko normal text mein badal dega.
 window.escapeHTML = function(str) {
-    if (!str) return "";
+    if (!str && str !== 0) return "";
     return str.toString()
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -81,10 +81,14 @@ window.apiFetch = async function(endpoint, options = {}) {
         const cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
         const response = await fetch(`${API_BASE}${cleanEndpoint}`, { ...options, headers });
 
-        // 🚨 SECURITY FIX: Agar Session Expire ho gaya ho (401), toh force logout!
-        if (response.status === 401) {
-            logout();
-            throw new Error("Session expired");
+        // 🚨 SECURITY FIX: Agar Session Expire ho gaya ho (401/403), toh force logout!
+        if (response.status === 401 || response.status === 403) {
+            // Only force logout if the API specifically rejects the token
+            const errData = await response.json().catch(() => ({}));
+            if(errData.message && errData.message.toLowerCase().includes('token')) {
+                logout();
+                throw new Error("Session expired or invalid token");
+            }
         }
 
         return await response.json();
@@ -147,10 +151,12 @@ function requireAuth() {
 // 🌟 MASTER FIX: GLOBAL IMAGE RESOLVER
 function resolveImageUrl(url) {
     const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
-    if (!url) return fallbackImg;
+    if (!url || typeof url !== 'string') return fallbackImg;
 
     // Agar external link hai (Cloudinary, Google Profile Pic ya Unsplash)
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image')) {
+        return url;
+    }
 
     // Agar local path hai, backslashes ko forward slashes mein badlo
     let cleanUrl = url.replace(/\\/g, '/'); 
@@ -164,15 +170,19 @@ function resolveImageUrl(url) {
 
 // Format Price in Indian Rupees (₹) System
 function formatPrice(amount) {
-    if (!amount) return '0';
+    if (amount === null || amount === undefined || isNaN(amount)) return '0';
     return Number(amount).toLocaleString('en-IN');
 }
 
 // Format Date nicely
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('en-IN', options);
+    try {
+        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString('en-IN', options);
+    } catch(e) {
+        return 'Invalid Date';
+    }
 }
 
 // ==========================================

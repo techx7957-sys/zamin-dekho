@@ -9,9 +9,9 @@
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
         <style>
-            @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+            @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap");
 
-            /* 🌟 FIX: Flex column to manage the new small footer naturally */
+            /* 🌟 FIX: Flex column to manage the small footer naturally */
             body { background: #f8fafc; font-family: "Inter", sans-serif; color: #1e293b; display: flex; flex-direction: column; min-height: 100vh; margin: 0;}
             .main-wrapper { flex: 1; display: flex; flex-direction: column; }
 
@@ -35,9 +35,9 @@
             .summary-card { position: sticky; top: 100px; background: #0f172a; color: white; padding: 30px; border-radius: 20px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15); }
             .prop-img-mini { width: 100%; height: 140px; object-fit: cover; border-radius: 12px; margin-bottom: 15px; border: 2px solid #334155; }
             .price-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-weight: 500; color: #94a3b8; font-size: 15px;}
-            .total-row { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 20px; border-top: 1px dashed #334155; font-weight: 800; font-size: 24px; color: #10b981; }
+            .total-row { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 20px; border-top: 1px dashed #334155; font-weight: 800; font-size: 24px; color: #10b981; font-family: 'JetBrains Mono', monospace;}
 
-            .trust-badges { display: flex; gap: 10px; margin-bottom: 20px; }
+            .trust-badges { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;}
             .t-badge { background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; color: #e2e8f0; display: flex; align-items: center; gap: 6px;}
             .t-badge i { color: #10b981; }
 
@@ -46,7 +46,6 @@
             .btn-pay:disabled { background: #64748b; cursor: not-allowed; transform: none; box-shadow: none; }
 
             .secure-footer { text-align: center; color: #64748b; font-size: 12px; font-weight: 600; margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 8px; }
-            .secure-footer img { height: 20px; filter: grayscale(100%) opacity(0.6); }
 
             /* Minimal Compliance Footer */
             .minimal-footer { text-align: center; padding: 20px 0; margin-top: auto; font-size: 12px; color: #94a3b8; font-weight: 600; width: 100%;}
@@ -66,11 +65,9 @@
             <div class="container checkout-container">
                 <div class="row g-4" id="mainCheckoutContent">
                     <div class="col-lg-7">
-                        <h2 class="fw-bold mb-4">Secure Checkout</h2>
+                        <h2 class="fw-bold mb-4" id="pageMainTitle">Secure Checkout</h2>
 
-                        <div class="alert alert-warning fw-bold border-warning mb-4 shadow-sm" style="background-color: #fffbeb;">
-                            <i class="fas fa-info-circle me-2 text-warning"></i> Note: This token amount is 100% refundable within 24 hours.
-                        </div>
+                        <div id="dynamicAlertBox" class="alert fw-bold mb-4 shadow-sm" style="display: none; font-size: 14px;"></div>
 
                         <div class="box-card">
                             <div class="box-title"><i class="fas fa-user-shield me-2 text-primary"></i> 1. Buyer Verification</div>
@@ -96,7 +93,7 @@
                                 <i class="fas fa-qrcode pay-icon"></i>
                                 <div>
                                     <h6 class="fw-bold m-0">UPI / Debit Card / NetBanking</h6>
-                                    <span class="text-muted small">Instant & Secure processing via Razorpay Escrow</span>
+                                    <span class="text-muted small">Instant & Secure processing via Razorpay Gateways</span>
                                 </div>
                                 <i class="fas fa-check-circle ms-auto text-success fs-5"></i>
                             </div>
@@ -110,25 +107,28 @@
                             <h5 class="fw-bold text-white mb-2" id="summaryTitle">Loading Property Details...</h5>
                             <p class="small text-secondary mb-4 lh-base"><i class="fas fa-map-marker-alt me-1 text-danger"></i> <span id="summaryLoc">Locating...</span></p>
 
-                            <div class="trust-badges">
-                                <div class="t-badge"><i class="fas fa-lock"></i> 48H Lock</div>
-                                <div class="t-badge"><i class="fas fa-undo"></i> Easy Refund</div>
+                            <div class="trust-badges" id="dynamicTrustBadges"></div>
+
+                            <div class="price-row">
+                                <span id="feeLabel1">Processing Fee</span>
+                                <span class="text-white fw-bold" id="feeAmount1">₹ 0</span>
+                            </div>
+                            <div class="price-row">
+                                <span id="feeLabel2">Platform Escrow Fee</span>
+                                <span class="text-white fw-bold" id="feeAmount2">₹ 0</span>
                             </div>
 
-                            <div class="price-row"><span>Token Booking Amount</span><span class="text-white fw-bold">₹ 1,00,000</span></div>
-                            <div class="price-row"><span>Platform Escrow Fee</span><span class="text-white fw-bold">₹ 0 <span class="text-secondary text-decoration-line-through ms-1">₹ 2,500</span></span></div>
-
                             <div class="total-row">
-                                <span class="text-white">Total to Pay</span>
-                                <span>₹ 1,00,000</span>
+                                <span class="text-white" style="font-family: 'Inter', sans-serif; font-size:18px;">Total to Pay</span>
+                                <span id="finalTotalAmount">₹ 0</span>
                             </div>
 
                             <button class="btn-pay" id="payBtn" onclick="processPayment()">
-                                <i class="fas fa-lock"></i> Pay ₹ 1,00,000 Securely
+                                <i class="fas fa-lock"></i> Pay Securely
                             </button>
 
                             <div class="secure-footer">
-                                <i class="fas fa-shield-check"></i> 256-bit Encryption
+                                <i class="fas fa-shield-check"></i> 256-bit Encryption & RBI Compliant
                             </div>
                         </div>
                     </div>
@@ -152,7 +152,15 @@
             const RAZORPAY_FRONTEND_KEY = "rzp_test_SRoMzyWoySJgae"; 
 
             let propertyData = null;
-            let propertyId = new URLSearchParams(window.location.search).get("id");
+            const urlParams = new URLSearchParams(window.location.search);
+            const propertyId = urlParams.get("id");
+
+            // 🌟 NAYA: Identify which flow user is on!
+            const checkoutType = urlParams.get("type") || "verify"; // Defaults to 'verify' if nothing provided
+
+            // Configuration Variables
+            let finalAmountToPay = 0;
+            let displayAmountStr = "0";
 
             // 🛡️ SECURITY FIX 1: HTML Sanitizer Function fallback
             if (typeof window.escapeHTML !== 'function') {
@@ -168,7 +176,6 @@
             }
 
             window.onload = () => {
-                // 🔒 Utilizes Global Setup
                 const token = typeof getToken === 'function' ? getToken() : null;
                 if (!token || !propertyId) {
                     Swal.fire("Session Invalid", "Your session has expired or the property link is invalid. Redirecting to home.", "warning")
@@ -181,11 +188,9 @@
 
             async function loadUserData() {
                 try {
-                    // 🔒 Uses API_BASE from script.js
                     const res = await fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${getToken()}` } });
                     const data = await res.json();
                     if (data.success) {
-                        // Safe value assignment
                         document.getElementById("buyerName").value = data.user.fullName;
                         document.getElementById("buyerEmail").value = data.user.email;
                         document.getElementById("buyerPhone").value = data.user.phone === "Not Provided" ? "" : data.user.phone;
@@ -195,21 +200,80 @@
 
             async function loadPropertyData() {
                 try {
-                    // 🔒 Uses API_BASE from script.js
                     const res = await fetch(`${API_BASE}/listings/${propertyId}`);
                     const data = await res.json();
+
                     if (data.success) {
                         propertyData = data.listing;
 
-                        // 🛡️ SECURITY FIX 2: Escaping user-generated data to prevent DOM-XSS
+                        // Populate Basic Visuals
                         document.getElementById("summaryTitle").innerText = escapeHTML(propertyData.landName);
                         document.getElementById("summaryLoc").innerText = escapeHTML(propertyData.address);
-
-                        // 🔒 Utilizes Global Image Resolver
                         const imgSource = typeof resolveImageUrl === 'function' ? resolveImageUrl(propertyData.imageUrl) : (propertyData.imageUrl || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600");
                         document.getElementById("summaryImg").src = imgSource;
+
+                        // 🌟 DYNAMIC UI UPDATER BASED ON CHECKOUT TYPE 🌟
+                        updateCheckoutUI();
                     }
                 } catch (e) { Swal.fire("Error", "Failed to load property details. Please refresh the page.", "error"); }
+            }
+
+            function updateCheckoutUI() {
+                const alertBox = document.getElementById('dynamicAlertBox');
+                const trustBadges = document.getElementById('dynamicTrustBadges');
+
+                if (checkoutType === 'verify') {
+                    // --- PREMIUM VERIFICATION FLOW (₹499) ---
+                    finalAmountToPay = 499;
+                    displayAmountStr = "₹ 499";
+
+                    document.getElementById('pageMainTitle').innerText = "Premium Verification";
+
+                    alertBox.className = "alert border-info shadow-sm";
+                    alertBox.style.backgroundColor = "#eff6ff";
+                    alertBox.style.color = "#1e3a8a";
+                    alertBox.innerHTML = `<i class="fas fa-shield-check me-2 text-primary"></i> <b>Verification Fee:</b> This non-refundable fee covers complete background and legal checks by our expert network.`;
+                    alertBox.style.display = "block";
+
+                    trustBadges.innerHTML = `
+                        <div class="t-badge"><i class="fas fa-file-contract"></i> Legal Check</div>
+                        <div class="t-badge"><i class="fas fa-history"></i> Background Verify</div>
+                    `;
+
+                    document.getElementById('feeLabel1').innerText = "Verification Service Fee";
+                    document.getElementById('feeAmount1').innerText = displayAmountStr;
+                    document.getElementById('feeLabel2').innerText = "Platform Processing";
+                    document.getElementById('feeAmount2').innerText = "Included";
+
+                } else if (checkoutType === 'token') {
+                    // --- ESCROW TOKEN BOOKING FLOW (Dynamic, eg. ₹20000) ---
+                    // Fetch token amount from backend property/lead data, defaulting to 20000 for realistic UI display
+                    finalAmountToPay = propertyData.tokenAmount || 20000; 
+                    displayAmountStr = `₹ ${Number(finalAmountToPay).toLocaleString('en-IN')}`;
+
+                    document.getElementById('pageMainTitle').innerText = "Escrow Token Booking";
+
+                    alertBox.className = "alert border-warning shadow-sm";
+                    alertBox.style.backgroundColor = "#fffbeb";
+                    alertBox.style.color = "#92400e";
+                    alertBox.innerHTML = `<i class="fas fa-exclamation-triangle me-2 text-warning"></i> <b>Refund Policy:</b> Token is refundable within 24 Hrs. However, a non-refundable ₹10,000 (Platform + Broker Fee) will be deducted upon cancellation.`;
+                    alertBox.style.display = "block";
+
+                    trustBadges.innerHTML = `
+                        <div class="t-badge"><i class="fas fa-lock"></i> Escrow Secured</div>
+                        <div class="t-badge"><i class="fas fa-undo"></i> 24H Refund Window</div>
+                    `;
+
+                    document.getElementById('feeLabel1').innerText = "Escrow Booking Token";
+                    document.getElementById('feeAmount1').innerText = displayAmountStr;
+                    document.getElementById('feeLabel2').innerText = "Platform & Broker Fee";
+                    document.getElementById('feeAmount2').innerText = "₹10,000 (Included)";
+                }
+
+                // Update Totals & Button
+                document.getElementById('finalTotalAmount').innerText = displayAmountStr;
+                const payBtn = document.getElementById('payBtn');
+                payBtn.innerHTML = `<i class="fas fa-lock"></i> Pay ${displayAmountStr} Securely`;
             }
 
             async function processPayment() {
@@ -223,7 +287,7 @@
                 btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Initializing Secure Gateway...';
                 btn.disabled = true;
 
-                const token = getToken(); // 🔒 Used secure function
+                const token = getToken(); 
 
                 try {
                     // Update User Phone
@@ -233,17 +297,18 @@
                         body: JSON.stringify({ phone }),
                     });
 
-                    // Create Order
+                    // Create Order (Passing the TYPE to the backend)
                     const orderRes = await fetch(`${API_BASE}/payment/create-order`, {
                         method: "POST",
                         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-                        body: JSON.stringify({ propertyId })
+                        // Backend will read `checkoutType` to decide if it charges ₹499 or the full Token amount
+                        body: JSON.stringify({ propertyId: propertyId, checkoutType: checkoutType })
                     });
 
                     const orderData = await orderRes.json();
 
                     if (!orderData.success) { 
-                        Swal.fire("Notice", orderData.message || "Property might be sold out. Please refresh.", "info"); 
+                        Swal.fire("Notice", orderData.message || "Failed to initiate payment. Please refresh.", "info"); 
                         resetPayButton(btn); 
                         return; 
                     }
@@ -253,9 +318,8 @@
                         key: RAZORPAY_FRONTEND_KEY,
                         amount: orderData.order.amount,
                         currency: "INR",
-                        name: "Zamin Dekho Escrow",
-                        // 🛡️ SECURITY FIX: Escaped property name in checkout modal
-                        description: `Secure Token for: ${escapeHTML(propertyData.landName)}`,
+                        name: "Zamin Dekho",
+                        description: `${checkoutType === 'verify' ? 'Premium Verification' : 'Escrow Token'}: ${escapeHTML(propertyData.landName)}`,
                         order_id: orderData.order.id,
                         handler: async function (response) {
                             btn.innerHTML = '<i class="fas fa-shield-alt"></i> Verifying Payment...';
@@ -267,7 +331,8 @@
                                         razorpay_order_id: response.razorpay_order_id,
                                         razorpay_payment_id: response.razorpay_payment_id,
                                         razorpay_signature: response.razorpay_signature,
-                                        propertyId: propertyId
+                                        propertyId: propertyId,
+                                        checkoutType: checkoutType // Send type for receipt generation
                                     })
                                 });
 
@@ -276,7 +341,7 @@
                                 if (verifyData.success) {
                                     const txnId = response.razorpay_payment_id;
                                     const propName = encodeURIComponent(propertyData.landName);
-                                    window.location.href = `success.html?txn=${txnId}&prop=${propName}&amt=1,00,000`;
+                                    window.location.href = `success.html?txn=${txnId}&prop=${propName}&amt=${finalAmountToPay}`;
                                 } else { 
                                     Swal.fire("Verification Failed", "If money was deducted, it will be refunded automatically to your source account.", "error"); 
                                     resetPayButton(btn); 
@@ -301,7 +366,7 @@
             }
 
             function resetPayButton(btn) {
-                btn.innerHTML = '<i class="fas fa-lock"></i> Pay ₹ 1,00,000 Securely';
+                btn.innerHTML = `<i class="fas fa-lock"></i> Pay ${displayAmountStr} Securely`;
                 btn.disabled = false;
             }
         </script>

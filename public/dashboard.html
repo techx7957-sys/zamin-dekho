@@ -15,7 +15,7 @@
 
         /* 🌟 FIX: Flex column to manage the new footer naturally */
         body { background-color: #f8fafc; color: #1e293b; overflow-x: hidden; display: flex; flex-direction: column; min-height: 100vh;}
-        main { flex: 1; }
+        main { flex: 1; position: relative;} /* Position relative added for absolute floating button */
 
         /* Navbar */
         .navbar { background: rgba(255,255,255,0.98) !important; backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); padding: 15px 0; }
@@ -67,6 +67,68 @@
         /* 🌟 Rating Factors UI */
         .rating-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 10px;}
         .rating-row select { width: auto; min-width: 150px; margin-bottom: 0; padding: 8px 15px;}
+
+        /* 🌟 FLOATING SUPPORT BUTTON (Visible only on Bookings) */
+        .floating-support-btn {
+            display: none; /* Hidden by default */
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 800;
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            align-items: center;
+            gap: 10px;
+        }
+        .floating-support-btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(16, 185, 129, 0.5);
+        }
+
+        /* Pulse effect to draw attention */
+        @keyframes pulseSupport {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+            70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .floating-support-btn { animation: pulseSupport 2s infinite; }
+
+        /* Support Chat Box (Simple slide up panel) */
+        .support-chat-panel {
+            position: fixed;
+            bottom: 90px;
+            right: 30px;
+            width: 320px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            border: 1px solid #e2e8f0;
+            z-index: 999;
+            transform: translateY(150%);
+            opacity: 0;
+            transition: all 0.3s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .support-chat-panel.active {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .support-header { background: #0f172a; color: white; padding: 15px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+        .support-body { padding: 20px; height: 250px; overflow-y: auto; background: #f8fafc;}
+        .support-input { display: flex; border-top: 1px solid #e2e8f0; padding: 10px;}
+        .support-input input { margin-bottom: 0; border: none; border-radius: 0; background: transparent; padding: 5px; flex: 1;}
+        .support-input input:focus { box-shadow: none; border: none;}
+        .support-input button { background: transparent; border: none; color: #10b981; font-size: 20px; padding: 0 10px; cursor: pointer;}
     </style>
 </head>
 <body>
@@ -279,6 +341,30 @@
                 </div>
             </div>
         </div>
+
+        <button id="floatingSupportBtn" class="floating-support-btn" onclick="toggleSupportChat()">
+            <i class="fas fa-headset fs-4"></i> Contact Zamin Dekho
+        </button>
+
+        <div id="supportChatPanel" class="support-chat-panel">
+            <div class="support-header">
+                <span><i class="fas fa-headset me-2 text-success"></i> Support</span>
+                <i class="fas fa-times" style="cursor:pointer;" onclick="toggleSupportChat()"></i>
+            </div>
+            <div class="support-body" id="supportChatBody">
+                <div class="text-start mb-3">
+                    <span class="badge bg-light text-dark border p-2" style="font-size:12px; font-weight:600;">
+                        Hello! Welcome to Zamin Dekho Support. Do you need help with a booking or a refund? <br><br>
+                        *Note: If you cancel within 24 hours of booking, a non-refundable Platform & Broker Fee (₹10,000) will be deducted from your token amount.*
+                    </span>
+                </div>
+            </div>
+            <div class="support-input">
+                <input type="text" id="supportMsgInput" placeholder="Type your message..." onkeypress="handleSupportKey(event)">
+                <button onclick="sendSupportMessage()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+
     </main>
 
     <footer class="bg-dark text-white text-center py-5 mt-auto" style="border-top: 4px solid #10b981;">
@@ -361,7 +447,7 @@
                     <div class="user-id-btn me-2">
                         <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> ${escapeHTML(firstName)}
                     </div>
-                    <button onclick="logout()" class="logout-btn-premium">
+                    <button onclick="typeof logout === 'function' ? logout() : (window.location.href='login.html')" class="logout-btn-premium">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </button>
                 `;
@@ -383,11 +469,65 @@
 
             window.location.hash = tabId;
 
+            // 🌟 NEW PLAN LOGIC: Show Floating Support Button ONLY on Bookings Tab
+            const supportBtn = document.getElementById('floatingSupportBtn');
+            if (tabId === '#bookingsTab') {
+                supportBtn.style.display = 'flex';
+            } else {
+                supportBtn.style.display = 'none';
+                document.getElementById('supportChatPanel').classList.remove('active'); // Also close chat if open
+            }
+
             // Trigger Data Load
             if (tabId === '#visitsTab') loadSiteVisits();
             else if (tabId === '#myListingsTab') loadMyListings();
             else if (tabId === '#savedTab') loadSavedListings();
             else if (tabId === '#bookingsTab') loadMyBookings();
+        }
+
+        // ==========================================
+        // 🌟 SUPPORT CHAT LOGIC (NEW PLAN)
+        // ==========================================
+        function toggleSupportChat() {
+            document.getElementById('supportChatPanel').classList.toggle('active');
+        }
+
+        function handleSupportKey(e) {
+            if(e.key === 'Enter') sendSupportMessage();
+        }
+
+        function sendSupportMessage() {
+            const input = document.getElementById('supportMsgInput');
+            const msg = input.value.trim();
+            if(!msg) return;
+
+            const chatBody = document.getElementById('supportChatBody');
+
+            // 🛡️ SECURITY FIX: Prevent DOM XSS in Support Chat
+            const safeMsg = escapeHTML(msg);
+
+            // Add User Message
+            chatBody.innerHTML += `
+                <div class="text-end mb-3">
+                    <span class="badge bg-primary text-white p-2" style="font-size:13px; font-weight:500;">
+                        ${safeMsg}
+                    </span>
+                </div>
+            `;
+            input.value = '';
+            chatBody.scrollTop = chatBody.scrollHeight;
+
+            // Auto Reply
+            setTimeout(() => {
+                chatBody.innerHTML += `
+                    <div class="text-start mb-3">
+                        <span class="badge bg-light text-dark border p-2" style="font-size:12px; font-weight:600;">
+                            A support executive will review your request. If this is a refund request for a token within 24 hours, the ₹10,000 platform fee will be deducted. Please hold on.
+                        </span>
+                    </div>
+                `;
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }, 1000);
         }
 
         // ==========================================
@@ -574,9 +714,12 @@
                 const rateBtn = brokerId ? `<button class="btn btn-warning btn-sm w-100 mt-2 fw-bold text-dark border-0 shadow-sm" onclick="openRateModal('${brokerId}')"><i class="fas fa-star me-1"></i> Rate Broker Service</button>` : '';
 
                 // 🛡️ SECURITY FIX: Apply escaping
-                const safeStatus = escapeHTML(lead.status || "Token Paid");
+                const safeStatus = escapeHTML(lead.status || "Booked");
                 const safeName = escapeHTML(item.landName);
                 const safeAddress = escapeHTML(item.address);
+
+                // NEW PLAN: Variable booking fee logic. Defaulting to 2000 for display if not set.
+                const feeAmount = lead.bookingFee || 2000; 
 
                 return `
                 <div class="col-lg-6">
@@ -588,14 +731,24 @@
                             <div>
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <span class="badge bg-success mb-1 py-2 px-3 shadow-sm"><i class="fas fa-check-circle me-1"></i> ${safeStatus}</span>
-                                    <h5 class="fw-bold text-success m-0" style="font-family:'JetBrains Mono', monospace;">₹ ${Number(lead.tokenAmount || 100000).toLocaleString("en-IN")}</h5>
+                                    <div class="text-end">
+                                        <h5 class="fw-bold text-success m-0" style="font-family:'JetBrains Mono', monospace;">₹ ${Number(feeAmount).toLocaleString("en-IN")}</h5>
+                                        <span class="small text-muted" style="font-size:10px;">Booking Fee Paid</span>
+                                    </div>
                                 </div>
                                 <h6 class="fw-bold text-dark text-truncate mb-1 lh-base">${safeName}</h6>
-                                <p class="text-muted small mb-0 text-truncate"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${safeAddress}</p>
+                                <p class="text-muted small mb-1 text-truncate"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${safeAddress}</p>
+
+                                <div class="alert alert-warning py-1 px-2 m-0 mt-2 mb-2" style="font-size:11px; border-left:3px solid #f59e0b;">
+                                    <b>Final Token Required:</b> TBD by Admin.<br>
+                                    <i>Contains non-refundable ₹10k fee if canceled after 24h.</i>
+                                </div>
+
                             </div>
-                            <div class="mt-3 border-top pt-3">
-                                <button class="btn btn-outline-dark btn-sm w-100 fw-bold" onclick="window.location.href='property.html?id=${item._id}'">View Property</button>
+                            <div class="mt-2 border-top pt-2">
+                                <button class="btn btn-outline-dark btn-sm w-100 fw-bold mb-2" onclick="window.location.href='property.html?id=${item._id}'">View Property</button>
                                 ${rateBtn}
+                                <button class="btn btn-primary btn-sm w-100 fw-bold mt-2" onclick="window.location.href='checkout.html?id=${item._id}&type=token'">Pay Remaining Token</button>
                             </div>
                         </div>
                     </div>
