@@ -12,13 +12,21 @@
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 
+        /* 🌟 FIX: Adjusted body for proper Footer placement */
         body { 
             background: #f8fafc; 
             min-height: 100vh; 
             display: flex; 
-            align-items: center; 
-            justify-content: center; 
+            flex-direction: column;
             font-family: 'Inter', sans-serif; 
+            margin: 0;
+        }
+
+        .main-wrapper {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 40px 20px;
         }
 
@@ -67,7 +75,6 @@
             color: #10b981;
         }
 
-        /* 🌟 NAYA: Password Eye Icon Fix */
         .password-eye {
             border-left: none;
             border-radius: 0 8px 8px 0;
@@ -122,77 +129,96 @@
 </head>
 <body>
 
-    <div class="auth-card">
-        <div class="text-center mb-4">
-            <h2 class="fw-bold text-success mb-1"><i class="fas fa-leaf me-1"></i> ZAMIN DEKHO</h2>
-            <p class="text-muted small fw-bold">Create your professional account</p>
-        </div>
+    <div class="main-wrapper">
+        <div class="auth-card">
+            <div class="text-center mb-4">
+                <h2 class="fw-bold text-success mb-1"><i class="fas fa-leaf me-1"></i> ZAMIN DEKHO</h2>
+                <p class="text-muted small fw-bold">Create your professional account</p>
+            </div>
 
-        <form id="registerForm">
+            <form id="registerForm">
 
-            <div class="mb-3">
-                <label class="form-label">Full Name</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="fas fa-user"></i></span>
-                    <input type="text" class="form-control border-start-0 ps-0" id="fullName" placeholder="Enter your name" required>
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" id="fullName" placeholder="Enter your name" required>
+                    </div>
                 </div>
-            </div>
 
-            <div class="mb-3">
-                <label class="form-label">Phone Number <span class="badge bg-success bg-opacity-10 text-success ms-1"><i class="fab fa-whatsapp"></i> WhatsApp OTP</span></label>
-                <input type="tel" class="form-control" id="phone" placeholder="Enter mobile number" required>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Email Address</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                    <input type="email" class="form-control border-start-0 ps-0" id="email" placeholder="Enter your email" required>
-                    <button type="button" class="btn-send-otp" id="sendOtpBtn">Send OTP</button>
+                <div class="mb-3">
+                    <label class="form-label">Phone Number <span class="badge bg-success bg-opacity-10 text-success ms-1"><i class="fab fa-whatsapp"></i> WhatsApp OTP</span></label>
+                    <input type="tel" class="form-control" id="phone" placeholder="Enter mobile number" required>
                 </div>
-            </div>
 
-            <div class="mb-3 d-none otp-container" id="otpContainer">
-                <label class="form-label text-success mb-1"><i class="fas fa-check-circle me-1"></i> Code Sent to Email & WhatsApp</label>
-                <input type="text" class="form-control text-center fw-bold fs-5" id="otp" placeholder="Enter 6-Digit OTP" maxlength="6" style="letter-spacing: 5px;">
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Password</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                    <input type="password" class="form-control border-start-0 border-end-0 ps-0" id="password" placeholder="Create a password" minlength="6" required>
-                    <span class="input-group-text password-eye" id="togglePassword"><i class="fas fa-eye"></i></span>
+                <div class="mb-3">
+                    <label class="form-label">Email Address</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                        <input type="email" class="form-control border-start-0 ps-0" id="email" placeholder="Enter your email" required>
+                        <button type="button" class="btn-send-otp" id="sendOtpBtn">Send OTP</button>
+                    </div>
                 </div>
-                <small class="text-muted" style="font-size: 11px; font-weight: 600;"><i class="fas fa-info-circle"></i> Password must be at least 6 characters long.</small>
+
+                <div class="mb-3 d-none otp-container" id="otpContainer">
+                    <label class="form-label text-success mb-1"><i class="fas fa-check-circle me-1"></i> Code Sent to Email & WhatsApp</label>
+                    <input type="text" class="form-control text-center fw-bold fs-5" id="otp" placeholder="Enter 6-Digit OTP" maxlength="6" style="letter-spacing: 5px;">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                        <input type="password" class="form-control border-start-0 border-end-0 ps-0" id="password" placeholder="Create a password" minlength="6" required>
+                        <span class="input-group-text password-eye" id="togglePassword"><i class="fas fa-eye"></i></span>
+                    </div>
+                    <small class="text-muted" style="font-size: 11px; font-weight: 600;"><i class="fas fa-info-circle"></i> Password must be at least 6 characters long.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">I am a...</label>
+                    <select class="form-select" id="role">
+                        <option value="buyer">Buyer / Investor</option>
+                        <option value="seller">Seller (Owner)</option>
+                        <option value="broker">Broker / Agent</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-register" id="regBtn" disabled>
+                    Register Now <i class="fas fa-arrow-right ms-1"></i>
+                </button>
+
+            </form>
+
+            <div class="auth-links">
+                Already have an account? <a href="login.html">Login here</a>
             </div>
-
-            <div class="mb-4">
-                <label class="form-label">I am a...</label>
-                <select class="form-select" id="role">
-                    <option value="buyer">Buyer / Investor</option>
-                    <option value="seller">Seller (Owner)</option>
-                    <option value="broker">Broker / Agent</option>
-                </select>
-            </div>
-
-            <button type="submit" class="btn-register" id="regBtn" disabled>
-                Register Now <i class="fas fa-arrow-right ms-1"></i>
-            </button>
-
-        </form>
-
-        <div class="auth-links">
-            Already have an account? <a href="login.html">Login here</a>
         </div>
     </div>
 
+    <footer class="bg-dark text-white text-center py-5 mt-auto" style="border-top: 4px solid #10b981;">
+        <div class="container">
+            <h4 class="fw-bold text-success mb-3"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</h4>
+            <p class="text-white-50 small mb-4" style="max-width: 500px; margin: 0 auto;">India's Most Secure & Transparent Real Estate Platform. Connecting verified buyers with genuine properties through Escrow.</p>
+
+            <div class="d-flex justify-content-center gap-3 gap-md-5 mb-4 flex-wrap">
+                <a href="policies.html#terms" class="text-white-50 text-decoration-none small fw-bold">Terms & Conditions</a>
+                <a href="policies.html#privacy" class="text-white-50 text-decoration-none small fw-bold">Privacy Policy</a>
+                <a href="policies.html#refund" class="text-white-50 text-decoration-none small fw-bold">Refund Policy</a>
+                <a href="policies.html#contact" class="text-white-50 text-decoration-none small fw-bold">Contact Us</a>
+            </div>
+
+            <hr class="border-secondary opacity-25">
+            <p class="mb-0 text-white-50 small fw-bold">© 2026 Zamin Dekho. All Rights Reserved.</p>
+        </div>
+    </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js"></script>
 
-    <script src="global.js"></script> 
+    <script src="script.js"></script> 
 
     <script>
-        // 🌟 NAYA: Password Visibility Toggle Logic
+        // Password Visibility Toggle Logic
         const togglePassword = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('password');
 
@@ -213,16 +239,22 @@
 
         // 📧 SEND OTP LOGIC (With Anti-Spam Timer)
         document.getElementById('sendOtpBtn').addEventListener('click', async function() {
-            const email = document.getElementById('email').value.trim();
+
+            // 🛡️ SECURITY FIX: Trim & Escape Inputs before sending OTP
+            const rawEmail = document.getElementById('email').value.trim();
             const rawPhone = document.getElementById('phone').value.trim();
 
+            const email = typeof escapeHTML === 'function' ? escapeHTML(rawEmail) : rawEmail;
+
             if(!email || !rawPhone) {
-                showToast("Please fill both Email and Phone Number first!", "error"); // 🔒 Using Global Secure Toast
+                if (typeof showToast === "function") showToast("Please fill both Email and Phone Number first!", "error");
+                else alert("Please fill both Email and Phone Number first!");
                 return;
             }
 
             if (!iti.isValidNumber()) {
-                showToast("Please enter a valid phone number.", "error");
+                if (typeof showToast === "function") showToast("Please enter a valid phone number.", "error");
+                else alert("Please enter a valid phone number.");
                 return;
             }
 
@@ -232,7 +264,7 @@
             btn.disabled = true;
 
             try {
-                // 🔒 Using API_BASE from global.js
+                // 🔒 Using API_BASE from script.js
                 const response = await fetch(`${API_BASE}/auth/send-multichannel-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -242,7 +274,7 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showToast(data.message || "OTP sent securely to Email and WhatsApp!", "success");
+                    if (typeof showToast === "function") showToast(data.message || "OTP sent securely to Email and WhatsApp!", "success");
                     document.getElementById('otpContainer').classList.remove('d-none');
                     document.getElementById('regBtn').disabled = false; 
 
@@ -259,12 +291,14 @@
                     }, 1000);
 
                 } else {
-                    showToast(data.message || "Failed to send OTP.", "error");
+                    if (typeof showToast === "function") showToast(data.message || "Failed to send OTP.", "error");
+                    else alert(data.message || "Failed to send OTP.");
                     btn.innerHTML = 'Send OTP';
                     btn.disabled = false;
                 }
             } catch (error) {
-                showToast("Network error. Please try again.", "error");
+                if (typeof showToast === "function") showToast("Network error. Please try again.", "error");
+                else alert("Network error. Please try again.");
                 btn.innerHTML = 'Send OTP';
                 btn.disabled = false;
             }
@@ -276,13 +310,13 @@
 
             const passwordValue = document.getElementById('password').value;
             if(passwordValue.length < 6) {
-                showToast("Password must be at least 6 characters!", "error");
+                if (typeof showToast === "function") showToast("Password must be at least 6 characters!", "error");
                 return;
             }
 
             const otpValue = document.getElementById('otp').value.trim();
             if(otpValue.length !== 6) {
-                showToast("Please enter the complete 6-digit OTP.", "error");
+                if (typeof showToast === "function") showToast("Please enter the complete 6-digit OTP.", "error");
                 return;
             }
 
@@ -291,17 +325,21 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Registering...';
             btn.disabled = true;
 
-            // 🛡️ SECURITY FIX: Trim all inputs to avoid saving whitespace in DB
+            // 🛡️ SECURITY FIX: Strict XSS sanitization before sending to DB
+            const rawFullName = document.getElementById('fullName').value.trim();
+            const rawEmail = document.getElementById('email').value.trim();
+
             const userData = {
-                fullName: document.getElementById('fullName').value.trim(),
-                email: document.getElementById('email').value.trim(),
+                fullName: typeof escapeHTML === 'function' ? escapeHTML(rawFullName) : rawFullName,
+                email: typeof escapeHTML === 'function' ? escapeHTML(rawEmail) : rawEmail,
                 phone: iti.getNumber(),
                 password: passwordValue,
                 role: document.getElementById('role').value,
-                otp: otpValue
+                otp: typeof escapeHTML === 'function' ? escapeHTML(otpValue) : otpValue
             };
 
             try {
+                // 🔒 Using API_BASE from script.js
                 const response = await fetch(`${API_BASE}/auth/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -311,15 +349,17 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showToast("Account created! Redirecting to login...", "success");
+                    if (typeof showToast === "function") showToast("Account created! Redirecting to login...", "success");
                     setTimeout(() => { window.location.href = 'login.html'; }, 2000);
                 } else {
-                    showToast(data.message || "Registration failed.", "error");
+                    if (typeof showToast === "function") showToast(data.message || "Registration failed.", "error");
+                    else alert(data.message || "Registration failed.");
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 }
             } catch (error) {
-                showToast("Server error. Please try again later.", "error");
+                if (typeof showToast === "function") showToast("Server error. Please try again later.", "error");
+                else alert("Server error. Please try again later.");
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }

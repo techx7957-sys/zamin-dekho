@@ -198,23 +198,25 @@
         <script src="script.js"></script>
 
         <script>
-            // 🛡️ SECURITY FIX 1: HTML Sanitizer Function
-            function escapeHTML(str) {
-                if (!str) return "";
-                return str.toString()
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;");
+            // 🛡️ SECURITY FIX 1: HTML Sanitizer Function Fallback
+            if (typeof window.escapeHTML !== 'function') {
+                window.escapeHTML = function(str) {
+                    if (!str) return "";
+                    return str.toString()
+                        .replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;")
+                        .replace(/"/g, "&quot;")
+                        .replace(/'/g, "&#039;");
+                }
             }
 
-            const ADMIN_API = "/api/admin";
+            const ADMIN_API = "/api/admin"; // Note: Most routes now use API_BASE + /admin
 
             window.onload = function () {
-                // 🔒 Safe token fetching
-                const token = getToken();
-                const user = getUser();
+                // 🔒 Safe token fetching from global script
+                const token = typeof getToken === 'function' ? getToken() : null;
+                const user = typeof getUser === 'function' ? getUser() : null;
 
                 if (!token || !user || (user.role !== 'admin' && user.role !== 'broker')) { 
                     window.location.href = "login.html"; 
@@ -232,7 +234,13 @@
 
             function logoutAdmin() {
                 // 🔒 Utilizes Global Setup
-                logout();
+                if(typeof logout === 'function') {
+                    logout();
+                } else {
+                    localStorage.removeItem('zamin_token');
+                    localStorage.removeItem('zamin_user');
+                    window.location.href = "login.html";
+                }
             }
 
             function switchTitle(title) { document.getElementById("pageTitle").innerText = title; }
@@ -253,6 +261,7 @@
             // ==========================================
             async function fetchDashboardStats() {
                 try {
+                    // 🔒 Uses global API_BASE
                     const res = await fetch(`${API_BASE}/admin/dashboard-stats`, { headers: { Authorization: `Bearer ${getToken()}` }});
                     const data = await res.json();
                     if(data.success) {
@@ -271,6 +280,7 @@
                 const tbodyLeads = document.getElementById("leadsTableBody");
 
                 try {
+                    // 🔒 Uses global API_BASE
                     const res = await fetch(`${API_BASE}/admin/leads`, { headers: { Authorization: `Bearer ${getToken()}` } });
                     const data = await res.json();
 
@@ -306,7 +316,7 @@
                         const dateStr = new Date(p.createdAt).toLocaleDateString('en-IN');
                         const amountStr = amount.toLocaleString('en-IN');
 
-                        // 🛡️ SECURITY FIX 2: Escaping names and property names
+                        // 🛡️ SECURITY FIX 2: Escaping names and property names for DOM
                         const safeBuyerName = p.buyer ? escapeHTML(p.buyer.fullName) : 'Guest';
                         const safePropName = p.property ? escapeHTML(p.property.landName) : 'Property in India';
 
@@ -333,6 +343,10 @@
                     const safePhone = lead.buyer ? escapeHTML(lead.buyer.phone) : '';
                     const safePropName = lead.property ? escapeHTML(lead.property.landName) : "Property";
 
+                    // Escaping for JS function call within HTML string
+                    const jsSafeBuyerName = safeBuyerName.replace(/'/g, "\\'");
+                    const jsSafePropName = safePropName.replace(/'/g, "\\'");
+
                     return `
                     <tr>
                         <td>${dateStr}</td>
@@ -349,7 +363,7 @@
                             </select>
                             <button class="btn btn-save-note btn-sm mt-1" onclick="updateLeadStatus('${lead._id}')"><i class="fas fa-save"></i> Update</button>
                         </td>
-                        <td class="text-center"><button class="btn-call" onclick="startSecureCall('${safeBuyerName.replace(/'/g, "\\'")}', '${safePropName.replace(/'/g, "\\'")}')"><i class="fas fa-phone-alt"></i> Call</button></td>
+                        <td class="text-center"><button class="btn-call" onclick="startSecureCall('${jsSafeBuyerName}', '${jsSafePropName}')"><i class="fas fa-phone-alt"></i> Call</button></td>
                     </tr>
                 `}).join("");
             }
@@ -437,8 +451,8 @@
                     const data = await res.json();
                     if (data.success && data.properties && data.properties.length > 0) {
                         container.innerHTML = data.properties.map((prop) => {
-                            // 🔒 Securely load images
-                            const imgSource = resolveImageUrl(prop.imageUrl);
+                            // 🔒 Securely load images using global resolver
+                            const imgSource = typeof resolveImageUrl === 'function' ? resolveImageUrl(prop.imageUrl) : (prop.imageUrl || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600");
                             const safePropName = escapeHTML(prop.landName);
 
                             return `

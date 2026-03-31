@@ -11,15 +11,22 @@
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 
+        /* 🌟 FIX: Adjusted body for proper Footer placement */
         body { 
             background: #f8fafc; 
             min-height: 100vh; 
             display: flex; 
-            align-items: center; 
-            justify-content: center; 
+            flex-direction: column;
             font-family: 'Inter', sans-serif; 
             margin: 0;
-            padding: 20px;
+        }
+
+        .main-wrapper {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
         }
 
         .login-card { 
@@ -37,7 +44,6 @@
 
         .form-label { font-size: 13px; font-weight: 800; color: #64748b; margin-bottom: 8px; display: block; text-transform: uppercase; letter-spacing: 0.5px;}
 
-        /* 🌟 FIX: Updated padding for Eye Icon integration */
         .input-block { position: relative; border: 1px solid #cbd5e1; border-radius: 12px; background: #f8fafc; padding: 14px 0 14px 45px; transition: 0.3s; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;}
         .input-block:focus-within { border-color: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); background: white; }
         .input-block i.field-icon { position: absolute; left: 16px; font-size: 18px; color: #94a3b8; transition: 0.3s;}
@@ -45,11 +51,9 @@
         .input-block input:focus { outline: none; }
         .input-block input::placeholder { color: #cbd5e1; font-weight: 500;}
 
-        /* 🌟 NAYA: Password Eye Icon styles */
         .password-eye { padding: 0 15px; cursor: pointer; color: #94a3b8; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
         .password-eye:hover { color: #10b981; }
 
-        /* Main Login Button */
         .btn-login { background: #10b981; color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 800; width: 100%; transition: 0.3s; font-size: 16px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 5px 15px rgba(16, 185, 129, 0.2);}
         .btn-login:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3); }
         .btn-login:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -69,49 +73,68 @@
 </head>
 <body>
 
-    <div class="login-card">
-        <div class="text-center mb-4">
-            <h2 class="fw-bold text-success mb-1"><i class="fas fa-leaf me-1"></i> ZAMIN DEKHO</h2>
-            <p class="text-muted small fw-bold">Login to your account</p>
-        </div>
-
-        <form id="loginForm">
-
-            <div class="input-block" style="padding-right: 14px;"> <i class="fas fa-envelope field-icon"></i>
-                <input type="email" id="loginEmail" placeholder="Email Address" required>
+    <div class="main-wrapper">
+        <div class="login-card">
+            <div class="text-center mb-4">
+                <h2 class="fw-bold text-success mb-1"><i class="fas fa-leaf me-1"></i> ZAMIN DEKHO</h2>
+                <p class="text-muted small fw-bold">Login to your account</p>
             </div>
 
-            <div class="input-block">
-                <i class="fas fa-lock field-icon"></i>
-                <input type="password" id="loginPassword" placeholder="Password" required>
-                <span class="password-eye" id="togglePassword"><i class="fas fa-eye"></i></span>
+            <form id="loginForm">
+
+                <div class="input-block" style="padding-right: 14px;"> <i class="fas fa-envelope field-icon"></i>
+                    <input type="email" id="loginEmail" placeholder="Email Address" required>
+                </div>
+
+                <div class="input-block">
+                    <i class="fas fa-lock field-icon"></i>
+                    <input type="password" id="loginPassword" placeholder="Password" required>
+                    <span class="password-eye" id="togglePassword"><i class="fas fa-eye"></i></span>
+                </div>
+
+                <button type="submit" class="btn-login" id="btnLogin">
+                    Login
+                </button>
+
+            </form>
+
+            <div class="divider">OR CONTINUE WITH</div>
+
+            <a href="#" onclick="window.location.href = API_BASE + '/auth/google'; return false;" class="social-btn">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="18" alt="Google"> Continue with Google
+            </a>
+            <a href="#" onclick="window.location.href = API_BASE + '/auth/twitter'; return false;" class="social-btn" style="background: #0f172a; color: white; border: none;">
+                <i class="fab fa-x-twitter"></i> Continue with X
+            </a>
+
+            <div class="footer-link">
+                <span>Don't have an account? </span>
+                <a href="register.html">Register Here</a>
             </div>
-
-            <button type="submit" class="btn-login" id="btnLogin">
-                Login
-            </button>
-
-        </form>
-
-        <div class="divider">OR CONTINUE WITH</div>
-
-        <a href="/api/auth/google" class="social-btn">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="18" alt="Google"> Continue with Google
-        </a>
-        <a href="/api/auth/twitter" class="social-btn" style="background: #0f172a; color: white; border: none;">
-            <i class="fab fa-x-twitter"></i> Continue with X
-        </a>
-
-        <div class="footer-link">
-            <span>Don't have an account? </span>
-            <a href="register.html">Register Here</a>
         </div>
     </div>
+
+    <footer class="bg-dark text-white text-center py-5 mt-auto" style="border-top: 4px solid #10b981;">
+        <div class="container">
+            <h4 class="fw-bold text-success mb-3"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</h4>
+            <p class="text-white-50 small mb-4" style="max-width: 500px; margin: 0 auto;">India's Most Secure & Transparent Real Estate Platform. Connecting verified buyers with genuine properties through Escrow.</p>
+
+            <div class="d-flex justify-content-center gap-3 gap-md-5 mb-4 flex-wrap">
+                <a href="policies.html#terms" class="text-white-50 text-decoration-none small fw-bold">Terms & Conditions</a>
+                <a href="policies.html#privacy" class="text-white-50 text-decoration-none small fw-bold">Privacy Policy</a>
+                <a href="policies.html#refund" class="text-white-50 text-decoration-none small fw-bold">Refund Policy</a>
+                <a href="policies.html#contact" class="text-white-50 text-decoration-none small fw-bold">Contact Us</a>
+            </div>
+
+            <hr class="border-secondary opacity-25">
+            <p class="mb-0 text-white-50 small fw-bold">© 2026 Zamin Dekho. All Rights Reserved.</p>
+        </div>
+    </footer>
 
     <script src="script.js"></script> 
 
     <script>
-        // 🌟 NAYA: Password Visibility Toggle Logic
+        // Password Visibility Toggle Logic
         const togglePassword = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('loginPassword');
 
@@ -125,12 +148,15 @@
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const email = document.getElementById('loginEmail').value.trim();
+            // 🛡️ SECURITY FIX: Input Sanitization using escapeHTML from script.js
+            const rawEmail = document.getElementById('loginEmail').value.trim();
+            const email = typeof escapeHTML === 'function' ? escapeHTML(rawEmail) : rawEmail;
             const password = document.getElementById('loginPassword').value;
             const btn = document.getElementById('btnLogin');
 
             if(!email || !password) {
-                showToast("Enter Email and Password!", "error"); // 🔒 Uses safe showToast from script.js
+                if (typeof showToast === "function") showToast("Enter Email and Password!", "error");
+                else alert("Enter Email and Password!");
                 return;
             }
 
@@ -152,7 +178,7 @@
                     localStorage.setItem('zamin_token', data.token);
                     localStorage.setItem('zamin_user', encodeURIComponent(JSON.stringify(data.user)));
 
-                    showToast("Login Successful! Redirecting...", "success");
+                    if (typeof showToast === "function") showToast("Login Successful! Redirecting...", "success");
 
                     // ⚡ STRICT DELAY FOR SMOOTH UI TRANSITION
                     setTimeout(() => {
@@ -164,20 +190,18 @@
                     }, 1000);
 
                 } else {
-                    showToast(data.message || "Invalid Email or Password", "error");
+                    if (typeof showToast === "function") showToast(data.message || "Invalid Email or Password", "error");
+                    else alert(data.message || "Invalid Email or Password");
                     btn.disabled = false;
                     btn.innerHTML = 'Login';
                 }
             } catch (err) {
-                showToast("Connection failed. Try again.", "error");
+                if (typeof showToast === "function") showToast("Connection failed. Try again.", "error");
+                else alert("Connection failed. Try again.");
                 btn.disabled = false;
                 btn.innerHTML = 'Login';
             }
         });
-
-        // 🚨 NOTE: Social Login ka check humne yahan se HATA diya hai. 
-        // Kyunki 'script.js' mein 'handleSocialLogin()' function pehle se hi ye kaam 
-        // poori security ke sath automatically kar raha hai!
     </script>
 </body>
 </html>

@@ -253,8 +253,8 @@
     <script>
         window.onload = async () => {
             // Check auth using secure global script function
-            const token = getToken();
-            const user = getUser();
+            const token = typeof getToken === 'function' ? getToken() : null;
+            const user = typeof getUser === 'function' ? getUser() : null;
             if(token && user) {
                 // Allow Brokers, Sellers and Admins to post reels
                 if(user.role === 'broker' || user.role === 'admin' || user.role === 'seller') {
@@ -290,6 +290,12 @@
                         const randomComments = Math.floor(Math.random() * 50) + 5;
                         const isFeatured = Math.random() > 0.7; 
 
+                        // 🛡️ SECURITY FIX 1: Sanitize DB outputs before rendering
+                        const safeLandName = typeof escapeHTML === 'function' ? escapeHTML(item.landName || 'Property') : item.landName;
+                        const safeAddress = typeof escapeHTML === 'function' ? escapeHTML(item.address || 'India') : item.address;
+                        const safeSize = typeof escapeHTML === 'function' ? escapeHTML(item.landSize || 'Verified Area') : item.landSize;
+                        const safeBrokerName = item.postedBy ? (typeof escapeHTML === 'function' ? escapeHTML(item.postedBy.fullName) : item.postedBy.fullName) : 'Verified Owner';
+
                         const authenticBadge = item.isMediaAuthentic 
                             ? `<div class="authentic-badge"><i class="fas fa-shield-alt me-1"></i> Verified In-App</div>` 
                             : '';
@@ -304,10 +310,10 @@
                                     ${isFeatured ? `<div class="ad-badge"><i class="fas fa-star me-1"></i> Featured</div>` : ''}
                                     <div class="broker-name">
                                         <img src="https://i.pravatar.cc/100?img=${index+20}" alt="Broker">
-                                        ${item.postedBy ? item.postedBy.fullName : 'Verified Owner'}
+                                        ${safeBrokerName}
                                     </div>
-                                    <h2 class="prop-title">${item.landName}</h2>
-                                    <p class="prop-desc"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${item.address} <br> Size: ${item.landSize || 'Verified Area'}</p>
+                                    <h2 class="prop-title">${safeLandName}</h2>
+                                    <p class="prop-desc"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${safeAddress} <br> Size: ${safeSize}</p>
                                     <div class="prop-price">₹ ${Number(item.landPrice).toLocaleString('en-IN')}</div>
                                 </div>
 
@@ -469,7 +475,7 @@
             }
 
             const formData = new FormData();
-            // 🛡️ SECURITY FIX: Sanitize and Trim text inputs
+            // 🛡️ SECURITY FIX: Safe input reading
             formData.append('landName', document.getElementById('r_title').value.trim());
             formData.append('landPrice', document.getElementById('r_price').value.trim());
             formData.append('landSize', document.getElementById('r_size').value.trim());
@@ -483,7 +489,8 @@
             formData.append('image', videoBlob, `zamin_reel_${Date.now()}.webm`);
 
             try {
-                const token = getToken(); // 🔒 Used secure function
+                // 🔒 Utilizes Global Setup
+                const token = typeof getToken === 'function' ? getToken() : null;
                 const response = await fetch(`${API_BASE}/listings/create`, {
                     method: "POST",
                     headers: { "Authorization": `Bearer ${token}` },
@@ -542,9 +549,8 @@
             const commentValue = input.value.trim();
             if(commentValue === "") return;
 
-            // 🛡️ SECURITY FIX: DOM-Based XSS Shield applied!
-            // Hum element ko JS logic se create karke textInject karenge. 
-            // Isse hacker ki koi bhi <script> ya HTML execute nahi hogi.
+            // 🛡️ SECURITY FIX: DOM-Based XSS Shield
+            // Using standard createElement ensures that `<script>` tags are not executed
 
             const commentItem = document.createElement('div');
             commentItem.className = 'comment-item';

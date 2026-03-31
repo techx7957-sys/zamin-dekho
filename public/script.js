@@ -2,7 +2,7 @@
 // ZAMIN DEKHO - GLOBAL SCRIPT (PRO VERSION)
 // ==========================================
 
-// 🌟 FIX: Vercel-ready Dynamic URLs
+// 🌟 Vercel-ready Dynamic URLs
 const API_BASE = "/api";
 const FRONTEND_URL = window.location.origin; 
 
@@ -43,7 +43,7 @@ function handleSocialLogin() {
 }
 
 // ==========================================
-// 2. 🛡️ GLOBAL SECURITY & UTILITIES (NEW)
+// 2. 🛡️ GLOBAL SECURITY & UTILITIES 
 // ==========================================
 
 // 🌟 THE ULTIMATE XSS SHIELD
@@ -94,7 +94,6 @@ window.apiFetch = async function(endpoint, options = {}) {
     }
 };
 
-
 // ==========================================
 // 3. AUTHENTICATION LOGIC
 // ==========================================
@@ -123,21 +122,21 @@ function getUser() {
     return null;
 }
 
-// Global Logout Function
+// Global Logout Function (Secure & Clean)
 function logout() {
     // 🛡️ SECURITY FIX: Clear both Local and Session storage completely
     localStorage.removeItem('zamin_token');
     localStorage.removeItem('zamin_user');
-    sessionStorage.clear();
+    sessionStorage.clear(); // Clears pre-fetched dashboard caches
 
-    // Redirect gracefully to login page
-    window.location.href = 'login.html';
+    // Prevent back-button navigation to secure pages
+    window.location.replace('login.html');
 }
 
 // Check if User is Logged In (Redirect if not)
 function requireAuth() {
     if (!getToken()) {
-        window.location.href = 'login.html';
+        window.location.replace('login.html');
     }
 }
 
@@ -171,16 +170,16 @@ function formatPrice(amount) {
 
 // Format Date nicely
 function formatDate(dateString) {
+    if (!dateString) return 'N/A';
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-IN', options);
 }
 
-
 // ==========================================
-// 5. UI UTILITIES (TOAST NOTIFICATIONS)
+// 5. UI UTILITIES (MOBILE-OPTIMIZED TOAST)
 // ==========================================
 
-// Dynamic Toast Notification System (XSS Protected)
+// Dynamic Toast Notification System (XSS Protected & Responsive)
 function showToast(message, type = 'success') {
     let toastContainer = document.getElementById('global-toast');
 
@@ -189,51 +188,68 @@ function showToast(message, type = 'success') {
         toastContainer.id = 'global-toast';
         toastContainer.style.position = 'fixed';
         toastContainer.style.top = '20px';
-        toastContainer.style.right = '20px';
-        toastContainer.style.padding = '15px 25px';
-        toastContainer.style.borderRadius = '8px';
+        toastContainer.style.left = '50%';
+        toastContainer.style.transform = 'translateX(-50%) translateY(-30px)';
+        toastContainer.style.minWidth = '300px';
+        toastContainer.style.maxWidth = '90%';
+        toastContainer.style.padding = '15px 20px';
+        toastContainer.style.borderRadius = '12px';
         toastContainer.style.fontWeight = '700';
-        toastContainer.style.zIndex = '9999';
+        toastContainer.style.fontSize = '14px';
+        toastContainer.style.zIndex = '99999';
         toastContainer.style.display = 'none';
-        toastContainer.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
-        toastContainer.style.transition = 'all 0.3s ease';
+        toastContainer.style.opacity = '0';
+        toastContainer.style.boxShadow = '0 10px 30px rgba(0,0,0,0.15)';
+        toastContainer.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
         document.body.appendChild(toastContainer);
     }
 
-    // 🛡️ SECURITY FIX: Anti-XSS Shield
+    // 🛡️ SECURITY FIX: Anti-XSS Shield inside Toast
     if (type === 'error') {
-        toastContainer.style.background = '#fee2e2';
+        toastContainer.style.background = '#fef2f2';
         toastContainer.style.color = '#991b1b';
-        toastContainer.style.borderLeft = '5px solid #991b1b';
-        toastContainer.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> `;
+        toastContainer.style.border = '1px solid #fecaca';
+        toastContainer.style.borderLeft = '5px solid #ef4444';
+        toastContainer.innerHTML = `<i class="fas fa-exclamation-triangle me-2 fs-5 align-middle"></i> `;
+    } else if (type === 'warning') {
+        toastContainer.style.background = '#fffbeb';
+        toastContainer.style.color = '#92400e';
+        toastContainer.style.border = '1px solid #fde68a';
+        toastContainer.style.borderLeft = '5px solid #f59e0b';
+        toastContainer.innerHTML = `<i class="fas fa-info-circle me-2 fs-5 align-middle"></i> `;
     } else {
-        toastContainer.style.background = '#dcfce7';
+        toastContainer.style.background = '#f0fdf4';
         toastContainer.style.color = '#166534';
-        toastContainer.style.borderLeft = '5px solid #166534';
-        toastContainer.innerHTML = `<i class="fas fa-check-circle me-2"></i> `;
+        toastContainer.style.border = '1px solid #bbf7d0';
+        toastContainer.style.borderLeft = '5px solid #10b981';
+        toastContainer.innerHTML = `<i class="fas fa-check-circle me-2 fs-5 align-middle"></i> `;
     }
 
-    // Append the message safely as a text node (Hacker ki script text ban jayegi, chalegi nahi)
+    // Append the message safely as a text node (Hacker ki script text ban jayegi)
     const textNode = document.createTextNode(message);
-    toastContainer.appendChild(textNode);
+    const textSpan = document.createElement('span');
+    textSpan.style.display = 'inline-block';
+    textSpan.style.verticalAlign = 'middle';
+    textSpan.appendChild(textNode);
+    toastContainer.appendChild(textSpan);
 
     // Show and Hide Logic
     toastContainer.style.display = 'block';
-    setTimeout(() => {
+    // Small delay to allow display:block to apply before animating opacity/transform
+    requestAnimationFrame(() => {
         toastContainer.style.opacity = '1';
-        toastContainer.style.transform = 'translateY(0)';
-    }, 10);
+        toastContainer.style.transform = 'translateX(-50%) translateY(0)';
+    });
 
-    // Hide after 4 seconds
+    // Hide after 3.5 seconds
     setTimeout(() => {
         toastContainer.style.opacity = '0';
-        toastContainer.style.transform = 'translateY(-20px)';
+        toastContainer.style.transform = 'translateX(-50%) translateY(-30px)';
         setTimeout(() => {
             toastContainer.style.display = 'none';
         }, 300);
-    }, 4000);
+    }, 3500);
 }
-
 
 // ==========================================
 // 6. UI UPDATE LOGIC (NAVBAR)
@@ -251,21 +267,23 @@ function updateNavbar() {
                 link.innerHTML = '<i class="fas fa-shield-alt me-1"></i> CRM Panel';
                 link.style.backgroundColor = "#fee2e2"; 
                 link.style.color = "#dc2626"; 
-                link.style.border = "1px solid #fca5a5";
+                link.style.borderColor = "#fca5a5";
             } else {
                 link.href = "dashboard.html"; 
-                link.innerHTML = '<i class="fas fa-user-circle me-1"></i> My Dashboard'; 
+                link.innerHTML = '<i class="fas fa-user-circle me-1"></i> Dashboard'; 
                 link.style.backgroundColor = "#10b981"; 
                 link.style.color = "white";
-                link.style.border = "none";
+                link.style.borderColor = "#10b981";
             }
 
-            link.style.padding = "8px 18px";
-            link.style.borderRadius = "8px";
+            link.style.padding = "8px 20px";
+            link.style.borderRadius = "50px";
             link.style.fontWeight = "700";
             link.style.transition = "0.3s";
             link.style.textDecoration = "none";
-            link.style.display = "inline-block";
+            link.style.display = "inline-flex";
+            link.style.alignItems = "center";
+            link.style.boxShadow = "0 4px 10px rgba(0,0,0,0.1)";
         });
     }
 }

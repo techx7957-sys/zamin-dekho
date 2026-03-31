@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal & Policies | Zamin Dekho</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+        /* 🌟 FIX: Added Flexbox layout for footer placement */
+        body { 
+            background-color: #f8fafc; 
+            font-family: "Inter", sans-serif; 
+            color: #1e293b; 
+            position: relative; 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 100vh;
+        }
+
+        .main-wrapper { flex: 1; }
+
+        /* Navbar */
+        .navbar { background: rgba(255,255,255,0.98) !important; backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); padding: 15px 0; }
+        .navbar-brand { font-weight: 800; color: #10b981 !important; font-size: 24px; letter-spacing: -0.5px;}
+
+        /* Hero Section */
+        .policy-hero { background: #0f172a; padding: 60px 0 40px; color: white; text-align: center; margin-bottom: 40px; border-bottom: 4px solid #10b981;}
+        .policy-hero h1 { font-weight: 800; font-size: 36px; margin-bottom: 10px; }
+        .policy-hero p { color: #94a3b8; font-size: 16px; font-weight: 500; }
+
+        /* Sidebar Navigation */
+        .sticky-sidebar { position: sticky; top: 100px; }
+        .nav-pills .nav-link { color: #64748b; font-weight: 600; padding: 12px 20px; border-radius: 12px; margin-bottom: 8px; text-align: left; transition: 0.3s; background: transparent; }
+        .nav-pills .nav-link:hover { background: #f1f5f9; color: #0f172a; }
+        .nav-pills .nav-link.active { background: #10b981; color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
+
+        /* Content Sections */
+        .policy-section { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; margin-bottom: 30px; }
+        .policy-section h2 { font-weight: 800; color: #0f172a; margin-bottom: 20px; font-size: 24px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;}
+        .policy-section h4 { font-weight: 700; color: #334155; margin-top: 25px; margin-bottom: 10px; font-size: 18px; }
+        .policy-section p, .policy-section li { color: #475569; line-height: 1.7; font-size: 15px; margin-bottom: 15px; }
+        .policy-section ul { padding-left: 20px; }
+
+        /* Contact Form */
+        .contact-input { background: #f8fafc; border: 1px solid #cbd5e1; padding: 12px 15px; border-radius: 10px; font-weight: 500; width: 100%; margin-bottom: 15px; transition: 0.3s; }
+        .contact-input:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); background: white;}
+        .btn-submit { background: #10b981; color: white; border: none; padding: 12px 25px; border-radius: 10px; font-weight: 700; width: 100%; transition: 0.3s; }
+        .btn-submit:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);}
+
+        .contact-info-card { background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;}
+        .contact-info-card i { color: #10b981; font-size: 20px; margin-bottom: 10px; display: block;}
+        .contact-info-card h6 { font-weight: 700; margin-bottom: 5px; color: #0f172a;}
+        .contact-info-card p { margin: 0; font-size: 14px; color: #64748b;}
+    </style>
+</head>
+<body data-bs-spy="scroll" data-bs-target="#policy-nav" data-bs-smooth-scroll="true" tabindex="0">
+
+    <div class="main-wrapper">
+        <nav class="navbar navbar-expand-lg sticky-top">
+            <div class="container">
+                <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</a>
+                <div class="d-flex ms-auto" id="authArea">
+                    <a href="login.html" class="btn btn-outline-dark fw-bold rounded-pill px-4">Login / Register</a>
+                </div>
+            </div>
+        </nav>
+
+        <header class="policy-hero">
+            <div class="container">
+                <h1>Legal & Compliance</h1>
+                <p>Transparency, Security, and Trust. Everything you need to know about how we operate.</p>
+            </div>
+        </header>
+
+        <div class="container mb-5">
+            <div class="row g-4">
+
+                <div class="col-lg-3">
+                    <nav id="policy-nav" class="sticky-sidebar">
+                        <div class="nav nav-pills flex-column">
+                            <a class="nav-link active" href="#terms"><i class="fas fa-file-contract me-2"></i> Terms & Conditions</a>
+                            <a class="nav-link" href="#privacy"><i class="fas fa-user-shield me-2"></i> Privacy Policy</a>
+                            <a class="nav-link" href="#refund"><i class="fas fa-undo me-2"></i> Refund Policy</a>
+                            <a class="nav-link" href="#contact"><i class="fas fa-headset me-2"></i> Contact Us</a>
+                        </div>
+                    </nav>
+                </div>
+
+                <div class="col-lg-9">
+
+                    <section id="terms" class="policy-section">
+                        <h2>Terms & Conditions</h2>
+                        <p>Last updated: <span class="fw-bold text-dark">March 31, 2026</span></p>
+                        <p>Welcome to Zamin Dekho. By accessing our platform, you agree to be bound by these Terms and Conditions. Please read them carefully before using our services or participating in our secure Deal Room.</p>
+
+                        <h4>1. Platform Role (Escrow & Intermediary)</h4>
+                        <p>Zamin Dekho acts as a secure intermediary between property buyers and verified brokers. We provide a platform for listing, GPS-verified site visits, and secure token payments via our Razorpay-powered Escrow system. We are not the legal owners of the properties listed.</p>
+
+                        <h4>2. Secure Deal Room & GPS Verification</h4>
+                        <p>To finalize a deal, both the buyer and broker must be physically present at the property location. Our system uses a 100-meter geo-fencing protocol. Bypassing or spoofing GPS data is a violation of these terms and will result in immediate account suspension.</p>
+
+                        <h4>3. Property Listings & Accuracy</h4>
+                        <p>While we use live-capture technology and timestamps to verify property existence, the final legal verification (Registry, Khatauni, Encumbrances) remains the responsibility of the buyer. Zamin Dekho is not liable for legal disputes arising post-registry.</p>
+
+                        <h4>4. Broker Code of Conduct</h4>
+                        <p>Brokers are strictly monitored via our Quality Control system. Maintaining an average rating below 3.0 or receiving multiple warnings will result in reduced visibility or permanent ban from the platform.</p>
+                    </section>
+
+                    <section id="privacy" class="policy-section">
+                        <h2>Privacy Policy</h2>
+                        <p>Your privacy is our priority. This policy outlines how Zamin Dekho collects, uses, and encrypts your data.</p>
+
+                        <h4>1. Data We Collect</h4>
+                        <ul>
+                            <li><strong>Personal Information:</strong> Name, Email, Phone Number (verified via Twilio/OTP).</li>
+                            <li><strong>Location Data (Crucial):</strong> We collect real-time GPS coordinates <em>only</em> when you activate the "Secure Deal Room" or use the "Live Property Capture" feature. We do not track your background location.</li>
+                            <li><strong>Device Information:</strong> IP Address, browser type, and OS for security and anti-fraud monitoring.</li>
+                        </ul>
+
+                        <h4>2. How We Use Your Data</h4>
+                        <p>Your data is strictly used to facilitate secure property transactions. Phone numbers are shared with brokers only after a site visit is officially scheduled. We <strong>never</strong> sell your data to third-party marketing agencies.</p>
+
+                        <h4>3. Data Security & Encryption</h4>
+                        <p>All chats inside the Secure Deal Room and payment transactions (via Razorpay) are secured using 256-bit SSL encryption. Passwords are cryptographically hashed using bcrypt before being stored in our database.</p>
+                    </section>
+
+                    <section id="refund" class="policy-section">
+                        <h2>Refund & Cancellation Policy</h2>
+                        <p>We understand that real estate decisions require careful thought. Our refund policy is designed to be fair, transparent, and hassle-free.</p>
+
+                        <h4>1. The 24-Hour Cooling-Off Period</h4>
+                        <p>When you pay the Token Booking Amount (typically ₹1,00,000) via our Escrow system, the property is locked for 48 hours. If you change your mind within the first <strong>24 hours</strong> of token payment, you are eligible for a <strong>100% Refund</strong> of the token amount.</p>
+
+                        <h4>2. Platform Fees</h4>
+                        <p>While the token amount is 100% refundable within 24 hours, the Zamin Dekho Platform Escrow Fee (if applied during checkout) is non-refundable as it covers the payment gateway and verification costs.</p>
+
+                        <h4>3. Cancellation After 24 Hours</h4>
+                        <p>Cancellations requested after the initial 24-hour window will be subject to a 10% penalty on the token amount to compensate the broker for the locked inventory period. The remaining 90% will be refunded.</p>
+
+                        <h4>4. Processing Time</h4>
+                        <p>Approved refunds are processed immediately from our Escrow account. It typically takes <strong>5 to 7 business days</strong> for the funds to reflect in your original source of payment (UPI/Bank Account) via Razorpay.</p>
+                    </section>
+
+                    <section id="contact" class="policy-section mb-0">
+                        <h2>Contact Us</h2>
+                        <p>Have a question about a property, a refund request, or a compliance issue? Our support team is here to help.</p>
+
+                        <div class="row mb-4 mt-4">
+                            <div class="col-md-4">
+                                <div class="contact-info-card text-center h-100">
+                                    <i class="fas fa-envelope"></i>
+                                    <h6>Email Support</h6>
+                                    <p>support@zamindekho.com</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="contact-info-card text-center h-100">
+                                    <i class="fas fa-phone-alt"></i>
+                                    <h6>Call Us</h6>
+                                    <p>+91 98765 43210<br><small>(10 AM - 6 PM)</small></p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="contact-info-card text-center h-100">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <h6>Head Office</h6>
+                                    <p>Zamin Dekho Tower,<br>Cyber City, India</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h4 class="mb-3">Send us a message</h4>
+                        <form id="contactForm" onsubmit="handleContactSubmit(event)">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <input type="text" id="contactName" class="contact-input" placeholder="Your Name" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="email" id="contactEmail" class="contact-input" placeholder="Your Email" required>
+                                </div>
+                                <div class="col-md-12">
+                                    <input type="text" id="contactSubject" class="contact-input" placeholder="Subject (e.g., Refund Request)" required>
+                                </div>
+                                <div class="col-md-12">
+                                    <textarea id="contactMessage" class="contact-input" rows="4" placeholder="How can we help you?" required></textarea>
+                                </div>
+                                <div class="col-md-12">
+                                    <button type="submit" class="btn-submit" id="contactBtn">
+                                        <i class="fas fa-paper-plane me-2"></i> Send Message
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </section>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white text-center py-5 mt-auto" style="border-top: 4px solid #10b981;">
+        <div class="container">
+            <h4 class="fw-bold text-success mb-3"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</h4>
+            <p class="text-white-50 small mb-4" style="max-width: 500px; margin: 0 auto;">India's Most Secure & Transparent Real Estate Platform. Connecting verified buyers with genuine properties through Escrow.</p>
+
+            <div class="d-flex justify-content-center gap-3 gap-md-5 mb-4 flex-wrap">
+                <a href="#terms" class="text-white-50 text-decoration-none small fw-bold">Terms & Conditions</a>
+                <a href="#privacy" class="text-white-50 text-decoration-none small fw-bold">Privacy Policy</a>
+                <a href="#refund" class="text-white-50 text-decoration-none small fw-bold">Refund Policy</a>
+                <a href="#contact" class="text-white-50 text-decoration-none small fw-bold">Contact Us</a>
+            </div>
+
+            <hr class="border-secondary opacity-25">
+            <p class="mb-0 text-white-50 small fw-bold">© 2026 Zamin Dekho. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="script.js"></script>
+
+    <script>
+        // 🌟 Initialize Global Navbar logic 
+        window.onload = function() {
+            // Update auth UI based on token
+            const token = typeof getToken === 'function' ? getToken() : null;
+            const authArea = document.getElementById('authArea');
+
+            if (token && typeof getUser === 'function') {
+                const user = getUser();
+                if (user) {
+                    const firstName = user.fullName ? user.fullName.split(" ")[0] : "User";
+                    // Using safe escape method
+                    const safeName = typeof escapeHTML === 'function' ? escapeHTML(firstName) : firstName;
+                    authArea.innerHTML = `
+                        <a href="dashboard.html" class="btn btn-outline-success fw-bold rounded-pill px-4 me-2">Dashboard</a>
+                        <button onclick="typeof logout === 'function' ? logout() : (window.location.href='login.html')" class="btn btn-danger fw-bold rounded-pill px-4">Logout</button>
+                    `;
+                }
+            }
+        };
+
+        // 🌟 Contact Form Handler
+        function handleContactSubmit(event) {
+            event.preventDefault();
+
+            const btn = document.getElementById('contactBtn');
+            const originalText = btn.innerHTML;
+
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i> Sending...';
+            btn.disabled = true;
+
+            // 🛡️ Sanitize inputs using global escapeHTML with fallback
+            const rawName = document.getElementById('contactName').value;
+            const name = typeof escapeHTML === 'function' ? escapeHTML(rawName) : rawName;
+
+            // Simulate API Call delay
+            setTimeout(() => {
+                // Use global Toast notification from script.js
+                if (typeof showToast === "function") {
+                    showToast(`Thank you ${name}! Your message has been sent to our support team.`, "success");
+                } else {
+                    alert(`Thank you ${name}! Message Sent successfully!`);
+                }
+
+                // Reset Form
+                document.getElementById('contactForm').reset();
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 1500);
+        }
+    </script>
+</body>
+</html>

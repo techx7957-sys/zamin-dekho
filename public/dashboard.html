@@ -12,7 +12,10 @@
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Inter", sans-serif; }
-        body { background-color: #f8fafc; color: #1e293b; overflow-x: hidden;}
+
+        /* 🌟 FIX: Flex column to manage the new footer naturally */
+        body { background-color: #f8fafc; color: #1e293b; overflow-x: hidden; display: flex; flex-direction: column; min-height: 100vh;}
+        main { flex: 1; }
 
         /* Navbar */
         .navbar { background: rgba(255,255,255,0.98) !important; backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); padding: 15px 0; }
@@ -68,213 +71,232 @@
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-lg sticky-top">
-        <div class="container-fluid px-lg-5">
-            <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</a>
-            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#zaminNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="zaminNav">
-                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center align-items-center gap-lg-2">
-                    <li class="nav-item"><a class="nav-link" href="index.html">Find Land</a></li>
+    <main>
+        <nav class="navbar navbar-expand-lg sticky-top">
+            <div class="container-fluid px-lg-5">
+                <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</a>
+                <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#zaminNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="zaminNav">
+                    <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center align-items-center gap-lg-2">
+                        <li class="nav-item"><a class="nav-link" href="index.html">Find Land</a></li>
 
-                    <li class="nav-item"><a class="nav-link" href="#postTab" onclick="switchTab('#postTab')">Post Property</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#visitsTab" onclick="switchTab('#visitsTab')">Site Visits</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#myListingsTab" onclick="switchTab('#myListingsTab')">My Listings</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#savedTab" onclick="switchTab('#savedTab')">Favorites</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#bookingsTab" onclick="switchTab('#bookingsTab')">My Bookings</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#postTab" onclick="switchTab('#postTab')">Post Property</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#visitsTab" onclick="switchTab('#visitsTab')">Site Visits</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#myListingsTab" onclick="switchTab('#myListingsTab')">My Listings</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#savedTab" onclick="switchTab('#savedTab')">Favorites</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#bookingsTab" onclick="switchTab('#bookingsTab')">My Bookings</a></li>
 
-                    <li id="adminLinkArea" class="nav-item"></li>
-                </ul>
-                <div id="authArea" class="auth-area justify-content-center mt-3 mt-lg-0"></div>
+                        <li id="adminLinkArea" class="nav-item"></li>
+                    </ul>
+                    <div id="authArea" class="auth-area justify-content-center mt-3 mt-lg-0"></div>
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
 
-    <div class="container mt-5 mb-5">
-        <h2 class="fw-bold mb-4 text-center" style="font-size: 32px;"><i class="fas fa-th-large text-primary me-2"></i> User Dashboard</h2>
+        <div class="container mt-5 mb-5">
+            <h2 class="fw-bold mb-4 text-center" style="font-size: 32px;"><i class="fas fa-th-large text-primary me-2"></i> User Dashboard</h2>
 
-        <ul class="nav nav-pills justify-content-center mb-5 flex-wrap" id="dashboardTabs">
-            <li class="nav-item"><button class="nav-link active" id="btn-postTab" onclick="switchTab('#postTab')"><i class="fas fa-plus-circle me-2"></i> Post Property</button></li>
-            <li class="nav-item"><button class="nav-link" id="btn-visitsTab" onclick="switchTab('#visitsTab')"><i class="fas fa-map-marked-alt me-2"></i> Site Visits</button></li>
-            <li class="nav-item"><button class="nav-link" id="btn-myListingsTab" onclick="switchTab('#myListingsTab')"><i class="fas fa-home me-2"></i> My Listings</button></li>
-            <li class="nav-item"><button class="nav-link" id="btn-savedTab" onclick="switchTab('#savedTab')"><i class="fas fa-heart me-2"></i> Favorites</button></li>
-            <li class="nav-item"><button class="nav-link" id="btn-bookingsTab" onclick="switchTab('#bookingsTab')"><i class="fas fa-file-invoice-dollar me-2"></i> Bookings</button></li>
-        </ul>
+            <ul class="nav nav-pills justify-content-center mb-5 flex-wrap" id="dashboardTabs">
+                <li class="nav-item"><button class="nav-link active" id="btn-postTab" onclick="switchTab('#postTab')"><i class="fas fa-plus-circle me-2"></i> Post Property</button></li>
+                <li class="nav-item"><button class="nav-link" id="btn-visitsTab" onclick="switchTab('#visitsTab')"><i class="fas fa-map-marked-alt me-2"></i> Site Visits</button></li>
+                <li class="nav-item"><button class="nav-link" id="btn-myListingsTab" onclick="switchTab('#myListingsTab')"><i class="fas fa-home me-2"></i> My Listings</button></li>
+                <li class="nav-item"><button class="nav-link" id="btn-savedTab" onclick="switchTab('#savedTab')"><i class="fas fa-heart me-2"></i> Favorites</button></li>
+                <li class="nav-item"><button class="nav-link" id="btn-bookingsTab" onclick="switchTab('#bookingsTab')"><i class="fas fa-file-invoice-dollar me-2"></i> Bookings</button></li>
+            </ul>
 
-        <div class="tab-content">
-            <div class="tab-pane fade show active" id="postTab">
-                <div class="container-form">
-                    <div class="form-box">
-                        <div class="box-title"><i class="fas fa-mountain me-2"></i> 1. Property Details</div>
-                        <label>Land Title / Name</label>
-                        <input type="text" id="land-name" placeholder="e.g. 5 Acre Farm House in Punjab" />
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="postTab">
+                    <div class="container-form">
+                        <div class="form-box">
+                            <div class="box-title"><i class="fas fa-mountain me-2"></i> 1. Property Details</div>
+                            <label>Land Title / Name</label>
+                            <input type="text" id="land-name" placeholder="e.g. 5 Acre Farm House in Punjab" />
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label>Estimated Price (₹)</label>
-                                <input type="number" id="land-price" placeholder="e.g. 5000000" />
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label>Estimated Price (₹)</label>
+                                    <input type="number" id="land-price" placeholder="e.g. 5000000" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label>Total Land Size</label>
+                                    <input type="text" id="land-size" placeholder="e.g. 5 Acre, 2000 SqFt" />
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <label>Total Land Size</label>
-                                <input type="text" id="land-size" placeholder="e.g. 5 Acre, 2000 SqFt" />
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label>Land Length (Frontage)</label>
+                                    <input type="text" id="land-length" placeholder="e.g. 50 Feet" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label>Land Breadth (Depth)</label>
+                                    <input type="text" id="land-breadth" placeholder="e.g. 100 Feet" />
+                                </div>
                             </div>
+
+                            <label>Property Category</label>
+                            <select id="category">
+                                <option value="residential">Residential Plot / House</option>
+                                <option value="commercial">Commercial Land / Shop</option>
+                                <option value="agricultural">Agricultural Farm / Orchard</option>
+                                <option value="industrial">Industrial Land / Factory</option>
+                            </select>
+
+                            <div class="alert alert-info mt-4 border-info">
+                                <i class="fas fa-shield-alt text-info me-2"></i> <strong>Anti-Fraud Protocol:</strong> To post a verified listing, you must capture a live photo of the property using the camera below.
+                            </div>
+
+                            <label class="mt-3">Property Verification (Live Capture)</label>
+
+                            <div id="camera-container" class="mb-3" style="display:none; position:relative;">
+                                <video id="video" width="100%" autoplay playsinline style="border-radius:16px; border:3px solid #10b981; background:#000;"></video>
+                                <canvas id="canvas" style="display:none;"></canvas>
+                                <div id="watermark-preview" style="position:absolute; bottom:15px; right:15px; color:white; font-size:12px; background:rgba(0,0,0,0.7); padding:5px 12px; border-radius:50px; font-weight: bold; backdrop-filter: blur(5px);">
+                                    <i class="fas fa-check-circle text-success me-1"></i> Zamin Dekho Verified
+                                </div>
+                            </div>
+
+                            <div id="photo-preview-container" class="mb-4" style="display:none;">
+                                <img id="captured-photo" src="" style="width:100%; border-radius:16px; border:3px solid #3b82f6; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
+                                <p class="text-success small fw-bold mt-2 text-center"><i class="fas fa-shield-check me-1"></i> Media Authenticated with GPS & Timestamp</p>
+                            </div>
+
+                            <button type="button" id="start-camera" class="btn btn-outline-dark w-100 mb-3 fw-bold py-3" style="border-radius: 12px; border: 2px dashed #94a3b8;">
+                                <i class="fas fa-camera me-2"></i> Open Real-Time Camera
+                            </button>
+
+                            <button type="button" id="capture-btn" class="btn btn-danger w-100 mb-3 fw-bold py-3" style="display:none; border-radius: 12px; box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);">
+                                <i class="fas fa-dot-circle me-2"></i> Capture & Tag GPS
+                            </button>
+
+                            <input type="file" id="land-image" accept="image/*" style="display:none;" />
                         </div>
 
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label>Land Length (Frontage)</label>
-                                <input type="text" id="land-length" placeholder="e.g. 50 Feet" />
+                        <div class="form-box">
+                            <div class="box-title"><i class="fas fa-map-marked-alt me-2"></i> 2. Location & Description</div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="m-0">Location / Address</label>
+                                <button type="button" class="detect-btn" onclick="detectLocation()"><i class="fas fa-crosshairs me-1"></i> Detect</button>
                             </div>
-                            <div class="col-md-6">
-                                <label>Land Breadth (Depth)</label>
-                                <input type="text" id="land-breadth" placeholder="e.g. 100 Feet" />
-                            </div>
+                            <textarea id="address" placeholder="Full address with city, district and landmarks..." rows="2"></textarea>
+
+                            <label>Road Connectivity</label>
+                            <select id="road-connectivity">
+                                <option value="Highway Attached">Highway Attached (National/State)</option>
+                                <option value="Tar Road">Tar Road (City/Village)</option>
+                                <option value="Mud Road">Mud Road (Kachha Rasta)</option>
+                                <option value="No Road Access">No Road Access</option>
+                            </select>
+
+                            <label>Additional Description / Features</label>
+                            <textarea id="extra-info" placeholder="Add details about water supply, electricity, legal clarity, etc." rows="3"></textarea>
                         </div>
 
-                        <label>Property Category</label>
-                        <select id="category">
-                            <option value="residential">Residential Plot / House</option>
-                            <option value="commercial">Commercial Land / Shop</option>
-                            <option value="agricultural">Agricultural Farm / Orchard</option>
-                            <option value="industrial">Industrial Land / Factory</option>
-                        </select>
-
-                        <div class="alert alert-info mt-4 border-info">
-                            <i class="fas fa-shield-alt text-info me-2"></i> <strong>Anti-Fraud Protocol:</strong> To post a verified listing, you must capture a live photo of the property using the camera below.
-                        </div>
-
-                        <label class="mt-3">Property Verification (Live Capture)</label>
-
-                        <div id="camera-container" class="mb-3" style="display:none; position:relative;">
-                            <video id="video" width="100%" autoplay playsinline style="border-radius:16px; border:3px solid #10b981; background:#000;"></video>
-                            <canvas id="canvas" style="display:none;"></canvas>
-                            <div id="watermark-preview" style="position:absolute; bottom:15px; right:15px; color:white; font-size:12px; background:rgba(0,0,0,0.7); padding:5px 12px; border-radius:50px; font-weight: bold; backdrop-filter: blur(5px);">
-                                <i class="fas fa-check-circle text-success me-1"></i> Zamin Dekho Verified
-                            </div>
-                        </div>
-
-                        <div id="photo-preview-container" class="mb-4" style="display:none;">
-                            <img id="captured-photo" src="" style="width:100%; border-radius:16px; border:3px solid #3b82f6; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
-                            <p class="text-success small fw-bold mt-2 text-center"><i class="fas fa-shield-check me-1"></i> Media Authenticated with GPS & Timestamp</p>
-                        </div>
-
-                        <button type="button" id="start-camera" class="btn btn-outline-dark w-100 mb-3 fw-bold py-3" style="border-radius: 12px; border: 2px dashed #94a3b8;">
-                            <i class="fas fa-camera me-2"></i> Open Real-Time Camera
+                        <button class="submit-btn" id="submit-btn" onclick="submitProperty()">
+                            <i class="fas fa-paper-plane me-2"></i> POST PROPERTY FOR REVIEW
                         </button>
-
-                        <button type="button" id="capture-btn" class="btn btn-danger w-100 mb-3 fw-bold py-3" style="display:none; border-radius: 12px; box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);">
-                            <i class="fas fa-dot-circle me-2"></i> Capture & Tag GPS
-                        </button>
-
-                        <input type="file" id="land-image" accept="image/*" style="display:none;" />
                     </div>
+                </div>
 
-                    <div class="form-box">
-                        <div class="box-title"><i class="fas fa-map-marked-alt me-2"></i> 2. Location & Description</div>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="m-0">Location / Address</label>
-                            <button type="button" class="detect-btn" onclick="detectLocation()"><i class="fas fa-crosshairs me-1"></i> Detect</button>
+                <div class="tab-pane fade" id="visitsTab">
+                    <div class="row g-4" id="visitsGrid"></div>
+                </div>
+
+                <div class="tab-pane fade" id="myListingsTab">
+                    <div class="row g-4" id="myListingsGrid"></div>
+                </div>
+
+                <div class="tab-pane fade" id="savedTab">
+                    <div class="row g-4" id="savedGrid"></div>
+                </div>
+
+                <div class="tab-pane fade" id="bookingsTab">
+                    <div class="row g-4" id="bookingsGrid"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="rateBrokerModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="border-radius: 24px; border: none; box-shadow: 0 25px 50px rgba(0,0,0,0.2);">
+                    <div class="modal-header bg-dark text-white border-0 py-3 px-4">
+                        <h5 class="modal-title fw-bold"><i class="fas fa-star text-warning me-2"></i> Rate Broker Service</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4 text-start">
+                        <p class="text-muted fw-bold mb-4 text-center">Your feedback helps us maintain a 100% verified and professional broker network.</p>
+
+                        <div class="rating-row">
+                            <span class="fw-bold text-dark"><i class="fas fa-user-tie text-primary me-2"></i> Professionalism</span>
+                            <select id="rateProf" class="form-select form-select-sm border-2">
+                                <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                                <option value="4">⭐⭐⭐⭐ (4)</option>
+                                <option value="3">⭐⭐⭐ (3)</option>
+                                <option value="2">⭐⭐ (2)</option>
+                                <option value="1">⭐ (1)</option>
+                            </select>
                         </div>
-                        <textarea id="address" placeholder="Full address with city, district and landmarks..." rows="2"></textarea>
+                        <div class="rating-row">
+                            <span class="fw-bold text-dark"><i class="fas fa-home text-primary me-2"></i> Info Accuracy</span>
+                            <select id="rateAcc" class="form-select form-select-sm border-2">
+                                <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                                <option value="4">⭐⭐⭐⭐ (4)</option>
+                                <option value="3">⭐⭐⭐ (3)</option>
+                                <option value="2">⭐⭐ (2)</option>
+                                <option value="1">⭐ (1)</option>
+                            </select>
+                        </div>
+                        <div class="rating-row">
+                            <span class="fw-bold text-dark"><i class="fas fa-hands-helping text-primary me-2"></i> Helpfulness</span>
+                            <select id="rateHelp" class="form-select form-select-sm border-2">
+                                <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                                <option value="4">⭐⭐⭐⭐ (4)</option>
+                                <option value="3">⭐⭐⭐ (3)</option>
+                                <option value="2">⭐⭐ (2)</option>
+                                <option value="1">⭐ (1)</option>
+                            </select>
+                        </div>
+                        <div class="rating-row border-0 mb-4">
+                            <span class="fw-bold text-dark"><i class="fas fa-comments text-primary me-2"></i> Communication</span>
+                            <select id="rateComm" class="form-select form-select-sm border-2">
+                                <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                                <option value="4">⭐⭐⭐⭐ (4)</option>
+                                <option value="3">⭐⭐⭐ (3)</option>
+                                <option value="2">⭐⭐ (2)</option>
+                                <option value="1">⭐ (1)</option>
+                            </select>
+                        </div>
 
-                        <label>Road Connectivity</label>
-                        <select id="road-connectivity">
-                            <option value="Highway Attached">Highway Attached (National/State)</option>
-                            <option value="Tar Road">Tar Road (City/Village)</option>
-                            <option value="Mud Road">Mud Road (Kachha Rasta)</option>
-                            <option value="No Road Access">No Road Access</option>
-                        </select>
+                        <textarea id="reviewText" class="form-control mb-4" rows="3" placeholder="Write a brief review about your site visit experience... (Optional)"></textarea>
 
-                        <label>Additional Description / Features</label>
-                        <textarea id="extra-info" placeholder="Add details about water supply, electricity, legal clarity, etc." rows="3"></textarea>
+                        <input type="hidden" id="ratingBrokerId">
+                        <button type="button" class="btn btn-success w-100 fw-bold py-3 rounded-pill shadow-sm fs-5" onclick="submitRating()">
+                            <i class="fas fa-paper-plane me-2"></i> Submit Feedback
+                        </button>
                     </div>
-
-                    <button class="submit-btn" id="submit-btn" onclick="submitProperty()">
-                        <i class="fas fa-paper-plane me-2"></i> POST PROPERTY FOR REVIEW
-                    </button>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="visitsTab">
-                <div class="row g-4" id="visitsGrid"></div>
-            </div>
-
-            <div class="tab-pane fade" id="myListingsTab">
-                <div class="row g-4" id="myListingsGrid"></div>
-            </div>
-
-            <div class="tab-pane fade" id="savedTab">
-                <div class="row g-4" id="savedGrid"></div>
-            </div>
-
-            <div class="tab-pane fade" id="bookingsTab">
-                <div class="row g-4" id="bookingsGrid"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="rateBrokerModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content" style="border-radius: 24px; border: none; box-shadow: 0 25px 50px rgba(0,0,0,0.2);">
-                <div class="modal-header bg-dark text-white border-0 py-3 px-4">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-star text-warning me-2"></i> Rate Broker Service</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4 text-start">
-                    <p class="text-muted fw-bold mb-4 text-center">Your feedback helps us maintain a 100% verified and professional broker network.</p>
-
-                    <div class="rating-row">
-                        <span class="fw-bold text-dark"><i class="fas fa-user-tie text-primary me-2"></i> Professionalism</span>
-                        <select id="rateProf" class="form-select form-select-sm border-2">
-                            <option value="5">⭐⭐⭐⭐⭐ (5)</option>
-                            <option value="4">⭐⭐⭐⭐ (4)</option>
-                            <option value="3">⭐⭐⭐ (3)</option>
-                            <option value="2">⭐⭐ (2)</option>
-                            <option value="1">⭐ (1)</option>
-                        </select>
-                    </div>
-                    <div class="rating-row">
-                        <span class="fw-bold text-dark"><i class="fas fa-home text-primary me-2"></i> Info Accuracy</span>
-                        <select id="rateAcc" class="form-select form-select-sm border-2">
-                            <option value="5">⭐⭐⭐⭐⭐ (5)</option>
-                            <option value="4">⭐⭐⭐⭐ (4)</option>
-                            <option value="3">⭐⭐⭐ (3)</option>
-                            <option value="2">⭐⭐ (2)</option>
-                            <option value="1">⭐ (1)</option>
-                        </select>
-                    </div>
-                    <div class="rating-row">
-                        <span class="fw-bold text-dark"><i class="fas fa-hands-helping text-primary me-2"></i> Helpfulness</span>
-                        <select id="rateHelp" class="form-select form-select-sm border-2">
-                            <option value="5">⭐⭐⭐⭐⭐ (5)</option>
-                            <option value="4">⭐⭐⭐⭐ (4)</option>
-                            <option value="3">⭐⭐⭐ (3)</option>
-                            <option value="2">⭐⭐ (2)</option>
-                            <option value="1">⭐ (1)</option>
-                        </select>
-                    </div>
-                    <div class="rating-row border-0 mb-4">
-                        <span class="fw-bold text-dark"><i class="fas fa-comments text-primary me-2"></i> Communication</span>
-                        <select id="rateComm" class="form-select form-select-sm border-2">
-                            <option value="5">⭐⭐⭐⭐⭐ (5)</option>
-                            <option value="4">⭐⭐⭐⭐ (4)</option>
-                            <option value="3">⭐⭐⭐ (3)</option>
-                            <option value="2">⭐⭐ (2)</option>
-                            <option value="1">⭐ (1)</option>
-                        </select>
-                    </div>
-
-                    <textarea id="reviewText" class="form-control mb-4" rows="3" placeholder="Write a brief review about your site visit experience... (Optional)"></textarea>
-
-                    <input type="hidden" id="ratingBrokerId">
-                    <button type="button" class="btn btn-success w-100 fw-bold py-3 rounded-pill shadow-sm fs-5" onclick="submitRating()">
-                        <i class="fas fa-paper-plane me-2"></i> Submit Feedback
-                    </button>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
+
+    <footer class="bg-dark text-white text-center py-5 mt-auto" style="border-top: 4px solid #10b981;">
+        <div class="container">
+            <h4 class="fw-bold text-success mb-3"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</h4>
+            <p class="text-white-50 small mb-4" style="max-width: 500px; margin: 0 auto;">India's Most Secure & Transparent Real Estate Platform. Connecting verified buyers with genuine properties through Escrow.</p>
+
+            <div class="d-flex justify-content-center gap-3 gap-md-5 mb-4 flex-wrap">
+                <a href="policies.html#terms" class="text-white-50 text-decoration-none small fw-bold">Terms & Conditions</a>
+                <a href="policies.html#privacy" class="text-white-50 text-decoration-none small fw-bold">Privacy Policy</a>
+                <a href="policies.html#refund" class="text-white-50 text-decoration-none small fw-bold">Refund Policy</a>
+                <a href="policies.html#contact" class="text-white-50 text-decoration-none small fw-bold">Contact Us</a>
+            </div>
+
+            <hr class="border-secondary opacity-25">
+            <p class="mb-0 text-white-50 small fw-bold">© 2026 Zamin Dekho. All Rights Reserved.</p>
+        </div>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -286,15 +308,17 @@
         let captureLat = 0;
         let captureLng = 0;
 
-        // 🛡️ SECURITY FIX 1: HTML Sanitizer Function
-        function escapeHTML(str) {
-            if (!str) return "";
-            return str.toString()
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+        // 🛡️ SECURITY FIX 1: HTML Sanitizer Function fallback
+        if (typeof window.escapeHTML !== 'function') {
+            window.escapeHTML = function(str) {
+                if (!str) return "";
+                return str.toString()
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
         }
 
         // ==========================================
@@ -302,7 +326,7 @@
         // ==========================================
         window.onload = function () {
             // 🔒 Safe global function
-            const token = getToken();
+            const token = typeof getToken === 'function' ? getToken() : null;
             if (!token) { window.location.href = "login.html"; return; }
 
             updateNavbarUI();
@@ -319,7 +343,7 @@
         function updateNavbarUI() {
             try {
                 // 🔒 Safe global function
-                const user = getUser();
+                const user = typeof getUser === 'function' ? getUser() : null;
                 const adminArea = document.getElementById('adminLinkArea');
                 const authArea = document.getElementById('authArea');
 
@@ -343,8 +367,6 @@
                 `;
             } catch(e) {}
         }
-
-        // 🚨 Note: Custom `logout()` function removed because `script.js` handles it globally & perfectly (clearing both localStorage and sessionStorage).
 
         function switchTab(tabId) {
             document.querySelectorAll('#zaminNav .nav-link').forEach(link => link.classList.remove('active'));
@@ -546,7 +568,7 @@
                 if (!item) return ""; 
 
                 // 🔒 Safe global resolver
-                const imgSource = resolveImageUrl(item.imageUrl);
+                const imgSource = typeof resolveImageUrl === 'function' ? resolveImageUrl(item.imageUrl) : (item.imageUrl || "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200");
 
                 const brokerId = lead.assignedBroker ? lead.assignedBroker._id || lead.assignedBroker : null;
                 const rateBtn = brokerId ? `<button class="btn btn-warning btn-sm w-100 mt-2 fw-bold text-dark border-0 shadow-sm" onclick="openRateModal('${brokerId}')"><i class="fas fa-star me-1"></i> Rate Broker Service</button>` : '';
@@ -586,7 +608,7 @@
             if (!item) return ''; 
 
             // 🔒 Connect to global resolver
-            const imgSource = resolveImageUrl(item.imageUrl);
+            const imgSource = typeof resolveImageUrl === 'function' ? resolveImageUrl(item.imageUrl) : (item.imageUrl || "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200");
             const fallbackImg = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
 
             // 🛡️ SECURITY FIX: Add HTML Escaping

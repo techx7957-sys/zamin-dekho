@@ -1,13 +1,15 @@
 {
-  "name": "zamin-dekho",
+  "name": "zamin-dekho-secure",
   "version": "1.0.0",
+  "description": "India's Most Secure Real Estate Escrow Platform",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "build": "echo 'No build step required for Zamin Dekho Core'"
   },
   "engines": {
-    "node": ">=18.x"
+    "node": "18.x || 20.x"
   },
   "dependencies": {
     "@google-cloud/vision": "^5.3.4",
@@ -40,7 +42,12 @@
   "devDependencies": {
     "nodemon": "^3.1.0"
   },
-  "keywords": ["real-estate", "marketplace"],
+  "keywords": [
+    "real-estate",
+    "marketplace",
+    "escrow",
+    "secure"
+  ],
   "author": "Zamin Dekho",
   "license": "ISC"
 }

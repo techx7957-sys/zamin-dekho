@@ -12,7 +12,26 @@
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap");
 
-        body { background: #f8fafc; font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        /* 🌟 FIX: Flex column to manage the new small footer naturally */
+        body { 
+            background: #f8fafc; 
+            font-family: 'Inter', sans-serif; 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+            padding: 20px; 
+            margin: 0;
+        }
+
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
 
         .success-card { background: white; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.05); width: 100%; max-width: 500px; overflow: hidden; border: 1px solid #e2e8f0; animation: slideUp 0.6s ease-out; }
         @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -38,81 +57,97 @@
         .btn-print { background: transparent; border: 2px solid #e2e8f0; color: #64748b; padding: 10px; border-radius: 12px; font-weight: 700; width: 100%; transition: 0.2s; }
         .btn-print:hover { background: white; color: #1e293b; border-color: #cbd5e1; }
 
-        @media print { .btn-dashboard, .btn-print { display: none; } .success-card { box-shadow: none; border: none; } .trust-box { background: transparent; border: 1px dashed #000; } }
+        /* Minimal Compliance Footer */
+        .minimal-footer { text-align: center; margin-top: 20px; font-size: 12px; color: #94a3b8; font-weight: 600; width: 100%;}
+        .minimal-footer a { color: #64748b; text-decoration: none; margin: 0 10px; transition: 0.2s;}
+        .minimal-footer a:hover { color: #10b981; text-decoration: underline; }
+
+        @media print { .btn-dashboard, .btn-print, .minimal-footer { display: none; } .success-card { box-shadow: none; border: none; } .trust-box { background: transparent; border: 1px dashed #000; } }
     </style>
 </head>
 <body>
 
-<div class="success-card">
-    <div class="header-visual">
-        <div class="check-circle"><i class="fas fa-check"></i></div>
-        <h2 class="fw-bold m-0">Booking Confirmed!</h2>
-        <p class="m-0 opacity-75 small fw-bold mt-1">Property Reserved Successfully</p>
+<div class="main-wrapper">
+    <div class="success-card">
+        <div class="header-visual">
+            <div class="check-circle"><i class="fas fa-check"></i></div>
+            <h2 class="fw-bold m-0">Booking Confirmed!</h2>
+            <p class="m-0 opacity-75 small fw-bold mt-1">Property Reserved Successfully</p>
+        </div>
+
+        <div class="receipt-body">
+
+            <div class="trust-box">
+                <h6><i class="fas fa-lock me-1"></i> Property Locked for 48 Hours</h6>
+                <p>This property is now exclusively reserved for you. You have a 24-hour window to cancel for a refund (platform fees apply).</p>
+            </div>
+
+            <div class="text-center mb-4">
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-bold">
+                    <i class="fas fa-shield-check me-1"></i> Zamin Verified Token Receipt
+                </span>
+            </div>
+
+            <div class="receipt-row">
+                <span class="label">Property Name</span>
+                <span class="value" id="resProperty">Premium Land Listing</span>
+            </div>
+
+            <div class="receipt-row">
+                <span class="label">Transaction ID</span>
+                <span class="value txn-id" id="resTxn">TXN-00000000</span>
+            </div>
+
+            <div class="receipt-row">
+                <span class="label">Token Amount Paid</span>
+                <span class="value text-success" id="resAmount">₹ 1,00,000</span>
+            </div>
+
+            <div class="receipt-row">
+                <span class="label">Date & Time</span>
+                <span class="value" id="resDate">...</span>
+            </div>
+
+            <div class="receipt-row border-0">
+                <span class="label">Payment Status</span>
+                <span class="value text-primary"><i class="fas fa-check-circle me-1"></i> SUCCESS</span>
+            </div>
+
+            <div class="mt-4">
+                <a href="dashboard.html" class="btn-dashboard text-center">Go to Dashboard</a>
+                <button class="btn-print" onclick="window.print()"><i class="fas fa-print me-2"></i> Print Receipt</button>
+            </div>
+        </div>
+
+        <div class="verified-footer">
+            <p class="text-muted small m-0 fw-bold">
+                <i class="fas fa-shield-alt me-1"></i> Securely processed via Zamin Dekho Payment Gateway
+            </p>
+        </div>
     </div>
+</div>
 
-    <div class="receipt-body">
-
-        <div class="trust-box">
-            <h6><i class="fas fa-lock me-1"></i> Property Locked for 48 Hours</h6>
-            <p>This property is now exclusively reserved for you. You have a 24-hour window to cancel for a refund (platform fees apply).</p>
-        </div>
-
-        <div class="text-center mb-4">
-            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-bold">
-                <i class="fas fa-shield-check me-1"></i> Zamin Verified Token Receipt
-            </span>
-        </div>
-
-        <div class="receipt-row">
-            <span class="label">Property Name</span>
-            <span class="value" id="resProperty">Premium Land Listing</span>
-        </div>
-
-        <div class="receipt-row">
-            <span class="label">Transaction ID</span>
-            <span class="value txn-id" id="resTxn">TXN-00000000</span>
-        </div>
-
-        <div class="receipt-row">
-            <span class="label">Token Amount Paid</span>
-            <span class="value text-success" id="resAmount">₹ 1,00,000</span>
-        </div>
-
-        <div class="receipt-row">
-            <span class="label">Date & Time</span>
-            <span class="value" id="resDate">...</span>
-        </div>
-
-        <div class="receipt-row border-0">
-            <span class="label">Payment Status</span>
-            <span class="value text-primary"><i class="fas fa-check-circle me-1"></i> SUCCESS</span>
-        </div>
-
-        <div class="mt-4">
-            <a href="dashboard.html" class="btn-dashboard text-center">Go to Dashboard</a>
-            <button class="btn-print" onclick="window.print()"><i class="fas fa-print me-2"></i> Print Receipt</button>
-        </div>
-    </div>
-
-    <div class="verified-footer">
-        <p class="text-muted small m-0 fw-bold">
-            <i class="fas fa-shield-alt me-1"></i> Securely processed via Zamin Dekho Payment Gateway
-        </p>
-    </div>
+<div class="minimal-footer">
+    <p class="mb-2">© 2026 Zamin Dekho. All Rights Reserved.</p>
+    <a href="policies.html#terms">Terms</a> | 
+    <a href="policies.html#privacy">Privacy</a> | 
+    <a href="policies.html#refund">Refund Policy</a>
 </div>
 
 <script src="script.js"></script> 
 
 <script>
     // 🛡️ SECURITY FIX 1: Provide a fallback HTML Sanitizer just in case script.js fails to load
-    function safeEscape(str) {
-        if (!str) return "";
-        return str.toString()
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+    if (typeof window.escapeHTML !== 'function') {
+        window.escapeHTML = function(str) {
+            if (!str) return "";
+            return str.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        };
     }
 
     window.onload = function() {
@@ -132,16 +167,16 @@
         let rawProp = urlParams.get('prop');
         let rawAmt = urlParams.get('amt');
 
-        const txnId = rawTxn ? safeEscape(rawTxn) : `ZMN-TXN-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
-        const propName = rawProp ? safeEscape(decodeURIComponent(rawProp)) : "Premium Property Plot";
-        let amount = rawAmt ? safeEscape(rawAmt) : "1,00,000";
+        const txnId = rawTxn ? escapeHTML(rawTxn) : `ZMN-TXN-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
+        const propName = rawProp ? escapeHTML(decodeURIComponent(rawProp)) : "Premium Property Plot";
+        let amount = rawAmt ? escapeHTML(rawAmt) : "1,00,000";
 
         // Ensure ₹ symbol is added if not present
         if (!amount.includes("₹")) {
             amount = "₹ " + amount;
         }
 
-        document.getElementById('resTxn').innerText = txnId;
+        document.getElementById('resTxn').innerText = txnId; // Using innerText is safe
         document.getElementById('resProperty').innerText = propName;
         document.getElementById('resAmount').innerText = amount;
         document.getElementById('resDate').innerText = new Date().toLocaleString('en-IN', {
