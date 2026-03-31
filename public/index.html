@@ -319,17 +319,6 @@
         <script src="script.js"></script> 
 
         <script>
-            // 🛡️ SECURITY FIX 1: HTML Sanitizer Function
-            function escapeHTML(str) {
-                if (!str) return "";
-                return str.toString()
-                    .replace(/&/g, "&")
-                    .replace(/</g, "<")
-                    .replace(/>/g, ">")
-                    .replace(/"/g, """)
-                    .replace(/'/g, "'");
-            }
-
             let userLat = null;
             let userLng = null;
 
