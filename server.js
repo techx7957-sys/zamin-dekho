@@ -35,6 +35,9 @@ const { verifyToken } = require("./middleware/authMiddleware");
 
 const app = express();
 
+// Trust Replit's reverse proxy so express-rate-limit can read the real client IP
+app.set('trust proxy', 1);
+
 // ==========================================
 // 🛡️ LAYER 1: BASIC SECURITY & ULTIMATE CORS FIX
 // ==========================================
