@@ -24,8 +24,9 @@ const validateObjectId = (req, res, next) => {
 // ==========================================
 
 // Route: Get Admin Dashboard Statistics (Leads, Revenue, Alerts)
+// 🌟 FIX: URL matched with frontend fetch call
 router.get(
-  "/stats",
+  "/dashboard-stats",
   verifyToken,
   authorizeRoles("admin"),
   adminController.getDashboardStats
@@ -44,8 +45,9 @@ router.get(
 );
 
 // Route: Update Lead Pipeline (Status, Notes, Follow-ups)
+// 🌟 FIX: URL matched with frontend fetch call (/leads/:id instead of /lead/:id)
 router.put(
-  "/lead/:id",
+  "/leads/:id",
   verifyToken,
   authorizeRoles("admin", "broker"),
   validateObjectId, // 🛡️ Added ID Shield
@@ -57,17 +59,18 @@ router.put(
 // ==========================================
 
 // Route: Get all listings waiting for review
+// 🌟 FIX: URL matched with frontend fetch call
 router.get(
-  "/pending-properties",
+  "/properties/pending",
   verifyToken,
   authorizeRoles("admin"),
   adminController.getPendingProperties
 );
 
-// 🌟 FIX: URL path corrected to match frontend fetch call (/approve-property)
 // Route: Approve or Reject a Property Listing
+// 🌟 FIX: URL matched with frontend fetch call
 router.put(
-  "/approve-property/:id",
+  "/properties/:id/approve",
   verifyToken,
   authorizeRoles("admin"),
   validateObjectId, // 🛡️ Added ID Shield
@@ -75,20 +78,22 @@ router.put(
 );
 
 // ==========================================
-// 🚨 4. QUALITY CONTROL & BROKER COMPLIANCE (Step 40)
+// 🚨 4. QUALITY CONTROL & BROKER COMPLIANCE
 // ==========================================
 
 // Route: Get brokers with low ratings or complaints
+// 🌟 FIX: URL matched with frontend fetch call
 router.get(
-  "/quality-alerts",
+  "/brokers/flagged",
   verifyToken,
   authorizeRoles("admin"),
   adminController.getFlaggedBrokers
 );
 
 // Route: Issue official warning to a broker (Strike System)
-router.post(
-  "/broker-warning/:id",
+// 🌟 FIX: URL matched with frontend fetch call. Changed to PUT to match frontend.
+router.put(
+  "/brokers/:id/warning",
   verifyToken,
   authorizeRoles("admin"),
   validateObjectId, // 🛡️ Added ID Shield
@@ -96,12 +101,34 @@ router.post(
 );
 
 // Route: Toggle Broker Visibility (Shadowban/Restore)
+// 🌟 FIX: URL matched with frontend fetch call
 router.put(
-  "/toggle-visibility/:id",
+  "/brokers/:id/visibility",
   verifyToken,
   authorizeRoles("admin"),
   validateObjectId, // 🛡️ Added ID Shield
   adminController.toggleVisibility
+);
+
+// ==========================================
+// 👥 5. USER MANAGEMENT
+// ==========================================
+
+// Route: Get all users
+router.get(
+  "/users",
+  verifyToken,
+  authorizeRoles("admin"),
+  adminController.getAllUsers
+);
+
+// Route: Toggle user active status
+router.put(
+  "/users/:id/toggle-status",
+  verifyToken,
+  authorizeRoles("admin"),
+  validateObjectId,
+  adminController.toggleUserStatus
 );
 
 module.exports = router;

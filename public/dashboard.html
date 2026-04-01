@@ -67,37 +67,30 @@
         .rating-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 10px;}
         .rating-row select { width: auto; min-width: 150px; margin-bottom: 0; padding: 8px 15px;}
 
-        /* 🌟 THE REAL FLOATING SUPPORT BUTTON (Matched to your image) 🌟 */
+        /* 🌟 FLOATING SUPPORT BUTTON 🌟 */
         .floating-support-btn {
-            display: none; /* Initially hidden */
+            display: none; 
             position: fixed;
             bottom: 30px;
             right: 30px;
-            background: linear-gradient(to right, #10b981, #0ca873);
+            background: linear-gradient(135deg, #10b981, #059669);
             color: white;
             border: none;
-            padding: 12px 28px;
+            padding: 15px 25px;
             border-radius: 50px;
             font-size: 16px;
             font-weight: 800;
             box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
             cursor: pointer;
-            z-index: 1050; /* Ensure it stays above everything */
+            z-index: 1000;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             align-items: center;
-            gap: 12px;
-            text-decoration: none;
+            gap: 10px;
         }
         .floating-support-btn:hover {
-            transform: translateY(-5px) scale(1.03);
+            transform: translateY(-5px) scale(1.05);
             box-shadow: 0 15px 35px rgba(16, 185, 129, 0.5);
-            color: white;
         }
-        .floating-support-btn i {
-            font-size: 22px;
-        }
-
-        /* Pulse effect to draw attention */
         @keyframes pulseSupport {
             0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
             70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
@@ -105,36 +98,121 @@
         }
         .floating-support-btn { animation: pulseSupport 2s infinite; }
 
-        /* Support Chat Box (Simple slide up panel) */
+        /* 🌟 UPGRADED CHAT MODEL (MODAL) CSS 🌟 */
         .support-chat-panel {
             position: fixed;
             bottom: 90px;
             right: 30px;
-            width: 320px;
+            width: 360px;
             background: white;
             border-radius: 16px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
             border: 1px solid #e2e8f0;
-            z-index: 9999; /* Ensure it's high up */
-            transform: translateY(150%);
+            z-index: 9999;
+            transform: translateY(150%) scale(0.9);
             opacity: 0;
-            transition: all 0.3s ease-in-out;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
             overflow: hidden;
             pointer-events: none;
         }
         .support-chat-panel.active {
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
             opacity: 1;
             pointer-events: auto;
         }
-        .support-header { background: #0f172a; color: white; padding: 15px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
-        .support-body { padding: 20px; height: 250px; overflow-y: auto; background: #f8fafc;}
-        .support-input { display: flex; border-top: 1px solid #e2e8f0; padding: 10px;}
-        .support-input input { margin-bottom: 0; border: none; border-radius: 0; background: transparent; padding: 5px; flex: 1;}
-        .support-input input:focus { box-shadow: none; border: none;}
-        .support-input button { background: transparent; border: none; color: #10b981; font-size: 20px; padding: 0 10px; cursor: pointer;}
+        .support-header { 
+            background: linear-gradient(135deg, #0f172a, #1e293b); 
+            color: white; 
+            padding: 18px; 
+            font-weight: 800; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-top-left-radius: 16px; 
+            border-top-right-radius: 16px; 
+        }
+        .support-body { 
+            padding: 20px; 
+            height: 320px; 
+            overflow-y: auto; 
+            background: #f8fafc; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+        }
+        .support-body::-webkit-scrollbar { width: 6px; }
+        .support-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        .chat-bubble { 
+            max-width: 85%; 
+            padding: 12px 16px; 
+            border-radius: 16px; 
+            font-size: 13px; 
+            font-weight: 500; 
+            line-height: 1.5; 
+            animation: fadeInChat 0.3s ease-out; 
+        }
+        .chat-bubble.bot { 
+            background: white; 
+            color: #1e293b; 
+            border: 1px solid #e2e8f0; 
+            border-bottom-left-radius: 4px; 
+            align-self: flex-start; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02); 
+        }
+        .chat-bubble.user { 
+            background: #10b981; 
+            color: white; 
+            border-bottom-right-radius: 4px; 
+            align-self: flex-end; 
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2); 
+        }
+        @keyframes fadeInChat { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .support-input { 
+            display: flex; 
+            border-top: 1px solid #e2e8f0; 
+            padding: 15px; 
+            background: white; 
+            align-items: center; 
+            gap: 10px; 
+        }
+        .support-input input { 
+            margin-bottom: 0; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 50px; 
+            background: #f8fafc; 
+            padding: 10px 15px; 
+            flex: 1; 
+            font-size: 14px; 
+            transition: 0.3s; 
+            outline: none;
+        }
+        .support-input input:focus { 
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); 
+            border-color: #10b981; 
+        }
+        .support-input button { 
+            background: #10b981; 
+            border: none; 
+            color: white; 
+            border-radius: 50%; 
+            width: 42px; 
+            height: 42px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            flex-shrink: 0; 
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2); 
+        }
+        .support-input button:hover { 
+            background: #059669; 
+            transform: scale(1.05); 
+        }
     </style>
 </head>
 <body>
@@ -349,24 +427,32 @@
         </div>
 
         <button id="floatingSupportBtn" class="floating-support-btn" onclick="toggleSupportChat()">
-            <i class="fas fa-headset"></i> Contact Zamin Dekho
+            <i class="fas fa-headset fs-5"></i> Contact Zamin Dekho
         </button>
 
         <div id="supportChatPanel" class="support-chat-panel">
             <div class="support-header">
-                <span><i class="fas fa-headset me-2 text-success"></i> Support</span>
-                <i class="fas fa-times" style="cursor:pointer;" onclick="toggleSupportChat()"></i>
+                <div class="d-flex align-items-center">
+                    <div style="width: 35px; height: 35px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; border: 2px solid rgba(255,255,255,0.5);">
+                        <i class="fas fa-headset text-white fs-6"></i>
+                    </div>
+                    <div>
+                        <h6 class="m-0 fw-bold" style="font-size: 15px; letter-spacing: 0.5px;">Zamin Support</h6>
+                        <small class="text-success fw-bold" style="font-size: 11px;"><i class="fas fa-circle me-1" style="font-size: 8px;"></i>Online</small>
+                    </div>
+                </div>
+                <i class="fas fa-times fs-5 opacity-75" style="cursor:pointer; transition: 0.2s;" onclick="toggleSupportChat()" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'"></i>
             </div>
+
             <div class="support-body" id="supportChatBody">
-                <div class="text-start mb-3">
-                    <span class="badge bg-light text-dark border p-2" style="font-size:12px; font-weight:600;">
-                        Hello! Welcome to Zamin Dekho Support. Do you need help with a booking or a refund? <br><br>
-                        *Note: If you cancel within 24 hours of booking, a non-refundable Platform & Broker Fee (₹10,000) will be deducted from your token amount.*
-                    </span>
+                <div class="chat-bubble bot">
+                    Hello! Welcome to Zamin Dekho Support. Do you need help with a booking or a refund? <br><br>
+                    <span class="text-danger fw-bold" style="font-size: 11px;">*Note: Cancellations within 24 hours deduct a non-refundable ₹10,000 Platform & Broker Fee.</span>
                 </div>
             </div>
+
             <div class="support-input">
-                <input type="text" id="supportMsgInput" placeholder="Type your message..." onkeypress="handleSupportKey(event)">
+                <input type="text" id="supportMsgInput" placeholder="Type your message here..." onkeypress="handleSupportKey(event)">
                 <button onclick="sendSupportMessage()"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>
@@ -417,14 +503,11 @@
         // 🌟 1. INIT & AUTH LOGIC
         // ==========================================
         window.onload = function () {
-            // 🔒 Safe global function
             const token = typeof getToken === 'function' ? getToken() : null;
             if (!token) { window.location.href = "login.html"; return; }
 
             updateNavbarUI();
             initCameraSystem(); 
-
-            // 🚀 MASTER FIX: Wake up Vercel and pre-fetch ALL data in background INSTANTLY
             wakeServerAndPrefetch(token);
 
             const hash = window.location.hash;
@@ -434,7 +517,6 @@
 
         function updateNavbarUI() {
             try {
-                // 🔒 Safe global function
                 const user = typeof getUser === 'function' ? getUser() : null;
                 const adminArea = document.getElementById('adminLinkArea');
                 const authArea = document.getElementById('authArea');
@@ -448,7 +530,6 @@
                 const firstName = user && user.fullName ? user.fullName.split(" ")[0] : "User";
                 const avatarUrl = user && user.avatar ? user.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=10b981&color=fff&size=100`;
 
-                // 🛡️ Escaped name rendering
                 authArea.innerHTML = `
                     <div class="user-id-btn me-2">
                         <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> ${escapeHTML(firstName)}
@@ -492,7 +573,7 @@
         }
 
         // ==========================================
-        // 🌟 SUPPORT CHAT LOGIC (NEW PLAN)
+        // 🌟 UPGRADED SUPPORT CHAT LOGIC
         // ==========================================
         function toggleSupportChat() {
             document.getElementById('supportChatPanel').classList.toggle('active');
@@ -512,28 +593,29 @@
             // 🛡️ SECURITY FIX: Prevent DOM XSS in Support Chat
             const safeMsg = escapeHTML(msg);
 
-            // Add User Message
-            chatBody.innerHTML += `
-                <div class="text-end mb-3">
-                    <span class="badge bg-primary text-white p-2 text-wrap text-start lh-base" style="font-size:13px; font-weight:500; max-width: 90%;">
-                        ${safeMsg}
-                    </span>
-                </div>
-            `;
+            // Add User Message (Right Side)
+            chatBody.innerHTML += `<div class="chat-bubble user">${safeMsg}</div>`;
             input.value = '';
             chatBody.scrollTop = chatBody.scrollHeight;
 
-            // Auto Reply
+            // Typing Indicator & Bot Reply
+            const typingId = 'typing-' + Date.now();
             setTimeout(() => {
-                chatBody.innerHTML += `
-                    <div class="text-start mb-3">
-                        <span class="badge bg-light text-dark border p-2 text-wrap text-start lh-base" style="font-size:12px; font-weight:600; max-width: 90%;">
-                            A support executive will review your request. If this is a refund request for a token within 24 hours, the ₹10,000 platform fee will be deducted. Please hold on.
-                        </span>
-                    </div>
-                `;
+                chatBody.innerHTML += `<div id="${typingId}" class="chat-bubble bot text-muted"><i class="fas fa-ellipsis-h fa-fade"></i></div>`;
                 chatBody.scrollTop = chatBody.scrollHeight;
-            }, 1000);
+
+                setTimeout(() => {
+                    const typingEl = document.getElementById(typingId);
+                    if(typingEl) typingEl.remove();
+
+                    chatBody.innerHTML += `
+                        <div class="chat-bubble bot">
+                            A support executive will review your request shortly. Please hold on.
+                        </div>
+                    `;
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                }, 1500);
+            }, 500);
         }
 
         // ==========================================

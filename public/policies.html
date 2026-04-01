@@ -10,9 +10,9 @@
 
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
-        /* 🌟 FIX: Added Flexbox layout for footer placement */
+
         body { 
-            background-color: #f8fafc; 
+            background-color: #f4f7f6; 
             font-family: "Inter", sans-serif; 
             color: #1e293b; 
             position: relative; 
@@ -23,38 +23,61 @@
 
         .main-wrapper { flex: 1; }
 
-        /* Navbar */
-        .navbar { background: rgba(255,255,255,0.98) !important; backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); padding: 15px 0; }
+        /* Premium Navbar */
+        .navbar { background: rgba(255,255,255,0.95) !important; backdrop-filter: blur(15px); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05); padding: 18px 0; border-bottom: 1px solid #e2e8f0; }
         .navbar-brand { font-weight: 800; color: #10b981 !important; font-size: 24px; letter-spacing: -0.5px;}
 
-        /* Hero Section */
-        .policy-hero { background: #0f172a; padding: 60px 0 40px; color: white; text-align: center; margin-bottom: 40px; border-bottom: 4px solid #10b981;}
-        .policy-hero h1 { font-weight: 800; font-size: 36px; margin-bottom: 10px; }
-        .policy-hero p { color: #94a3b8; font-size: 16px; font-weight: 500; }
+        /* Glassmorphism Hero Section */
+        .policy-hero { 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            padding: 80px 0 60px; 
+            color: white; 
+            text-align: center; 
+            margin-bottom: 50px; 
+            position: relative;
+            overflow: hidden;
+        }
+        .policy-hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #10b981, #3b82f6);
+        }
+        .policy-hero h1 { font-weight: 800; font-size: 42px; margin-bottom: 15px; letter-spacing: -1px; }
+        .policy-hero p { color: #94a3b8; font-size: 18px; font-weight: 500; max-width: 600px; margin: 0 auto; line-height: 1.6;}
 
-        /* Sidebar Navigation */
-        .sticky-sidebar { position: sticky; top: 100px; }
-        .nav-pills .nav-link { color: #64748b; font-weight: 600; padding: 12px 20px; border-radius: 12px; margin-bottom: 8px; text-align: left; transition: 0.3s; background: transparent; }
-        .nav-pills .nav-link:hover { background: #f1f5f9; color: #0f172a; }
-        .nav-pills .nav-link.active { background: #10b981; color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
+        /* Premium Sidebar Navigation */
+        .sticky-sidebar { position: sticky; top: 120px; }
+        .nav-pills { background: white; padding: 15px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
+        .nav-pills .nav-link { color: #64748b; font-weight: 600; padding: 14px 20px; border-radius: 12px; margin-bottom: 8px; text-align: left; transition: all 0.3s ease; background: transparent; display: flex; align-items: center; gap: 12px; font-size: 15px;}
+        .nav-pills .nav-link:hover { background: #f8fafc; color: #0f172a; transform: translateX(5px);}
+        .nav-pills .nav-link.active { background: #10b981; color: white; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); transform: translateX(5px); }
 
         /* Content Sections */
-        .policy-section { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; margin-bottom: 30px; }
-        .policy-section h2 { font-weight: 800; color: #0f172a; margin-bottom: 20px; font-size: 24px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;}
-        .policy-section h4 { font-weight: 700; color: #334155; margin-top: 25px; margin-bottom: 10px; font-size: 18px; }
-        .policy-section p, .policy-section li { color: #475569; line-height: 1.7; font-size: 15px; margin-bottom: 15px; }
+        .policy-section { background: white; padding: 50px; border-radius: 24px; box-shadow: 0 15px 40px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; margin-bottom: 40px; transition: transform 0.3s ease;}
+        .policy-section:hover { transform: translateY(-3px); box-shadow: 0 20px 45px rgba(0,0,0,0.04);}
+        .policy-section h2 { font-weight: 800; color: #0f172a; margin-bottom: 25px; font-size: 28px; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; display: flex; align-items: center; gap: 10px;}
+        .policy-section h4 { font-weight: 700; color: #1e293b; margin-top: 35px; margin-bottom: 15px; font-size: 19px; }
+        .policy-section p, .policy-section li { color: #475569; line-height: 1.8; font-size: 16px; margin-bottom: 18px; }
         .policy-section ul { padding-left: 20px; }
 
-        /* Contact Form */
-        .contact-input { background: #f8fafc; border: 1px solid #cbd5e1; padding: 12px 15px; border-radius: 10px; font-weight: 500; width: 100%; margin-bottom: 15px; transition: 0.3s; }
-        .contact-input:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); background: white;}
-        .btn-submit { background: #10b981; color: white; border: none; padding: 12px 25px; border-radius: 10px; font-weight: 700; width: 100%; transition: 0.3s; }
-        .btn-submit:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);}
+        .highlight-text { background: #ecfdf5; color: #065f46; padding: 2px 8px; border-radius: 6px; font-weight: 600; }
 
-        .contact-info-card { background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;}
-        .contact-info-card i { color: #10b981; font-size: 20px; margin-bottom: 10px; display: block;}
-        .contact-info-card h6 { font-weight: 700; margin-bottom: 5px; color: #0f172a;}
-        .contact-info-card p { margin: 0; font-size: 14px; color: #64748b;}
+        /* Premium Contact Form */
+        .contact-input { background: #f8fafc; border: 2px solid #e2e8f0; padding: 15px 20px; border-radius: 12px; font-weight: 500; width: 100%; margin-bottom: 20px; transition: all 0.3s ease; font-size: 15px; color: #1e293b;}
+        .contact-input::placeholder { color: #94a3b8; }
+        .contact-input:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); background: white;}
+
+        .btn-submit { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 16px 30px; border-radius: 12px; font-weight: 800; font-size: 16px; width: 100%; transition: all 0.3s ease; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.25);}
+        .btn-submit:hover { transform: translateY(-3px); box-shadow: 0 15px 25px rgba(16, 185, 129, 0.35);}
+
+        .contact-info-card { background: white; padding: 30px 20px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 30px; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.02);}
+        .contact-info-card:hover { border-color: #10b981; transform: translateY(-5px); }
+        .icon-wrapper { width: 50px; height: 50px; background: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; }
+        .contact-info-card i { color: #10b981; font-size: 20px; }
+        .contact-info-card h6 { font-weight: 800; margin-bottom: 8px; color: #0f172a; font-size: 16px;}
+        .contact-info-card p { margin: 0; font-size: 14px; color: #64748b; line-height: 1.5;}
     </style>
 </head>
 <body data-bs-spy="scroll" data-bs-target="#policy-nav" data-bs-smooth-scroll="true" tabindex="0">
@@ -77,15 +100,15 @@
         </header>
 
         <div class="container mb-5">
-            <div class="row g-4">
+            <div class="row g-5">
 
-                <div class="col-lg-3">
+                <div class="col-lg-3 d-none d-lg-block">
                     <nav id="policy-nav" class="sticky-sidebar">
                         <div class="nav nav-pills flex-column">
-                            <a class="nav-link active" href="#terms"><i class="fas fa-file-contract me-2"></i> Terms & Conditions</a>
-                            <a class="nav-link" href="#privacy"><i class="fas fa-user-shield me-2"></i> Privacy Policy</a>
-                            <a class="nav-link" href="#refund"><i class="fas fa-undo me-2"></i> Refund Policy</a>
-                            <a class="nav-link" href="#contact"><i class="fas fa-headset me-2"></i> Contact Us</a>
+                            <a class="nav-link active" href="#terms"><i class="fas fa-file-contract"></i> Terms & Conditions</a>
+                            <a class="nav-link" href="#privacy"><i class="fas fa-user-shield"></i> Privacy Policy</a>
+                            <a class="nav-link" href="#refund"><i class="fas fa-undo"></i> Refund Policy</a>
+                            <a class="nav-link" href="#contact"><i class="fas fa-headset"></i> Contact Support</a>
                         </div>
                     </nav>
                 </div>
@@ -93,15 +116,15 @@
                 <div class="col-lg-9">
 
                     <section id="terms" class="policy-section">
-                        <h2>Terms & Conditions</h2>
-                        <p>Last updated: <span class="fw-bold text-dark">March 31, 2026</span></p>
+                        <h2><i class="fas fa-file-contract text-primary"></i> Terms & Conditions</h2>
+                        <p class="text-muted fw-bold mb-4">Last updated: <span class="text-dark">March 31, 2026</span></p>
                         <p>Welcome to Zamin Dekho. By accessing our platform, you agree to be bound by these Terms and Conditions. Please read them carefully before using our services or participating in our secure Deal Room.</p>
 
                         <h4>1. Platform Role (Tech & Intermediary)</h4>
                         <p>Zamin Dekho acts as a secure intermediary and technology platform connecting property buyers and verified brokers. We provide services for premium property verification, booking requests, GPS-verified site visits, and secure Escrow Token payments. We are not the legal owners of the properties listed.</p>
 
                         <h4>2. Premium Verification Fees</h4>
-                        <p>Any fees paid for "Premium Verification" (e.g., ₹499) cover background and legal check services by our network and are strictly non-refundable once the process is initiated.</p>
+                        <p>Any fees paid for "Premium Verification" (e.g., <span class="highlight-text">₹499</span>) cover background and legal check services by our network and are strictly non-refundable once the process is initiated.</p>
 
                         <h4>3. Property Listings & Accuracy</h4>
                         <p>While we use live-capture technology and timestamps to verify property existence, the final legal verification (Registry, Khatauni, Encumbrances) remains the responsibility of the buyer. Zamin Dekho is not liable for legal disputes arising post-registry.</p>
@@ -111,8 +134,8 @@
                     </section>
 
                     <section id="privacy" class="policy-section">
-                        <h2>Privacy Policy</h2>
-                        <p>Your privacy is our priority. This policy outlines how Zamin Dekho collects, uses, and encrypts your data.</p>
+                        <h2><i class="fas fa-user-shield text-success"></i> Privacy Policy</h2>
+                        <p>Your privacy is our priority. This policy outlines how Zamin Dekho collects, uses, and encrypts your data to ensure maximum security.</p>
 
                         <h4>1. Data We Collect</h4>
                         <ul>
@@ -125,11 +148,11 @@
                         <p>Your data is strictly used to facilitate secure property transactions. Phone numbers are shared with brokers only after a site visit is officially scheduled. We <strong>never</strong> sell your data to third-party marketing agencies.</p>
 
                         <h4>3. Data Security & Encryption</h4>
-                        <p>All chats inside the Secure Deal Room and payment transactions (via Razorpay) are secured using 256-bit SSL encryption. Passwords are cryptographically hashed using bcrypt before being stored in our database.</p>
+                        <p>All chats inside the Secure Deal Room and payment transactions (via Razorpay) are secured using <span class="highlight-text">256-bit SSL encryption</span>. Passwords are cryptographically hashed using bcrypt before being stored in our secure database.</p>
                     </section>
 
                     <section id="refund" class="policy-section">
-                        <h2>Refund & Cancellation Policy</h2>
+                        <h2><i class="fas fa-undo text-warning"></i> Refund & Cancellation Policy</h2>
                         <p>We understand that real estate decisions require careful thought. Our refund policy is designed to be fair, transparent, and hassle-free based on the type of payment.</p>
 
                         <h4>1. Premium Verification Fees</h4>
@@ -139,7 +162,7 @@
                         <p>When you pay a Token Booking Amount via our Escrow system after an admin sets the fee, the property is reserved for you. If you change your mind within the first <strong>24 hours</strong> of the token payment, you are eligible for a partial refund.</p>
 
                         <h4>3. Non-Refundable Deductions</h4>
-                        <p>If you request a cancellation within the 24-hour window, a fixed sum of <strong>₹10,000</strong> (comprising the Zamin Dekho Platform Fee and the Broker Consultation Fee) will be deducted from your total Token Amount. The remaining balance will be refunded.</p>
+                        <p>If you request a cancellation within the 24-hour window, a fixed sum of <span class="highlight-text">₹10,000</span> (comprising the Zamin Dekho Platform Fee and the Broker Consultation Fee) will be deducted from your total Token Amount. The remaining balance will be refunded.</p>
 
                         <h4>4. How to Request a Refund</h4>
                         <p>To request a refund within the 24-hour window, you must initiate the request via the <strong>Support Chat Panel</strong> located in the "My Bookings" section of your Dashboard. <strong>Requests made after 24 hours will result in zero refund.</strong></p>
@@ -149,55 +172,56 @@
                     </section>
 
                     <section id="contact" class="policy-section mb-0">
-                        <h2>Contact Us</h2>
-                        <p>Have a question about a property, a refund request, or a compliance issue? Our support team is here to help.</p>
+                        <h2><i class="fas fa-headset text-info"></i> Contact Us</h2>
+                        <p>Have a question about a property, a refund request, or a compliance issue? Our expert support team is here to help.</p>
 
-                        <div class="alert alert-info border-info mb-4 shadow-sm" style="font-size: 14px;">
-                            <i class="fas fa-info-circle me-2 text-info"></i> For immediate assistance regarding active property bookings or refund requests, please use the <strong>Support Chat Panel</strong> available in the <strong>"My Bookings"</strong> section of your User Dashboard.
+                        <div class="alert alert-primary border-0 mb-5 mt-4 p-4 rounded-4 shadow-sm">
+                            <h6 class="fw-bold mb-2"><i class="fas fa-info-circle me-2"></i> Fast-Track Support for Bookings</h6>
+                            <p class="m-0" style="font-size: 14.5px;">For immediate assistance regarding active property bookings or refund requests, please use the <strong>Support Chat Panel</strong> available in the <strong>"My Bookings"</strong> section of your User Dashboard.</p>
                         </div>
 
-                        <div class="row mb-4 mt-4">
+                        <div class="row mb-5">
                             <div class="col-md-4">
                                 <div class="contact-info-card text-center h-100">
-                                    <i class="fas fa-envelope"></i>
+                                    <div class="icon-wrapper"><i class="fas fa-envelope"></i></div>
                                     <h6>Email Support</h6>
                                     <p>support@zamindekho.com</p>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="contact-info-card text-center h-100">
-                                    <i class="fas fa-phone-alt"></i>
+                                    <div class="icon-wrapper"><i class="fas fa-phone-alt"></i></div>
                                     <h6>Call Us</h6>
-                                    <p>+91 98765 43210<br><small>(10 AM - 6 PM)</small></p>
+                                    <p>+91 98765 43210<br><small class="text-muted">(10 AM - 6 PM)</small></p>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="contact-info-card text-center h-100">
-                                    <i class="fas fa-map-marker-alt"></i>
+                                    <div class="icon-wrapper"><i class="fas fa-map-marker-alt"></i></div>
                                     <h6>Head Office</h6>
                                     <p>Zamin Dekho Tower,<br>Cyber City, India</p>
                                 </div>
                             </div>
                         </div>
 
-                        <h4 class="mb-3">Send us a general message</h4>
+                        <h4 class="mb-4 font-weight-bold">Send us a general message</h4>
                         <form id="contactForm" onsubmit="handleContactSubmit(event)">
                             <div class="row">
                                 <div class="col-md-6">
-                                    <input type="text" id="contactName" class="contact-input" placeholder="Your Name" required>
+                                    <input type="text" id="contactName" class="contact-input" placeholder="Your Full Name" required>
                                 </div>
                                 <div class="col-md-6">
-                                    <input type="email" id="contactEmail" class="contact-input" placeholder="Your Email" required>
+                                    <input type="email" id="contactEmail" class="contact-input" placeholder="Your Email Address" required>
                                 </div>
                                 <div class="col-md-12">
-                                    <input type="text" id="contactSubject" class="contact-input" placeholder="Subject" required>
+                                    <input type="text" id="contactSubject" class="contact-input" placeholder="Subject of your message" required>
                                 </div>
                                 <div class="col-md-12">
-                                    <textarea id="contactMessage" class="contact-input" rows="4" placeholder="How can we help you?" required></textarea>
+                                    <textarea id="contactMessage" class="contact-input" rows="5" placeholder="How can we help you today?" required></textarea>
                                 </div>
-                                <div class="col-md-12">
+                                <div class="col-md-12 mt-2">
                                     <button type="submit" class="btn-submit" id="contactBtn">
-                                        <i class="fas fa-paper-plane me-2"></i> Send Message
+                                        <i class="fas fa-paper-plane me-2"></i> Send Message Securely
                                     </button>
                                 </div>
                             </div>
@@ -258,7 +282,7 @@
             const btn = document.getElementById('contactBtn');
             const originalText = btn.innerHTML;
 
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i> Sending...';
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i> Sending Securely...';
             btn.disabled = true;
 
             // 🛡️ Sanitize inputs using global escapeHTML with fallback

@@ -79,6 +79,46 @@ exports.updateLeadStatus = async (req, res) => {
 };
 
 // ==========================================
+// 👑 3A. APPROVE BOOKING TOKEN AMOUNT (ADMIN ONLY)
+// ==========================================
+exports.approveBookingAmount = async (req, res) => {
+    try {
+        // 🛡️ SECURITY FIX: Hyper-Strict Admin Check
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: "Access Denied. Only Admins can set token amounts." });
+        }
+
+        const { leadId, amount } = req.body;
+
+        if (!leadId || !amount || isNaN(amount) || amount < 1000) {
+            return res.status(400).json({ success: false, message: "Valid Lead ID and Minimum Amount (₹1000) are required." });
+        }
+
+        // Lock the token amount and make it visible for payment
+        const updatedLead = await Lead.findByIdAndUpdate(
+            leadId, 
+            {
+                bookingFee: amount,
+                isAmountVisible: true, 
+                status: "Ready for Payment" // Update pipeline stage
+            },
+            { new: true }
+        );
+
+        if (!updatedLead) {
+            return res.status(404).json({ success: false, message: "Booking request not found." });
+        }
+
+        res.json({ success: true, message: "Booking amount approved and visible to buyer! ✅" });
+
+    } catch (error) {
+        console.error("Admin Approval Error:", error);
+        res.status(500).json({ success: false, message: "Error updating booking amount." });
+    }
+};
+
+
+// ==========================================
 // 🕒 4. GET PENDING PROPERTIES (Approval Queue)
 // ==========================================
 exports.getPendingProperties = async (req, res) => {

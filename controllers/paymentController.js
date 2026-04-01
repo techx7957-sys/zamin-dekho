@@ -17,31 +17,75 @@ const razorpay = new Razorpay({
 });
 
 // ==========================================
-// 💳 1. CREATE PAYMENT ORDER (Step 25)
+// 💳 1. CREATE PAYMENT ORDER (Dynamic & Protected)
 // ==========================================
 exports.createOrder = async (req, res) => {
     try {
-        const { propertyId } = req.body;
+        // checkoutType ayega frontend se: 'verify' ya 'token'
+        const { propertyId, checkoutType } = req.body;
+        let finalAmountInPaise = 0;
+        let receiptPrefix = "";
+
+        if (!propertyId || !checkoutType) {
+            return res.status(400).json({ success: false, message: "Invalid request parameters." });
+        }
 
         // 🚨 PRE-FLIGHT CHECK: Zameen khali hai ya nahi?
-        if (propertyId) {
-            const property = await Listing.findById(propertyId);
-            if (!property || property.bookingStatus !== "Available") {
+        const property = await Listing.findById(propertyId);
+        if (!property) {
+            return res.status(404).json({ success: false, message: "Property not found." });
+        }
+
+        // 🌟 DYNAMIC ROUTING & ZERO-TRUST AMOUNT CALCULATION
+        if (checkoutType === 'verify') {
+            // Case 1: Premium Verification (Flat ₹499)
+            finalAmountInPaise = 499 * 100;
+            receiptPrefix = "ZMN_VER_";
+
+        } else if (checkoutType === 'token') {
+            // Case 2: Booking Token
+
+            // Check if property is already blocked
+            if (property.bookingStatus === "Reserved" || property.bookingStatus === "Sold") {
                 return res.status(400).json({ 
                     success: false, 
                     message: "Sorry, this property is already Reserved or Sold! ❌" 
                 });
             }
+
+            // Find the specific Lead entry
+            const lead = await Lead.findOne({ buyer: req.user.id, property: propertyId });
+
+            if (!lead) {
+                return res.status(400).json({ success: false, message: "No active booking request found." });
+            }
+
+            // 🛑 STRICT ADMIN CHECK: Bina Admin ke permission ke no payment
+            if (!lead.isAmountVisible || !lead.bookingFee) {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: "Security Block: Token amount is not approved by Admin yet. Please wait." 
+                });
+            }
+
+            // Extract trusted amount from DB, NOT from frontend
+            finalAmountInPaise = lead.bookingFee * 100;
+            receiptPrefix = "ZMN_TOK_";
+
+        } else {
+            return res.status(400).json({ success: false, message: "Unknown checkout type." });
         }
 
+        // Create Order
         const options = {
-            amount: 100000 * 100, // ₹1,00,000 in paise (Razorpay standard)
+            amount: finalAmountInPaise, 
             currency: "INR",
-            receipt: "ZMN_RCPT_" + Date.now(),
+            receipt: receiptPrefix + Date.now(),
         };
 
         const order = await razorpay.orders.create(options);
         res.json({ success: true, order });
+
     } catch (error) {
         console.error("Razorpay Order Error:", error);
         res.status(500).json({ success: false, message: "Payment gateway error. Please try again." });
@@ -49,11 +93,11 @@ exports.createOrder = async (req, res) => {
 };
 
 // ==========================================
-// ✅ 2. VERIFY PAYMENT & SECURE BOOKING (Step 27 & 28)
+// ✅ 2. VERIFY PAYMENT & SECURE BOOKING
 // ==========================================
 exports.verifyAndBook = async (req, res) => {
     try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, propertyId, paymentMethod } = req.body;
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, propertyId, checkoutType, paymentMethod } = req.body;
 
         // 🛡️ Extra Layer: Ensure Secret exists before hashing
         if (!process.env.RAZORPAY_KEY_SECRET) {
@@ -69,33 +113,58 @@ exports.verifyAndBook = async (req, res) => {
 
         if (expectedSignature === razorpay_signature) {
 
-            // 1. Lock the Property (Smart Reservation - Step 28)
-            await Listing.findByIdAndUpdate(propertyId, { 
-                bookingStatus: "Reserved" 
-            });
+            let responseMessage = "";
+            let displayAmount = "";
+            let leadData;
 
-            // 2. Update or Create Lead (Upsert Logic to prevent duplicates)
-            const lead = await Lead.findOneAndUpdate(
-                { buyer: req.user.id, property: propertyId },
-                {
-                    tokenAmount: 100000,
-                    paymentMethod: paymentMethod || "Razorpay Online",
-                    transactionId: razorpay_payment_id,
-                    status: "Token Paid", // Updates CRM pipeline
-                    paymentStatus: "Paid",
-                    bookingDate: Date.now()
-                },
-                { upsert: true, new: true } // Creates if missing, updates if exists
-            ).populate('property');
+            if (checkoutType === 'verify') {
+                // Update Lead for Verification Paid
+                leadData = await Lead.findOneAndUpdate(
+                    { buyer: req.user.id, property: propertyId },
+                    {
+                        paymentMethod: paymentMethod || "Razorpay Online",
+                        transactionId: razorpay_payment_id,
+                        status: "Verification Paid", 
+                        paymentStatus: "Paid",
+                    },
+                    { upsert: true, new: true } 
+                );
+
+                responseMessage = "Premium Verification Payment Successful! ✅";
+                displayAmount = "₹ 499";
+
+            } else if (checkoutType === 'token') {
+                // Lock Property and Update Lead for Token Paid
+                await Listing.findByIdAndUpdate(propertyId, { 
+                    bookingStatus: "Reserved" 
+                });
+
+                leadData = await Lead.findOneAndUpdate(
+                    { buyer: req.user.id, property: propertyId },
+                    {
+                        paymentMethod: paymentMethod || "Razorpay Online",
+                        transactionId: razorpay_payment_id,
+                        status: "Booked", 
+                        paymentStatus: "Paid",
+                        bookingDate: Date.now()
+                    },
+                    { new: true } 
+                );
+
+                responseMessage = "Token Payment Verified! Property Reserved. 🎉";
+                displayAmount = `₹ ${(leadData.bookingFee || 0).toLocaleString('en-IN')}`;
+            }
+
+            const propertyDetails = await Listing.findById(propertyId).select('landName');
 
             res.json({ 
                 success: true, 
-                message: "Payment Verified! Property Reserved for 48 Hours. 🎉", 
+                message: responseMessage, 
                 receipt: {
                     txnId: razorpay_payment_id,
-                    amount: "₹ 1,00,000",
-                    property: lead.property ? lead.property.landName : "Verified Property",
-                    date: lead.bookingDate
+                    amount: displayAmount,
+                    property: propertyDetails ? propertyDetails.landName : "Verified Property",
+                    date: Date.now()
                 }
             });
         } else {
@@ -104,5 +173,39 @@ exports.verifyAndBook = async (req, res) => {
     } catch (error) {
         console.error("Payment Verification Error:", error);
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// ==========================================
+// 👑 3. ADMIN ONLY: FINALIZE BOOKING AMOUNT
+// ==========================================
+exports.approveBookingAmount = async (req, res) => {
+    try {
+        const { leadId, amount } = req.body;
+
+        if (!leadId || !amount) {
+            return res.status(400).json({ success: false, message: "Lead ID and Amount are required." });
+        }
+
+        // Only Admin updates this. It unlocks the payment for the buyer on the dashboard
+        const updatedLead = await Lead.findByIdAndUpdate(
+            leadId, 
+            {
+                bookingFee: amount,
+                isAmountVisible: true, 
+                status: "Ready for Payment" 
+            },
+            { new: true }
+        );
+
+        if (!updatedLead) {
+            return res.status(404).json({ success: false, message: "Lead request not found." });
+        }
+
+        res.json({ success: true, message: "Booking amount approved and visible to buyer! ✅" });
+
+    } catch (error) {
+        console.error("Admin Approval Error:", error);
+        res.status(500).json({ success: false, message: "Error updating booking amount." });
     }
 };

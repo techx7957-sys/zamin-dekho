@@ -38,6 +38,13 @@
             .btn-call:hover { background: #059669; }
             .btn-save-note { background: #3b82f6; color: white; font-weight: 700; border-radius: 8px; width: 100%; font-size: 12px; padding: 8px; border: none; transition: 0.2s;}
             .btn-save-note:hover { background: #2563eb; }
+
+            /* 🌟 NEW: Approve Token Button Styling */
+            .btn-approve-token { background: #f59e0b; color: white; font-weight: 700; border-radius: 8px; font-size: 12px; padding: 6px 10px; border: none; transition: 0.2s; margin-left: 5px; box-shadow: 0 2px 5px rgba(245, 158, 11, 0.2);}
+            .btn-approve-token:hover { background: #d97706; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);}
+            .token-input { border: 1px solid #cbd5e1; border-radius: 6px; padding: 5px 8px; font-size: 12px; width: 80px; font-weight: 600; text-align: center; }
+            .token-input:focus { border-color: #f59e0b; outline: none; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);}
+
             .btn-feature { background: #fef3c7; color: #d97706; border: 1px solid #fde047; padding: 6px 15px; border-radius: 50px; font-size: 12px; font-weight: 700; transition: 0.2s; width: 100%; }
             .btn-feature.active { background: #f59e0b; color: white; border-color: #d97706; }
 
@@ -146,10 +153,17 @@
                     <div class="table-container table-responsive">
                         <table class="table table-hover mb-0">
                             <thead>
-                                <tr><th style="width: 15%">Date</th><th style="width: 25%">Buyer Info</th><th style="width: 25%">Property</th><th style="width: 25%">CRM Action</th><th style="width: 10%; text-align: center">Contact</th></tr>
+                                <tr>
+                                    <th style="width: 12%">Date</th>
+                                    <th style="width: 20%">Buyer Info</th>
+                                    <th style="width: 23%">Property</th>
+                                    <th style="width: 15%">Status Action</th>
+                                    <th style="width: 20%; text-align: center;">Set Token Amount</th>
+                                    <th style="width: 10%; text-align: center">Contact</th>
+                                </tr>
                             </thead>
                             <tbody id="leadsTableBody">
-                                <tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                                <tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -194,7 +208,6 @@
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
         <script src="script.js"></script>
 
         <script>
@@ -223,10 +236,14 @@
                     return; 
                 }
 
+                // UI adjustments for brokers
                 if(user.role === 'broker') {
                     document.getElementById('approvalTabNav').style.display = 'none';
                     document.querySelector('[data-bs-target="#alertsTab"]').parentElement.style.display = 'none';
                     document.querySelector('[data-bs-target="#adsTab"]').parentElement.style.display = 'none';
+
+                    // Hide Token column in leads table for brokers
+                    document.querySelector('#leadsTab thead tr th:nth-child(5)').style.display = 'none';
                 }
 
                 refreshData();
@@ -247,7 +264,7 @@
 
             function refreshData() {
                 document.getElementById("transactionsTableBody").innerHTML = `<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-success"></div></td></tr>`;
-                document.getElementById("leadsTableBody").innerHTML = `<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`;
+                document.getElementById("leadsTableBody").innerHTML = `<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`;
 
                 fetchDashboardStats();
                 fetchLeadsData();
@@ -261,7 +278,6 @@
             // ==========================================
             async function fetchDashboardStats() {
                 try {
-                    // 🔒 Uses global API_BASE
                     const res = await fetch(`${API_BASE}/admin/dashboard-stats`, { headers: { Authorization: `Bearer ${getToken()}` }});
                     const data = await res.json();
                     if(data.success) {
@@ -280,7 +296,6 @@
                 const tbodyLeads = document.getElementById("leadsTableBody");
 
                 try {
-                    // 🔒 Uses global API_BASE
                     const res = await fetch(`${API_BASE}/admin/leads`, { headers: { Authorization: `Bearer ${getToken()}` } });
                     const data = await res.json();
 
@@ -293,7 +308,7 @@
                     }
                 } catch (e) { 
                     tbodyTransactions.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No recent transactions found.</td></tr>`;
-                    tbodyLeads.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No leads available.</td></tr>`;
+                    tbodyLeads.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No leads available.</td></tr>`;
                 }
             }
 
@@ -311,7 +326,7 @@
 
                 if (payments.length > 0) {
                     txnTbody.innerHTML = payments.map((p) => {
-                        const amount = p.tokenAmount || 100000;
+                        const amount = p.bookingFee || p.tokenAmount || 0; // Using bookingFee primarily now
                         totalRev += amount;
                         const dateStr = new Date(p.createdAt).toLocaleDateString('en-IN');
                         const amountStr = amount.toLocaleString('en-IN');
@@ -330,22 +345,43 @@
 
             function renderCRMLeads(leads) {
                 const tbody = document.getElementById("leadsTableBody");
+                const user = typeof getUser === 'function' ? getUser() : null;
+                const isBroker = user && user.role === 'broker';
+
                 if(!leads || leads.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted fw-bold">No leads available at the moment.</td></tr>`;
+                    const colSpan = isBroker ? 5 : 6;
+                    tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center py-5 text-muted fw-bold">No leads available at the moment.</td></tr>`;
                     return;
                 }
 
                 tbody.innerHTML = leads.map((lead) => {
                     const dateStr = new Date(lead.createdAt).toLocaleDateString('en-IN');
-
-                    // 🛡️ SECURITY FIX 3: Prevent injected scripts in Leads CRM
                     const safeBuyerName = lead.buyer ? escapeHTML(lead.buyer.fullName) : "User";
                     const safePhone = lead.buyer ? escapeHTML(lead.buyer.phone) : '';
                     const safePropName = lead.property ? escapeHTML(lead.property.landName) : "Property";
-
-                    // Escaping for JS function call within HTML string
                     const jsSafeBuyerName = safeBuyerName.replace(/'/g, "\\'");
                     const jsSafePropName = safePropName.replace(/'/g, "\\'");
+
+                    // 🌟 NEW: Token Approval UI Logic (Only for Admin)
+                    let tokenApprovalUI = "";
+                    if (!isBroker) {
+                        if (lead.isAmountVisible) {
+                            tokenApprovalUI = `
+                                <td class="text-center">
+                                    <span class="badge bg-success mb-1">Approved</span><br>
+                                    <strong class="text-success" style="font-size:13px;">₹${(lead.bookingFee || 0).toLocaleString('en-IN')}</strong>
+                                </td>`;
+                        } else {
+                            tokenApprovalUI = `
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center align-items-center">
+                                        <input type="number" id="amt-${lead._id}" class="token-input" placeholder="₹ Amount" min="1000" step="500">
+                                        <button class="btn-approve-token" onclick="approveTokenAmount('${lead._id}')">Set</button>
+                                    </div>
+                                    <small class="text-muted" style="font-size:10px;">Send to Buyer DB</small>
+                                </td>`;
+                        }
+                    }
 
                     return `
                     <tr>
@@ -358,14 +394,54 @@
                                 <option value="Contacted" ${lead.status === "Contacted" ? "selected" : ""}>📞 Contacted</option>
                                 <option value="Site Visit Scheduled" ${lead.status === "Site Visit Scheduled" ? "selected" : ""}>🚗 Schedule Visit</option>
                                 <option value="Negotiation" ${lead.status === "Negotiation" ? "selected" : ""}>🤝 Negotiation</option>
-                                <option value="Token Paid" ${lead.status === "Token Paid" ? "selected" : ""}>💰 Token Paid</option>
+                                <option value="Ready for Payment" ${lead.status === "Ready for Payment" ? "selected" : ""}>💰 Payment Sent</option>
+                                <option value="Token Paid" ${lead.status === "Token Paid" ? "selected" : ""}>✅ Token Paid</option>
                                 <option value="Closed" ${lead.status === "Closed" ? "selected" : ""}>✅ Closed</option>
                             </select>
                             <button class="btn btn-save-note btn-sm mt-1" onclick="updateLeadStatus('${lead._id}')"><i class="fas fa-save"></i> Update</button>
                         </td>
+                        ${tokenApprovalUI}
                         <td class="text-center"><button class="btn-call" onclick="startSecureCall('${jsSafeBuyerName}', '${jsSafePropName}')"><i class="fas fa-phone-alt"></i> Call</button></td>
                     </tr>
                 `}).join("");
+            }
+
+            // 🌟 NEW API CALL: Approve Token Amount
+            async function approveTokenAmount(leadId) {
+                const amountInput = document.getElementById(`amt-${leadId}`);
+                const amount = parseInt(amountInput.value);
+
+                if (!amount || amount < 1000) {
+                    Swal.fire('Invalid Amount', 'Please enter a valid token amount (minimum ₹1,000).', 'warning');
+                    return;
+                }
+
+                const result = await Swal.fire({ 
+                    title: 'Approve Payment?', 
+                    text: `Send a payment request of ₹${amount.toLocaleString('en-IN')} to the buyer's dashboard?`, 
+                    icon: 'question', 
+                    showCancelButton: true, 
+                    confirmButtonColor: '#f59e0b',
+                    confirmButtonText: 'Yes, Send to Buyer' 
+                });
+
+                if(result.isConfirmed) {
+                    try {
+                        const res = await fetch(`${API_BASE}/payment/approve-token`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                            body: JSON.stringify({ leadId, amount })
+                        });
+                        const data = await res.json();
+
+                        if(data.success) {
+                            Swal.fire('Sent!', 'Buyer can now securely pay this token from their dashboard.', 'success');
+                            fetchLeadsData(); // Refresh UI
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    } catch (e) { Swal.fire('Error', 'Network connection failed.', 'error'); }
+                }
             }
 
             async function updateLeadStatus(leadId) {
