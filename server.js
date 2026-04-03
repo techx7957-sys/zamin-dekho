@@ -28,6 +28,7 @@ const listingRoutes = require("./routes/listingRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const brokerRoutes = require("./routes/brokerRoutes"); 
 const paymentRoutes = require("./routes/paymentRoutes"); 
+const contactRoutes = require("./routes/contactRoutes"); // 🌟 NEW: Added Contact Routes
 
 // Controller Imports
 const leadController = require("./controllers/leadController"); 
@@ -107,7 +108,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // 🌐 DATABASE CONNECTION
 // ==========================================
 mongoose
-    .connect(process.env.MONGO_URI) // Deprecated options (useNewUrlParser, useUnifiedTopology) removed for Mongoose 6+
+    .connect(process.env.MONGO_URI) 
     .then(() => console.log("✅ MongoDB Cloud Connected Successfully!"))
     .catch((err) => console.log("❌ MongoDB Connection Error:", err));
 
@@ -121,11 +122,13 @@ app.use("/api/", apiLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/send-multichannel-otp", authLimiter);
 
+// 🌟 Route Mounts
 app.use("/api/auth", authRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/broker", brokerRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/contact", contactRoutes); // 🌟 NEW: Connected the Secure Contact API
 
 // LEADS / DEAL ROOM ROUTES (Buyer Facing)
 app.get('/api/leads/my-visits', verifyToken, leadController.getMyVisits);
