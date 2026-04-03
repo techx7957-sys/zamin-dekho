@@ -1,15 +1,16 @@
 const nodemailer = require("nodemailer");
 
 // ==========================================
-// 📞 1. FETCH DYNAMIC CONTACT INFO (From .env)
+// 📞 1. FETCH CONTACT INFO (Safe Display UI)
 // ==========================================
 exports.getContactInfo = (req, res) => {
     try {
-        // Fetching securely from Vercel Environment Variables
+        // 🛡️ SECURITY FIX: Sending a Display Email to the frontend.
+        // Your real email (zamdekho303@gmail.com) stays strictly hidden in the .env file.
         res.json({
             success: true,
-            email: process.env.SUPPORT_EMAILS || "support@zamindekho.com",
-            phone: process.env.ADMIN_PHONE || "+919876543210"
+            email: "Zamsupport@gmail.com", // 🌟 PUBLIC DISPLAY EMAIL (Masked)
+            phone: process.env.ADMIN_PHONE || "+917909830649"
         });
     } catch (error) {
         console.error("Error fetching contact info:", error);
@@ -18,7 +19,7 @@ exports.getContactInfo = (req, res) => {
 };
 
 // ==========================================
-// ✉️ 2. SEND SECURE CONTACT EMAIL (To your Inbox)
+// ✉️ 2. SEND SECURE CONTACT EMAIL (To your Real Inbox)
 // ==========================================
 exports.sendMessage = async (req, res) => {
     try {
@@ -41,38 +42,39 @@ exports.sendMessage = async (req, res) => {
         }
 
         // 🛡️ SECURITY SHIELD 4: Verify if Email Credentials exist in .env
+        // Ye tere ASLI email ko .env se uthayega (zamdekho303@gmail.com)
         if (!process.env.SUPPORT_EMAILS || !process.env.EMAIL_PASS) {
-            console.error("❌ CRITICAL: Missing Email Credentials (SUPPORT_EMAILS or EMAIL_PASS) in .env");
-            return res.status(500).json({ success: false, message: "Email service is temporarily unavailable due to server configuration." });
+            console.error("❌ CRITICAL: Missing Email Credentials in .env");
+            return res.status(500).json({ success: false, message: "Email service is temporarily unavailable." });
         }
 
-        // ⚙️ Initialize Nodemailer Transporter (Using Google App Passwords)
+        // ⚙️ Initialize Nodemailer Transporter
         const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com', // Explicitly defining host for better reliability
+            host: 'smtp.gmail.com', 
             port: 465,
             secure: true, 
             auth: {
-                user: process.env.SUPPORT_EMAILS, 
-                pass: process.env.EMAIL_PASS      
+                user: process.env.SUPPORT_EMAILS, // Asli Email (.env se aayega)
+                pass: process.env.EMAIL_PASS      // Asli App Password (.env se aayega)
             }
         });
 
-        // 📝 Sanitize HTML Output slightly by replacing tags if user tried injecting them
+        // 📝 Sanitize HTML Output
         const safeMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>');
         const safeName = name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
         const safeSubject = subject.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
         // 📧 Email Layout Construction
         const mailOptions = {
-            from: `"${safeName} (Zamin Dekho User)" <${process.env.SUPPORT_EMAILS}>`, // Authorized sender
-            to: process.env.SUPPORT_EMAILS,                    // Destination (Your inbox)
-            replyTo: email,                                    // Direct reply maps to user
+            from: `"${safeName} (Zamin Dekho User)" <${process.env.SUPPORT_EMAILS}>`, 
+            to: process.env.SUPPORT_EMAILS,                    // Seedha tere ASLI inbox mein aayega
+            replyTo: email,                                    // Reply click karne par user ko mail jayega
             subject: `🚨 New Inquiry | Zamin Dekho: ${safeSubject}`,
             html: `
                 <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
                     <h2 style="color: #10b981; border-bottom: 2px solid #10b981; padding-bottom: 10px;">New Zamin Dekho Support Message</h2>
                     <p><strong>Name:</strong> ${safeName}</p>
-                    <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+                    <p><strong>User Email:</strong> <a href="mailto:${email}">${email}</a></p>
                     <p><strong>Subject:</strong> ${safeSubject}</p>
                     <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #3b82f6; margin-top: 20px; border-radius: 5px;">
                         <p style="margin: 0;"><strong>Message:</strong></p>
