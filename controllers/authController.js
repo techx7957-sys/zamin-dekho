@@ -73,16 +73,17 @@ exports.sendMultichannelOtp = async (req, res) => {
         console.log("------------------------\n");
 
         // 📧 2. SEND EMAIL (Via Nodemailer with Branding)
+        const senderEmail = (process.env.ADMIN_EMAILS || '').split(',')[0].trim();
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: { 
-                user: process.env.EMAIL_USER, // Will use EMAIL_USER if provided, else fallback to ADMIN_EMAILS format in your specific setup
+                user: senderEmail,
                 pass: process.env.EMAIL_PASS 
             }
         });
 
         const mailOptions = {
-            from: `"Zamindekho" <${process.env.EMAIL_USER || process.env.ADMIN_EMAILS}>`,
+            from: `"Zamindekho" <${senderEmail}>`,
             to: email,
             subject: "Your Zamindekho Verification OTP",
             html: `
