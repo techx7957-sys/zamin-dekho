@@ -6,6 +6,7 @@
         <title>Zamin Dekho | India's Smartest Land Marketplace</title>
 
         <meta name="google-signin-client_id" content="598117317970-q9lv6sl694v6ooodu42gnvqb303l6p06.apps.googleusercontent.com" />
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
 
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
@@ -339,6 +340,27 @@
         <script src="script.js"></script> 
 
         <script>
+            // 🛡️ 1. MASTER XSS PROTECTOR: Essential for preventing Script Injection
+            function escapeHTML(str) {
+                if (!str) return '';
+                return str.toString().replace(/[&<>'"]/g, 
+                    tag => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        "'": '&#39;',
+                        '"': '&quot;'
+                    }[tag] || tag)
+                );
+            }
+
+            // 🛡️ 2. FALLBACK RESOLVER: In case script.js loads late or fails
+            const resolveImageUrl = window.resolveImageUrl || function(url) {
+                if (!url) return '';
+                if (url.startsWith('http')) return url;
+                return `${window.API_BASE || ''}${url.startsWith('/') ? '' : '/'}${url}`;
+            };
+
             let userLat = null;
             let userLng = null;
 
@@ -506,9 +528,9 @@
             }
 
             async function executeAdvancedSearch() {
-                // 🛡️ SECURITY FIX: Input Sanitization using escapeHTML
+                // 🛡️ SECURITY FIX: Safe HTML Encoding applied
                 let rawKeyword = document.getElementById('mainSearchInput').value.replace('Nearby: ', '').trim(); 
-                const keyword = typeof escapeHTML === 'function' ? escapeHTML(rawKeyword) : rawKeyword;
+                const keyword = escapeHTML(rawKeyword);
 
                 const cat = document.getElementById('mainCategory').value;
                 const budget = document.getElementById('budgetFilter').value;
@@ -534,7 +556,7 @@
                 }
 
                 // 🔒 Using API_BASE from global script
-                fetchAll(`${API_BASE}/listings/search?${query}`);
+                fetchAll(`${window.API_BASE || ''}/listings/search?${query}`);
             }
 
             function shuffleArray(array) {
@@ -548,16 +570,16 @@
 
             // 🚀 MASTER FIX: Bulletproof Vercel Image URLs and XSS protection
             function getCardHTML(item, badgeHTML = '') {
-                // 🔒 Utilizes Global Image Resolver
+                // 🔒 Safe Resolver Call
                 const imgSource = resolveImageUrl(item.imageUrl);
 
-                // 🛡️ SECURITY FIX: Sanitize Data before injecting to DOM
-                const safeLandName = typeof escapeHTML === 'function' ? escapeHTML(item.landName || '') : (item.landName || '');
-                const safeAddress = typeof escapeHTML === 'function' ? escapeHTML(item.address || '') : (item.address || '');
-                const safeCategory = typeof escapeHTML === 'function' ? escapeHTML(item.category || 'LAND') : (item.category || 'LAND');
-                const safeSize = typeof escapeHTML === 'function' ? escapeHTML(item.landSize || '') : (item.landSize || '');
-                const safeLength = typeof escapeHTML === 'function' ? escapeHTML(item.length || '') : (item.length || '');
-                const safeBreadth = typeof escapeHTML === 'function' ? escapeHTML(item.breadth || '') : (item.breadth || '');
+                // 🛡️ SECURITY FIX: Mandatory HTML Sanitization
+                const safeLandName = escapeHTML(item.landName);
+                const safeAddress = escapeHTML(item.address);
+                const safeCategory = escapeHTML(item.category || 'LAND');
+                const safeSize = escapeHTML(item.landSize);
+                const safeLength = escapeHTML(item.length);
+                const safeBreadth = escapeHTML(item.breadth);
 
                 let dimBadge = '';
                 if (safeLength || safeBreadth) dimBadge = `<span class="badge bg-light text-dark border ms-2"><i class="fas fa-ruler-combined text-primary me-1"></i> ${safeLength || '-'}x${safeBreadth || '-'}</span>`;
@@ -589,7 +611,8 @@
                 `;
             }
 
-            async function fetchAll(url = `${API_BASE}/listings/all`) {
+            async function fetchAll(url) {
+                const targetUrl = url || `${window.API_BASE || ''}/listings/all`;
                 const mainGrid = document.getElementById('listingsGrid');
                 const premiumGrid = document.getElementById('premiumGrid');
                 const recentGrid = document.getElementById('recentlyViewedGrid');
@@ -597,7 +620,7 @@
                 const trendingGrid = document.getElementById('trendingLocationsGrid');
                 const resCount = document.getElementById('resultCount');
 
-                const isSearch = url.includes('/search');
+                const isSearch = targetUrl.includes('/search');
 
                 mainGrid.innerHTML = '<div class="text-center w-100 py-5"><div class="spinner-grow text-success" role="status"></div></div>';
 
@@ -606,7 +629,7 @@
                 }
 
                 try {
-                    const res = await fetch(url);
+                    const res = await fetch(targetUrl);
                     const data = await res.json();
 
                     if (data.success && data.listings.length > 0) {
@@ -679,9 +702,8 @@
             }
 
             async function saveProfile() {
-                // 🛡️ SECURITY FIX: Trim and escape the name being saved
                 const rawNewName = document.getElementById('editNameInput').value.trim();
-                const newName = typeof escapeHTML === 'function' ? escapeHTML(rawNewName) : rawNewName;
+                const newName = escapeHTML(rawNewName);
 
                 if(!newName) return Swal.fire("Required", "Name cannot be empty", "warning");
 
@@ -693,7 +715,7 @@
                 let user = typeof getUser === 'function' ? getUser() : null;
 
                 try {
-                    const response = await fetch(`${API_BASE}/auth/update-profile`, {
+                    const response = await fetch(`${window.API_BASE || ''}/auth/update-profile`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                         body: JSON.stringify({ fullName: newName, avatar: tempAvatarBase64 || (user ? user.avatar : null) })
@@ -758,9 +780,9 @@
 
                         authArea.innerHTML = `
                             <button data-bs-toggle="modal" data-bs-target="#userProfileModal" class="user-id-btn me-2">
-                                <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> ${typeof escapeHTML === 'function' ? escapeHTML(firstName) : firstName}
+                                <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> ${escapeHTML(firstName)}
                             </button>
-                            <button onclick="logout()" class="logout-btn-premium"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                            <button onclick="typeof logout === 'function' ? logout() : null" class="logout-btn-premium"><i class="fas fa-sign-out-alt"></i> Logout</button>
                         `;
                     } catch(e) {
                          console.error("Error parsing user data:", e);
