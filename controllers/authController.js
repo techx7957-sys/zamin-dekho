@@ -291,7 +291,7 @@ exports.uploadAvatar = async (req, res) => {
 // ==========================================
 exports.verifyFlutterGoogleToken = async (req, res) => {
     try {
-        const { token, email, name } = req.body;
+        const { token, email, name, fullName } = req.body;
 
         if (!token || !email) {
             return res.status(400).json({ success: false, message: "Token and email are required" });
@@ -307,16 +307,22 @@ exports.verifyFlutterGoogleToken = async (req, res) => {
             const randomPassword = Math.random().toString(36).slice(-8);
             const hashed = await bcrypt.hash(randomPassword, 10);
 
-            // 🛡️ CRASH FIX: Google se phone number nahi milta hai. 
-            // Agar Mongoose 'phone' field maang raha hai, toh app 500 error degi.
-            // Isliye hum yahan fallback string daal rahe hain!
+            // 🛡️ THE ULTIMATE MONGOOSE CRASH FIX
+            // Mongoose ko khaali string pasand nahi aati agar validate laga ho.
+            let validName = "Zamin User";
+            if (name && name.trim().length > 0) {
+                validName = name.trim();
+            } else if (fullName && fullName.trim().length > 0) {
+                validName = fullName.trim();
+            }
+
             user = new User({
-                fullName: name || "Zamin User",
+                fullName: validName, // 🚀 Fully protected Name Fallback
                 email: safeEmail,
                 role: assignedRole, 
                 isActive: true, 
                 password: hashed,
-                phone: "Not Provided" // 🚀 THE MAGIC FIX PREVENTING MONGOOSE CRASH
+                phone: "Not Provided" // 🚀 Fully protected Phone Fallback
             });
             await user.save();
         } else {
