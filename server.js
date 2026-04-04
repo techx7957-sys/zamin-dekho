@@ -50,14 +50,25 @@ app.use(helmet({
     contentSecurityPolicy: false // Disabled temporarily so it doesn't block external images (Cloudinary/Unsplash)
 }));
 
-// 🚀 1. THE VERCEL CORS FIX
+// 🚀 1. THE BULLETPROOF CORS FIX (Connects Flutter Localhost & Vercel smoothly)
 app.use(cors({
     origin: function (origin, callback) {
-        callback(null, true); // Allow all origins for Vercel dynamic preview links
+        // Allow requests with no origin (like mobile apps or Postman)
+        if (!origin) return callback(null, true);
+
+        // Smart Detection: Allow Localhost (any port), Vercel, and Replit domains
+        if (origin.startsWith('http://localhost') || 
+            origin.startsWith('http://127.0.0.1') || 
+            origin.endsWith('.vercel.app') || 
+            origin.endsWith('.replit.dev')) {
+            callback(null, origin); // 🛡️ Explicitly reflect the origin for credentials to work
+        } else {
+            callback(new Error('🚨 CORS Blocked: Origin not trusted by Zamin Dekho'));
+        }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
-    credentials: true,
+    credentials: true, // Requires exact origin reflection, which the logic above handles perfectly!
     optionsSuccessStatus: 200 
 }));
 
