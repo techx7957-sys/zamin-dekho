@@ -354,13 +354,6 @@
                 );
             }
 
-            // 🛡️ 2. FALLBACK RESOLVER: In case script.js loads late or fails
-            const resolveImageUrl = window.resolveImageUrl || function(url) {
-                if (!url) return '';
-                if (url.startsWith('http')) return url;
-                return `${window.API_BASE || ''}${url.startsWith('/') ? '' : '/'}${url}`;
-            };
-
             let userLat = null;
             let userLng = null;
 
