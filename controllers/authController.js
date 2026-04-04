@@ -287,7 +287,7 @@ exports.uploadAvatar = async (req, res) => {
 };
 
 // ==========================================
-// 🚀 5. FLUTTER GOOGLE LOGIN (Mobile Shield)
+// 🚀 5. FLUTTER GOOGLE LOGIN (Mobile & Web Shield)
 // ==========================================
 exports.verifyFlutterGoogleToken = async (req, res) => {
     try {
@@ -307,12 +307,16 @@ exports.verifyFlutterGoogleToken = async (req, res) => {
             const randomPassword = Math.random().toString(36).slice(-8);
             const hashed = await bcrypt.hash(randomPassword, 10);
 
+            // 🛡️ CRASH FIX: Google se phone number nahi milta hai. 
+            // Agar Mongoose 'phone' field maang raha hai, toh app 500 error degi.
+            // Isliye hum yahan fallback string daal rahe hain!
             user = new User({
                 fullName: name || "Zamin User",
                 email: safeEmail,
                 role: assignedRole, 
                 isActive: true, 
-                password: hashed 
+                password: hashed,
+                phone: "Not Provided" // 🚀 THE MAGIC FIX PREVENTING MONGOOSE CRASH
             });
             await user.save();
         } else {
@@ -327,8 +331,8 @@ exports.verifyFlutterGoogleToken = async (req, res) => {
             }
         }
 
-        // 🛡️ SECURITY FIX: Removed weak hardcoded fallback key
-        if (!process.env.JWT_SECRET) throw new Error("CRITICAL: JWT_SECRET is missing");
+        // 🛡️ SECURITY FIX: Check JWT Secret explicitly before signing
+        if (!process.env.JWT_SECRET) throw new Error("CRITICAL: JWT_SECRET is missing in environment variables");
 
         const jwtToken = jwt.sign(
             { id: user._id, role: user.role },
@@ -347,7 +351,13 @@ exports.verifyFlutterGoogleToken = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Flutter Google Auth Error:", error);
-        res.status(500).json({ success: false, message: "Server error during Google Authentication" });
+        console.error("🔥 FATAL Flutter Google Auth Error Details:", error.message);
+        console.error(error.stack); // 🚀 Added Stack Trace to pinpoint future Vercel issues
+
+        res.status(500).json({ 
+            success: false, 
+            message: "Server error during Google Authentication", 
+            errorDetails: error.message 
+        });
     }
 };
