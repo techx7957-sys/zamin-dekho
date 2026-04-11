@@ -4,6 +4,7 @@
 
 // 🌟 Vercel-ready Dynamic URLs
 const API_BASE = "/api";
+window.API_BASE = "/api";
 const FRONTEND_URL = window.location.origin; 
 
 // ==========================================
