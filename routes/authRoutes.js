@@ -93,9 +93,14 @@ router.get(
 // ==========================================
 router.get(
     "/twitter",
-    passport.authenticate("twitter", {
-        scope: ["tweet.read", "users.read", "offline.access"],
-    })
+    (req, res, next) => {
+        // Store clientUrl in session so callback can redirect correctly
+        const safeDomain = process.env.BASE_URL || "http://localhost:5000";
+        req.session.twitterClientUrl = req.query.clientUrl || safeDomain;
+        passport.authenticate("twitter", {
+            scope: ["tweet.read", "users.read", "offline.access"],
+        })(req, res, next);
+    }
 );
 
 router.get(
@@ -104,6 +109,13 @@ router.get(
         session: false,
         failureRedirect: "/login.html",
     }),
+    (req, res, next) => {
+        // Restore clientUrl from session for the controller redirect
+        const safeDomain = process.env.BASE_URL || "http://localhost:5000";
+        req.customRedirectUrl = req.session.twitterClientUrl || safeDomain;
+        delete req.session.twitterClientUrl;
+        next();
+    },
     authController.socialLoginCallback
 );
 

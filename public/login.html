@@ -100,10 +100,10 @@
 
             <div class="divider">OR CONTINUE WITH</div>
 
-            <a href="#" onclick="window.location.href = API_BASE + '/auth/google'; return false;" class="social-btn">
+            <a href="#" onclick="window.location.href = API_BASE + '/auth/google?clientUrl=' + encodeURIComponent(window.location.origin); return false;" class="social-btn">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="18" alt="Google"> Continue with Google
             </a>
-            <a href="#" onclick="window.location.href = API_BASE + '/auth/twitter'; return false;" class="social-btn" style="background: #0f172a; color: white; border: none;">
+            <a href="#" onclick="window.location.href = API_BASE + '/auth/twitter?clientUrl=' + encodeURIComponent(window.location.origin); return false;" class="social-btn" style="background: #0f172a; color: white; border: none;">
                 <i class="fab fa-x-twitter"></i> Continue with X
             </a>
 

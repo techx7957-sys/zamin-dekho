@@ -44,32 +44,43 @@ app.set('trust proxy', 1);
 // ==========================================
 app.disable('x-powered-by'); // Hide Express signature
 
-// 🛡️ HELMET: Hide Express internals and secure HTTP headers
+// 🛡️ HELMET: Secure HTTP headers
+// frameguard disabled so Replit preview iframe and mobile webviews work correctly
 app.use(helmet({
     crossOriginResourcePolicy: false,
-    contentSecurityPolicy: false // Disabled temporarily so it doesn't block external images (Cloudinary/Unsplash)
+    contentSecurityPolicy: false,
+    frameguard: false  // Allow iframe embedding for Replit preview & mobile webview
 }));
 
-// 🚀 1. THE BULLETPROOF CORS FIX (Connects Flutter Localhost & Vercel smoothly)
+// Trusted origins: localhost (dev), Vercel deployments, Replit dev & production domains
+const TRUSTED_ORIGINS = [
+    'http://localhost',
+    'http://127.0.0.1',
+    '.vercel.app',
+    '.replit.dev',
+    '.replit.app'
+];
+
+// 🚀 BULLETPROOF CORS: Handles web browsers, Flutter/mobile apps, and Postman
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or Postman)
+        // No origin = mobile app, Flutter, Postman, or server-to-server — allow all
         if (!origin) return callback(null, true);
 
-        // Smart Detection: Allow Localhost (any port), Vercel, and Replit domains
-        if (origin.startsWith('http://localhost') || 
-            origin.startsWith('http://127.0.0.1') || 
-            origin.endsWith('.vercel.app') || 
-            origin.endsWith('.replit.dev')) {
-            callback(null, origin); // 🛡️ Explicitly reflect the origin for credentials to work
+        const trusted = TRUSTED_ORIGINS.some(o =>
+            origin.startsWith(o) || origin.endsWith(o)
+        );
+
+        if (trusted) {
+            callback(null, origin); // Reflect exact origin so credentials work
         } else {
             callback(new Error('🚨 CORS Blocked: Origin not trusted by Zamin Dekho'));
         }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
-    credentials: true, // Requires exact origin reflection, which the logic above handles perfectly!
-    optionsSuccessStatus: 200 
+    credentials: true,
+    optionsSuccessStatus: 200
 }));
 
 // 50mb limit is crucial here because we are receiving Base64 Canvas Images from the Deal Room / Post Property
