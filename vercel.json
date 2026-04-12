@@ -1,11 +1,24 @@
 {
   "version": 2,
+
   "builds": [
     {
       "src": "server.js",
       "use": "@vercel/node"
     }
   ],
+
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "server.js"
+    }
+  ],
+
   "headers": [
     {
       "source": "/(.*)",
@@ -14,24 +27,18 @@
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
         { "key": "X-XSS-Protection", "value": "1; mode=block" },
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+
+        // 🔥 IMPORTANT (helps fix unsafe warning)
+        { "key": "Content-Security-Policy", "value": "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval';" }
       ]
     },
+
     {
       "source": "/(.*)\\.(jpg|jpeg|png|webp|gif|svg|css|js|woff2|woff|ttf|ico)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/server.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/server.js"
     }
   ]
 }

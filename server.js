@@ -5,54 +5,72 @@ const path = require("path");
 const fs = require("fs");
 const session = require("express-session");
 const passport = require("passport");
-const helmet = require("helmet"); // 🛡️ Security Headers
-const rateLimit = require("express-rate-limit"); // 🛡️ Anti-Spam / DDoS Protection
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
-// 🌟 ALWAYS load dotenv locally, Vercel provides env vars automatically
 if (process.env.NODE_ENV !== 'production') {
     require("dotenv").config();
 }
 
-// 🛡️ CRITICAL SECURITY CHECK: Ensure essential environment variables exist
 if (!process.env.MONGO_URI || !process.env.JWT_SECRET) {
-    console.error("❌ CRITICAL ERROR: MONGO_URI or JWT_SECRET is missing in .env!");
-    process.exit(1); // Stop server immediately to prevent insecure state
+    console.error("❌ CRITICAL ERROR: Missing ENV");
+    process.exit(1);
 }
 
-// Load Passport strategies BEFORE routes
 require("./config/passport-setup");
 
-// 🌟 Proper Route Imports (Modular Architecture)
 const authRoutes = require("./routes/authRoutes");
 const listingRoutes = require("./routes/listingRoutes");
 const adminRoutes = require("./routes/adminRoutes");
-const brokerRoutes = require("./routes/brokerRoutes"); 
-const paymentRoutes = require("./routes/paymentRoutes"); 
-const contactRoutes = require("./routes/contactRoutes"); // 🌟 NEW: Added Contact Routes
+const brokerRoutes = require("./routes/brokerRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
+const contactRoutes = require("./routes/contactRoutes");
 
-// Controller Imports
-const leadController = require("./controllers/leadController"); 
+const leadController = require("./controllers/leadController");
 const { verifyToken } = require("./middleware/authMiddleware");
 
 const app = express();
-
-// Trust Replit/Vercel's reverse proxy so express-rate-limit can read the real client IP
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
 
 // ==========================================
-// 🛡️ LAYER 1: BASIC SECURITY & ULTIMATE CORS FIX
+// 🔐 FORCE HTTPS (VERY IMPORTANT)
 // ==========================================
-app.disable('x-powered-by'); // Hide Express signature
+app.use((req, res, next) => {
+    if (process.env.NODE_ENV === "production") {
+        if (req.headers['x-forwarded-proto'] !== 'https') {
+            return res.redirect(`https://${req.headers.host}${req.url}`);
+        }
+    }
+    next();
+});
 
-// 🛡️ HELMET: Secure HTTP headers
-// frameguard disabled so Replit preview iframe and mobile webviews work correctly
+
+// ==========================================
+// 🛡️ HELMET (FULL SECURE CONFIG)
+// ==========================================
 app.use(helmet({
     crossOriginResourcePolicy: false,
-    contentSecurityPolicy: false,
-    frameguard: false  // Allow iframe embedding for Replit preview & mobile webview
+    frameguard: false,
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'", "https:"],
+            scriptSrc: ["'self'", "https:", "'unsafe-inline'"],
+            styleSrc: ["'self'", "https:", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "https:", "wss:"],
+            fontSrc: ["'self'", "https:", "data:"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: []
+        }
+    }
 }));
 
-// Trusted origins: localhost (dev), Vercel deployments, Replit dev & production domains
+
+// ==========================================
+// 🌐 CORS (SAFE + MOBILE SUPPORT)
+// ==========================================
 const TRUSTED_ORIGINS = [
     'http://localhost',
     'http://127.0.0.1',
@@ -61,121 +79,110 @@ const TRUSTED_ORIGINS = [
     '.replit.app'
 ];
 
-// 🚀 BULLETPROOF CORS: Handles web browsers, Flutter/mobile apps, and Postman
 app.use(cors({
     origin: function (origin, callback) {
-        // No origin = mobile app, Flutter, Postman, or server-to-server — allow all
         if (!origin) return callback(null, true);
 
         const trusted = TRUSTED_ORIGINS.some(o =>
-            origin.startsWith(o) || origin.endsWith(o)
+            origin.includes(o)
         );
 
         if (trusted) {
-            callback(null, origin); // Reflect exact origin so credentials work
+            callback(null, origin);
         } else {
-            callback(new Error('🚨 CORS Blocked: Origin not trusted by Zamin Dekho'));
+            callback(new Error("🚨 CORS BLOCKED"));
         }
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
-    credentials: true,
-    optionsSuccessStatus: 200
+    credentials: true
 }));
 
-// 50mb limit is crucial here because we are receiving Base64 Canvas Images from the Deal Room / Post Property
-app.use(express.json({ limit: "50mb" })); 
+
+app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// ==========================================
-// 🛡️ LAYER 2: ANTI-DDOS & BRUTE-FORCE SHIELDS
-// ==========================================
 
-// General API Limiter (Max 150 requests per 10 mins per IP)
+// ==========================================
+// 🚫 RATE LIMIT
+// ==========================================
 const apiLimiter = rateLimit({
-    windowMs: 10 * 60 * 1000, // 10 minutes
-    max: 150, 
-    message: { success: false, message: "🚨 Too many requests from this IP, please try again after 10 minutes." }
+    windowMs: 10 * 60 * 1000,
+    max: 150
 });
 
-// Strict Auth Limiter (Prevents Password/OTP Brute Force)
 const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 20, // Max 20 attempts for login/OTP
-    message: { success: false, message: "🚨 Too many login attempts. Please wait 15 minutes to protect your account." }
+    windowMs: 15 * 60 * 1000,
+    max: 20
 });
 
-// Session middleware optimized for Vercel's stateless nature
-app.use(
-    session({
-        secret: process.env.JWT_SECRET,
-        resave: false,
-        saveUninitialized: false,
-        cookie: {
-            secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-            httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        }
-    })
-);
+app.use("/api/", apiLimiter);
+app.use("/api/auth/login", authLimiter);
+
+
+// ==========================================
+// 🔐 SESSION
+// ==========================================
+app.use(session({
+    secret: process.env.JWT_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true
+    }
+}));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Serve static assets securely
+
+// ==========================================
+// 📁 STATIC FILES
+// ==========================================
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// ==========================================
-// 🌐 DATABASE CONNECTION (🚀 VERCEL PROTECTED)
-// ==========================================
-// FIX: Added specific timeout and connection pool settings for Serverless architecture
-mongoose
-    .connect(process.env.MONGO_URI, {
-        serverSelectionTimeoutMS: 5000, // Keeps Vercel from hanging forever if DB is asleep
-        socketTimeoutMS: 45000,         // Closes inactive sockets properly
-        maxPoolSize: 10                 // Optimized pool size for serverless
-    }) 
-    .then(() => console.log("✅ MongoDB Cloud Connected Successfully!"))
-    .catch((err) => console.log("❌ MongoDB Connection Error:", err));
 
 // ==========================================
-// 🚀 API ROUTES ENGINE
+// 🌐 DATABASE
 // ==========================================
-// Apply general spam filter to all API routes
-app.use("/api/", apiLimiter); 
+mongoose.connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+    maxPoolSize: 10
+})
+.then(() => console.log("✅ MongoDB Connected"))
+.catch(err => console.log("❌ DB Error:", err));
 
-// Apply strict brute-force filter ONLY to auth endpoints
-app.use("/api/auth/login", authLimiter);
-app.use("/api/auth/send-multichannel-otp", authLimiter);
 
-// 🌟 Route Mounts
+// ==========================================
+// 🚀 ROUTES
+// ==========================================
 app.use("/api/auth", authRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/broker", brokerRoutes);
 app.use("/api/payment", paymentRoutes);
-app.use("/api/contact", contactRoutes); // 🌟 NEW: Connected the Secure Contact API
+app.use("/api/contact", contactRoutes);
 
-// LEADS / DEAL ROOM ROUTES (Buyer Facing)
 app.get('/api/leads/my-visits', verifyToken, leadController.getMyVisits);
 app.post('/api/leads/verify-gps/:id', verifyToken, leadController.verifyGPS);
 
 
 // ==========================================
-// 🛡️ LAYER 3: ANTI-HACK & FILE PROTECTION
+// ❌ API 404
 // ==========================================
-
-// 🚀 FIX: Strictly catch API 404s before the static file handler
 app.all("/api/*", (req, res) => {
-    return res.status(404).json({ success: false, message: "API Route Not Found" });
+    res.status(404).json({ success: false, message: "API Not Found" });
 });
 
-// SPA Routing and Directory Traversal Protection
+
+// ==========================================
+// 🔐 FILE PROTECTION + SPA
+// ==========================================
 app.get("*", (req, res) => {
-    // 🚨 DIRECTORY TRAVERSAL PROTECTION
+
     if (req.path.includes('..') || req.path.includes('%00')) {
-        return res.status(403).send("🚨 Access Denied by Zamin Dekho Firewall.");
+        return res.status(403).send("🚨 Access Denied");
     }
 
     let filePath = path.join(__dirname, "public", req.path);
@@ -184,22 +191,11 @@ app.get("*", (req, res) => {
         filePath = path.join(__dirname, "public", "index.html");
     }
 
-    // 🛡️ Block access to backend code/config files
-    const blockedFiles = [".env", "server.js", "package.json", "package-lock.json", "vercel.json", "index.js"];
-    const isBlocked = blockedFiles.some(file => filePath.endsWith(file));
-
-    const inProtectedFolder = filePath.includes(path.join(__dirname, 'routes')) || 
-                              filePath.includes(path.join(__dirname, 'models')) || 
-                              filePath.includes(path.join(__dirname, 'controllers')) || 
-                              filePath.includes(path.join(__dirname, 'config')) ||
-                              filePath.includes(path.join(__dirname, 'middleware')) ||
-                              filePath.includes(path.join(__dirname, 'node_modules'));
-
-    if (isBlocked || inProtectedFolder) {
-        return res.status(403).send("🚨 Forbidden: Access Denied. Zamin Dekho Security.");
+    const blockedFiles = [".env", "server.js", "package.json", "vercel.json"];
+    if (blockedFiles.some(file => filePath.endsWith(file))) {
+        return res.status(403).send("🚨 Forbidden");
     }
 
-    // Vercel SPA Fallback
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
         res.sendFile(filePath);
     } else {
@@ -207,43 +203,24 @@ app.get("*", (req, res) => {
     }
 });
 
+
 // ==========================================
-// 🛡️ LAYER 4: ANTI-CRASH SYSTEM (Global Error Handlers)
+// 🛡️ ERROR HANDLER
 // ==========================================
 app.use((err, req, res, next) => {
-    console.error("🔥 Route Error Caught:", err.message);
-    res.status(500).json({ success: false, message: "Internal Server Error! Engine is protected." });
+    console.error("🔥 Error:", err.message);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
 });
 
-process.on('uncaughtException', (err) => {
-    console.error('🚨 UNCAUGHT EXCEPTION! System saved from crashing.', err);
-});
-
-process.on('unhandledRejection', (err) => {
-    console.error('🚨 UNHANDLED REJECTION! System saved from crashing.', err);
-});
 
 // ==========================================
-// ⚡ VERCEL EXPORT & LOCAL PORT BINDING
+// 🚀 SERVER / VERCEL
 // ==========================================
-
-// 🚀 THE VERCEL FIX (Runs locally but exports cleanly for Vercel Serverless)
 if (!process.env.VERCEL) {
     const PORT = process.env.PORT || 5000;
-    const server = app.listen(PORT, "0.0.0.0", () => {
-        console.log(`\n=========================================`);
-        console.log(`🛡️ Zamin Dekho (SECURED) LIVE on port ${PORT}`);
-        console.log(`=========================================\n`);
-    });
-
-    server.on("error", (err) => {
-        if (err.code === "EADDRINUSE") {
-            console.log(`⚠️ Port ${PORT} is busy... Try running 'killall node' in terminal.`);
-        } else {
-            console.error("Server error:", err);
-        }
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running on ${PORT}`);
     });
 }
 
-// 🚀 CRITICAL FOR VERCEL: Export the app so Vercel Serverless can consume it
 module.exports = app;
