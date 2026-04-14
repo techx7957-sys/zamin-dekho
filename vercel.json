@@ -1,24 +1,17 @@
 {
   "version": 2,
-
   "builds": [
     {
       "src": "server.js",
       "use": "@vercel/node"
     }
   ],
-
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "server.js"
-    },
     {
       "src": "/(.*)",
       "dest": "server.js"
     }
   ],
-
   "headers": [
     {
       "source": "/(.*)",
@@ -28,12 +21,12 @@
         { "key": "X-XSS-Protection", "value": "1; mode=block" },
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-
-        // 🔥 IMPORTANT (helps fix unsafe warning)
-        { "key": "Content-Security-Policy", "value": "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval';" }
+        { "key": "Content-Security-Policy", "value": "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval';" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" }
       ]
     },
-
     {
       "source": "/(.*)\\.(jpg|jpeg|png|webp|gif|svg|css|js|woff2|woff|ttf|ico)",
       "headers": [
