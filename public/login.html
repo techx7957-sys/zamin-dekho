@@ -102,10 +102,10 @@
 
             <div class="divider">OR CONTINUE WITH</div>
 
-            <a href="#" onclick="window.location.href = API_BASE + '/auth/google?clientUrl=' + encodeURIComponent(window.location.origin); return false;" class="social-btn">
+            <a href="#" id="googleLoginBtn" class="social-btn">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="18" alt="Google"> Continue with Google
             </a>
-            <a href="#" onclick="window.location.href = API_BASE + '/auth/twitter?clientUrl=' + encodeURIComponent(window.location.origin); return false;" class="social-btn" style="background: #0f172a; color: white; border: none;">
+            <a href="#" id="twitterLoginBtn" class="social-btn" style="background: #0f172a; color: white; border: none;">
                 <i class="fab fa-x-twitter"></i> Continue with X
             </a>
 
@@ -144,6 +144,17 @@
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
             passwordInput.setAttribute('type', type);
             this.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+        });
+
+        // 🚀 SOCIAL LOGIN LOGIC (CSP SAFE)
+        document.getElementById('googleLoginBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = API_BASE + '/auth/google?clientUrl=' + encodeURIComponent(window.location.origin);
+        });
+
+        document.getElementById('twitterLoginBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = API_BASE + '/auth/twitter?clientUrl=' + encodeURIComponent(window.location.origin);
         });
 
         // 🚀 STANDARD LOGIN LOGIC
