@@ -71,25 +71,27 @@ app.use(helmet({
 // ==========================================
 // 🌐 CORS (SAFE + MOBILE SUPPORT)
 // ==========================================
+// 🔥 FIX: Added your main domains to the VIP list
 const TRUSTED_ORIGINS = [
     'http://localhost',
     'http://127.0.0.1',
     '.vercel.app',
     '.replit.dev',
-    '.replit.app'
+    '.replit.app',
+    'zamindekho.tech',      
+    'www.zamindekho.tech'   
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin) return callback(null, true);
 
-        const trusted = TRUSTED_ORIGINS.some(o =>
-            origin.includes(o)
-        );
+        const trusted = TRUSTED_ORIGINS.some(o => origin.includes(o));
 
         if (trusted) {
             callback(null, origin);
         } else {
+            console.error(`🚨 CORS BLOCKED origin: ${origin}`); // Debugging ke liye log
             callback(new Error("🚨 CORS BLOCKED"));
         }
     },
