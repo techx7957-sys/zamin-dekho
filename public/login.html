@@ -157,7 +157,7 @@
             window.location.href = API_BASE + '/auth/twitter?clientUrl=' + encodeURIComponent(window.location.origin);
         });
 
-        // 🚀 STANDARD LOGIN LOGIC
+        // 🚀 STANDARD LOGIN LOGIC (SECURED)
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
@@ -177,10 +177,11 @@
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Logging in...';
 
             try {
-                // 🔒 Uses API_BASE from script.js
+                // 🔒 Uses API_BASE from script.js & Secured with credentials: 'include'
                 const res = await fetch(`${API_BASE}/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include', // 🔥 CRITICAL PROTECTION: Syncs with strict CORS
                     body: JSON.stringify({ email, password })
                 });
 
@@ -193,16 +194,12 @@
 
                     if (typeof showToast === "function") showToast("Login Successful! Redirecting...", "success");
 
-                    // ⚡ STRICT DELAY FOR SMOOTH UI TRANSITION
+                    // ⚡ INSTANT UNIFIED REDIRECT
                     setTimeout(() => {
-                        const parsedUser = getUser();
-                        if (parsedUser && (parsedUser.role === 'admin' || parsedUser.role === 'broker')) {
-                            window.location.replace('admin.html'); // Admin/Broker jayenge CRM par
-                        } else {
-                            window.location.replace('index.html'); // Normal user jayega 'Find Land' par
-                        }
-                    }, 100); // 1000 ki jagah 100 kar diya taaki instant redirect ho!
-                    
+                        // Sabhi users ab strictly 'index.html' par jayenge (teri demand ke hisaab se)
+                        window.location.replace('index.html'); 
+                    }, 100); 
+
                 } else {
                     if (typeof showToast === "function") showToast(data.message || "Invalid Email or Password", "error");
                     else alert(data.message || "Invalid Email or Password");
