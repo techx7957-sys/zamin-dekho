@@ -1,5 +1,12 @@
-const API_BASE = "/api";
-window.API_BASE = "/api";
+// ==========================================
+// 🚀 DYNAMIC API CONFIGURATION
+// ==========================================
+// PRO TIP: Agar Vercel ka "/api" proxy 500 error de raha hai, 
+// toh isko hata kar seedha apna Replit ka URL daal de. 
+// Example: const API_BASE = "https://44bb9c51...sisko.replit.dev/api";
+const API_BASE = "/api"; 
+window.API_BASE = API_BASE;
+
 const FRONTEND_URL = window.location.origin;
 
 // ==========================================
@@ -29,11 +36,18 @@ function handleSocialLogin() {
             // 🔥 REMOVE TOKEN FROM URL (SECURITY)
             window.history.replaceState({}, document.title, window.location.pathname);
 
-            showToast("Login Successful 🚀", "success");
+            if (typeof showToast === "function") {
+                showToast("Login Successful 🚀", "success");
+            }
 
             setTimeout(() => {
-                window.location.href = 'dashboard.html';
-            }, 1200);
+                const parsedUser = getUser();
+                if (parsedUser && (parsedUser.role === 'admin' || parsedUser.role === 'broker')) {
+                    window.location.href = 'admin.html'; // Or dashboard.html based on your flow
+                } else {
+                    window.location.href = 'dashboard.html';
+                }
+            }, 1000);
 
         } catch (e) {
             console.error("Login Error:", e);
@@ -79,17 +93,17 @@ window.apiFetch = async function(endpoint, options = {}) {
         const res = await fetch(`${API_BASE}${cleanEndpoint}`, {
             ...options,
             headers,
-            credentials: "include" // 🔥 important for secure cookies
+            credentials: "omit" // Changed to 'omit' or 'same-origin' to prevent CORS issues with Replit unless strictly needed
         });
 
-        // 🔥 HANDLE INVALID JSON
+        // 🔥 HANDLE INVALID JSON OR 500 ERRORS
         const contentType = res.headers.get("content-type");
         let data = null;
 
         if (contentType && contentType.includes("application/json")) {
             data = await res.json();
         } else {
-            throw new Error("Invalid server response");
+            throw new Error(`Server responded with status: ${res.status}`);
         }
 
         // 🔐 AUTO LOGOUT ON TOKEN FAIL
@@ -102,7 +116,7 @@ window.apiFetch = async function(endpoint, options = {}) {
 
     } catch (err) {
         console.error("API ERROR:", err.message);
-        showToast("Network error. Try again.", "error");
+        if (typeof showToast === "function") showToast("Network error or Server is offline.", "error");
         throw err;
     }
 };
@@ -110,43 +124,49 @@ window.apiFetch = async function(endpoint, options = {}) {
 // ==========================================
 // 🔐 AUTH
 // ==========================================
-function getToken() {
+window.getToken = function() {
     return localStorage.getItem('zamin_token');
 }
 
-function getUser() {
+window.getUser = function() {
     try {
         const userStr = localStorage.getItem('zamin_user');
         if (!userStr) return null;
-
         return JSON.parse(decodeURIComponent(userStr));
     } catch {
         return null;
     }
 }
 
-function logout() {
+window.logout = function() {
     localStorage.clear();
     sessionStorage.clear();
     window.location.replace('login.html');
 }
 
-function requireAuth() {
+window.requireAuth = function() {
     if (!getToken()) {
         window.location.replace('login.html');
     }
 }
 
 // ==========================================
-// 🖼️ IMAGE FIX (IMPORTANT)
+// 🖼️ IMAGE FIX (ROBUST)
 // ==========================================
-function resolveImageUrl(url) {
-    const fallback = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6";
+window.resolveImageUrl = function(url) {
+    const fallback = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
 
     if (!url) return fallback;
 
+    // Default valid URLs (Cloudinary, AWS, Unsplash, Data URI)
     if (url.startsWith("http") || url.startsWith("data:image")) {
         return url;
+    }
+
+    // Fix for relative uploads hitting backend
+    // If your backend serves images via /uploads/
+    if (url.startsWith("uploads/")) {
+        return `${API_BASE.replace('/api', '')}/${url}`;
     }
 
     return `${FRONTEND_URL}/${url.replace(/^\/+/, '')}`;
@@ -155,11 +175,11 @@ function resolveImageUrl(url) {
 // ==========================================
 // 💰 FORMATTERS
 // ==========================================
-function formatPrice(amount) {
+window.formatPrice = function(amount) {
     return Number(amount || 0).toLocaleString("en-IN");
 }
 
-function formatDate(date) {
+window.formatDate = function(date) {
     try {
         return new Date(date).toLocaleDateString("en-IN");
     } catch {
@@ -170,7 +190,7 @@ function formatDate(date) {
 // ==========================================
 // 🔔 TOAST SYSTEM (SAFE)
 // ==========================================
-function showToast(message, type = "success") {
+window.showToast = function(message, type = "success") {
     let toast = document.getElementById("toast");
 
     if (!toast) {
@@ -187,7 +207,8 @@ function showToast(message, type = "success") {
             borderRadius: "10px",
             zIndex: 9999,
             fontWeight: "600",
-            display: "none"
+            display: "none",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
         });
     }
 
@@ -199,9 +220,7 @@ function showToast(message, type = "success") {
 
     toast.style.background = colors[type] || colors.success;
     toast.style.color = "#fff";
-
-    toast.textContent = message;
-
+    toast.innerHTML = message; // Using innerHTML if icons are passed
     toast.style.display = "block";
 
     setTimeout(() => {
@@ -212,23 +231,20 @@ function showToast(message, type = "success") {
 // ==========================================
 // 🧭 NAVBAR UPDATE
 // ==========================================
-function updateNavbar() {
+window.updateNavbar = function() {
     const token = getToken();
     const user = getUser();
-
     const links = document.querySelectorAll('a[href="login.html"]');
 
     if (token) {
         links.forEach(link => {
-
             if (user?.role === "admin" || user?.role === "broker") {
                 link.href = "admin.html";
-                link.textContent = "CRM Panel";
+                link.innerHTML = '<i class="fas fa-shield-alt me-1"></i> CRM Panel';
             } else {
                 link.href = "dashboard.html";
-                link.textContent = "Dashboard";
+                link.innerHTML = '<i class="fas fa-laptop-house me-1"></i> Dashboard';
             }
-
             link.style.background = "#10b981";
             link.style.color = "#fff";
             link.style.padding = "8px 16px";
