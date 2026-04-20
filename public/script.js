@@ -5,7 +5,7 @@
 // toh isko hata kar seedha apna Replit ka URL daal de. 
 // Example: const API_BASE = "https://44bb9c51...sisko.replit.dev/api";
 // Apne Replit server ka exact link daal, aakhri mein /api zaroor lagana
-const API_BASE = "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev";
+const API_BASE = "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev/api";
 window.API_BASE = API_BASE;
 
 const FRONTEND_URL = window.location.origin;
