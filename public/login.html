@@ -195,13 +195,14 @@
 
                     // ⚡ STRICT DELAY FOR SMOOTH UI TRANSITION
                     setTimeout(() => {
-                        if(data.user.role === 'admin' || data.user.role === 'broker') {
-                            window.location.replace('dashboard.html');
+                        const parsedUser = getUser();
+                        if (parsedUser && (parsedUser.role === 'admin' || parsedUser.role === 'broker')) {
+                            window.location.replace('admin.html'); // Admin/Broker jayenge CRM par
                         } else {
-                            window.location.replace('index.html');
+                            window.location.replace('index.html'); // Normal user jayega 'Find Land' par
                         }
-                    }, 1000);
-
+                    }, 100); // 1000 ki jagah 100 kar diya taaki instant redirect ho!
+                    
                 } else {
                     if (typeof showToast === "function") showToast(data.message || "Invalid Email or Password", "error");
                     else alert(data.message || "Invalid Email or Password");
