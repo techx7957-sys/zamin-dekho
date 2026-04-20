@@ -69,50 +69,40 @@ app.use(helmet({
 
 
 // ==========================================
-// 🌐 CORS — PROPERLY CONFIGURED
+// 🌐 PERFECT & PROTECTED CORS SETUP
 // ==========================================
-// Trusted domains: dev, production, custom domain, mobile (null origin)
-const TRUSTED_ORIGINS = [
-    'http://localhost',           // Local dev (any port)
-    'http://127.0.0.1',          // Local dev alternate
-    '.vercel.app',               // Vercel deployments
-    '.replit.dev',               // Replit dev preview
-    '.replit.app',               // Replit published app
-    'zamindekho.tech',           // Custom domain
-    'www.zamindekho.tech'        // Custom domain with www
+const EXACT_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:5000',
+    'http://127.0.0.1:5500',
+    'https://zamindekho.tech',      
+    'https://www.zamindekho.tech',   
+    'https://zamin-dekho-m5iq.vercel.app' 
 ];
-
-function isOriginTrusted(origin) {
-    return TRUSTED_ORIGINS.some(trusted => {
-        if (trusted.startsWith('.')) {
-            // Suffix match: .vercel.app matches anything.vercel.app
-            return origin.endsWith(trusted) || origin.includes(trusted);
-        }
-        // Prefix match: http://localhost matches http://localhost:3000
-        return origin.startsWith(trusted);
-    });
-}
 
 app.use(cors({
     origin: function (origin, callback) {
-        // No origin = Flutter/mobile app, Postman, server-to-server — allow
+        // 1. Allow mobile apps or backend-to-backend requests (No origin)
         if (!origin) return callback(null, true);
 
-        if (isOriginTrusted(origin)) {
-            callback(null, origin); // Reflect exact origin so cookies/auth work
-        } else {
-            console.warn(`🚨 CORS BLOCKED: ${origin}`);
-            callback(new Error(`CORS: Origin not allowed — ${origin}`));
+        // 2. Exact match for Production Domains (Highest Security)
+        if (EXACT_ALLOWED_ORIGINS.includes(origin)) {
+            return callback(null, true);
         }
-    },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
-    credentials: true,           // Required for JWT Bearer + cookies
-    optionsSuccessStatus: 200    // For IE11 / older mobile browsers
-}));
 
-// Handle all OPTIONS preflight requests up front
-app.options('*', cors());
+        // 3. Dynamic match ONLY for Replit preview links
+        if (origin.endsWith('.replit.dev') || origin.endsWith('.replit.app')) {
+            return callback(null, true);
+        }
+
+        // 4. Block everything else!
+        console.error(`🚨 CORS BLOCKED INTRUDER: ${origin}`); 
+        callback(new Error("🚨 CORS Policy Blocked this request"));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
+}));
 
 
 app.use(express.json({ limit: "50mb" }));

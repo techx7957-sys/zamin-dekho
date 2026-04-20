@@ -1,10 +1,7 @@
 // ==========================================
 // 🚀 DYNAMIC API CONFIGURATION
 // ==========================================
-// PRO TIP: Agar Vercel ka "/api" proxy 500 error de raha hai, 
-// toh isko hata kar seedha apna Replit ka URL daal de. 
-// Example: const API_BASE = "https://44bb9c51...sisko.replit.dev/api";
-// Apne Replit server ka exact link daal, aakhri mein /api zaroor lagana
+// Replit server ka exact link (with /api at the end)
 const API_BASE = "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev/api";
 window.API_BASE = API_BASE;
 
@@ -19,7 +16,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 🔐 SOCIAL LOGIN
+// 🔐 SOCIAL LOGIN (PROTECTED & SEAMLESS)
 // ==========================================
 function handleSocialLogin() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -34,21 +31,22 @@ function handleSocialLogin() {
                 localStorage.setItem('zamin_user', decodeURIComponent(user));
             }
 
-            // 🔥 REMOVE TOKEN FROM URL (SECURITY)
+            // 🔥 REMOVE TOKEN FROM URL (SECURITY AGAINST URL LEAKS)
             window.history.replaceState({}, document.title, window.location.pathname);
 
             if (typeof showToast === "function") {
                 showToast("Login Successful 🚀", "success");
             }
 
+            // INSTANT REDIRECT LOGIC
             setTimeout(() => {
                 const parsedUser = getUser();
                 if (parsedUser && (parsedUser.role === 'admin' || parsedUser.role === 'broker')) {
-                    window.location.href = 'admin.html'; // Or dashboard.html based on your flow
+                    window.location.replace('admin.html'); 
                 } else {
-                    window.location.href = 'dashboard.html';
+                    window.location.replace('index.html'); // Normal users go to Find Land
                 }
-            }, 1000);
+            }, 100); // 100ms for instant transition
 
         } catch (e) {
             console.error("Login Error:", e);
@@ -57,7 +55,7 @@ function handleSocialLogin() {
 }
 
 // ==========================================
-// 🛡️ XSS PROTECTION
+// 🛡️ XSS PROTECTION (ANTI-HACKING)
 // ==========================================
 window.escapeHTML = function(str) {
     if (!str && str !== 0) return "";
@@ -70,7 +68,7 @@ window.escapeHTML = function(str) {
 };
 
 // ==========================================
-// 🌐 API FETCH (SUPER SECURE)
+// 🌐 API FETCH (SUPER SECURE + CORS SYNCED)
 // ==========================================
 window.apiFetch = async function(endpoint, options = {}) {
     const token = getToken();
@@ -94,7 +92,8 @@ window.apiFetch = async function(endpoint, options = {}) {
         const res = await fetch(`${API_BASE}${cleanEndpoint}`, {
             ...options,
             headers,
-            credentials: "omit" // Changed to 'omit' or 'same-origin' to prevent CORS issues with Replit unless strictly needed
+            // 🔥 CRITICAL FIX: Changed to "include" to sync with backend credentials: true
+            credentials: "include" 
         });
 
         // 🔥 HANDLE INVALID JSON OR 500 ERRORS
@@ -107,7 +106,7 @@ window.apiFetch = async function(endpoint, options = {}) {
             throw new Error(`Server responded with status: ${res.status}`);
         }
 
-        // 🔐 AUTO LOGOUT ON TOKEN FAIL
+        // 🔐 AUTO LOGOUT ON TOKEN FAIL / SESSION EXPIRE
         if ((res.status === 401 || res.status === 403) && data?.message?.toLowerCase().includes("token")) {
             logout();
             throw new Error("Session expired");
@@ -123,7 +122,7 @@ window.apiFetch = async function(endpoint, options = {}) {
 };
 
 // ==========================================
-// 🔐 AUTH
+// 🔐 AUTH UTILITIES
 // ==========================================
 window.getToken = function() {
     return localStorage.getItem('zamin_token');
@@ -152,7 +151,7 @@ window.requireAuth = function() {
 }
 
 // ==========================================
-// 🖼️ IMAGE FIX (ROBUST)
+// 🖼️ IMAGE FIX (ROBUST & XSS SAFE)
 // ==========================================
 window.resolveImageUrl = function(url) {
     const fallback = "https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200";
@@ -165,7 +164,6 @@ window.resolveImageUrl = function(url) {
     }
 
     // Fix for relative uploads hitting backend
-    // If your backend serves images via /uploads/
     if (url.startsWith("uploads/")) {
         return `${API_BASE.replace('/api', '')}/${url}`;
     }
@@ -189,7 +187,7 @@ window.formatDate = function(date) {
 }
 
 // ==========================================
-// 🔔 TOAST SYSTEM (SAFE)
+// 🔔 TOAST SYSTEM (SAFE UI)
 // ==========================================
 window.showToast = function(message, type = "success") {
     let toast = document.getElementById("toast");
@@ -209,7 +207,8 @@ window.showToast = function(message, type = "success") {
             zIndex: 9999,
             fontWeight: "600",
             display: "none",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+            transition: "all 0.3s ease-in-out"
         });
     }
 
@@ -221,7 +220,7 @@ window.showToast = function(message, type = "success") {
 
     toast.style.background = colors[type] || colors.success;
     toast.style.color = "#fff";
-    toast.innerHTML = message; // Using innerHTML if icons are passed
+    toast.innerHTML = message; 
     toast.style.display = "block";
 
     setTimeout(() => {
@@ -230,7 +229,7 @@ window.showToast = function(message, type = "success") {
 }
 
 // ==========================================
-// 🧭 NAVBAR UPDATE
+// 🧭 NAVBAR UPDATE DYNAMICALLY
 // ==========================================
 window.updateNavbar = function() {
     const token = getToken();
