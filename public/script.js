@@ -1,10 +1,12 @@
 // ==========================================
 // 🚀 DYNAMIC API CONFIGURATION
 // ==========================================
-// Replit server ka exact link (with /api at the end)
+// API_BASE goes through Vercel's secure proxy (vercel.json)
 const API_BASE = "/api";
 window.API_BASE = API_BASE;
 
+// 🔥 Direct Backend URL for fetching uploaded images safely
+const BACKEND_URL = "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev";
 const FRONTEND_URL = window.location.origin;
 
 // ==========================================
@@ -38,15 +40,10 @@ function handleSocialLogin() {
                 showToast("Login Successful 🚀", "success");
             }
 
-            // INSTANT REDIRECT LOGIC
+            // ⚡ INSTANT UNIFIED REDIRECT (100% TO INDEX.HTML)
             setTimeout(() => {
-                const parsedUser = getUser();
-                if (parsedUser && (parsedUser.role === 'admin' || parsedUser.role === 'broker')) {
-                    window.location.replace('admin.html'); 
-                } else {
-                    window.location.replace('index.html'); // Normal users go to Find Land
-                }
-            }, 100); // 100ms for instant transition
+                window.location.replace('index.html'); 
+            }, 100); 
 
         } catch (e) {
             console.error("Login Error:", e);
@@ -92,7 +89,7 @@ window.apiFetch = async function(endpoint, options = {}) {
         const res = await fetch(`${API_BASE}${cleanEndpoint}`, {
             ...options,
             headers,
-            // 🔥 CRITICAL FIX: Changed to "include" to sync with backend credentials: true
+            // 🔥 CRITICAL FIX: Ensures sessions/cookies work with secure CORS
             credentials: "include" 
         });
 
@@ -163,9 +160,9 @@ window.resolveImageUrl = function(url) {
         return url;
     }
 
-    // Fix for relative uploads hitting backend
+    // 🔥 FIX: Fetch user-uploaded images directly from Replit 
     if (url.startsWith("uploads/")) {
-        return `${API_BASE.replace('/api', '')}/${url}`;
+        return `${BACKEND_URL}/${url}`;
     }
 
     return `${FRONTEND_URL}/${url.replace(/^\/+/, '')}`;
