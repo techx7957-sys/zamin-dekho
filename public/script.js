@@ -231,7 +231,7 @@ window.showToast = function(message, type = "success") {
 }
 
 // ==========================================
-// 🧭 NAVBAR UPDATE DYNAMICALLY
+// 🧭 NAVBAR UPDATE DYNAMICALLY (STRICT ROLE CHECK)
 // ==========================================
 window.updateNavbar = function() {
     const token = getToken();
@@ -240,13 +240,17 @@ window.updateNavbar = function() {
 
     if (token) {
         links.forEach(link => {
-            if (user?.role === "admin" || user?.role === "broker") {
+            // STRICT RULE: Only Admin and Broker get the CRM Button
+            if (user && (user.role === "admin" || user.role === "broker")) {
                 link.href = "admin.html";
                 link.innerHTML = '<i class="fas fa-shield-alt me-1"></i> CRM Panel';
-            } else {
+            } 
+            // RULE: Buyer, Seller, and anyone else get the Normal Dashboard
+            else {
                 link.href = "dashboard.html";
                 link.innerHTML = '<i class="fas fa-laptop-house me-1"></i> Dashboard';
             }
+
             link.style.background = "#10b981";
             link.style.color = "#fff";
             link.style.padding = "8px 16px";
