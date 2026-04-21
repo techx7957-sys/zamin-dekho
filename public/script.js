@@ -18,7 +18,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 🔐 SOCIAL LOGIN (PROTECTED & SEAMLESS)
+// 🔐 SOCIAL LOGIN (SEAMLESS - NO AUTO REFRESH LOOP)
 // ==========================================
 function handleSocialLogin() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -27,23 +27,27 @@ function handleSocialLogin() {
 
     if (token) {
         try {
+            // Save Token & User securely
             localStorage.setItem('zamin_token', token);
-
             if (user) {
                 localStorage.setItem('zamin_user', decodeURIComponent(user));
             }
 
             // 🔥 REMOVE TOKEN FROM URL (SECURITY AGAINST URL LEAKS)
+            // No page reload! Just silently clean the URL.
             window.history.replaceState({}, document.title, window.location.pathname);
 
-            if (typeof showToast === "function") {
-                showToast("Login Successful 🚀", "success");
+            if (typeof window.showToast === "function") {
+                window.showToast("Login Successful 🚀", "success");
             }
 
-            // ⚡ INSTANT UNIFIED REDIRECT (100% TO INDEX.HTML)
-            setTimeout(() => {
-                window.location.replace('index.html'); 
-            }, 100); 
+            // ⚡ UPDATE UI DIRECTLY (NO REDIRECT LOOP!)
+            updateNavbar();
+
+            // If this function exists in index.html, run it to show user profile
+            if (typeof window.updateCustomNavbarUI === "function") {
+                window.updateCustomNavbarUI();
+            }
 
         } catch (e) {
             console.error("Login Error:", e);
@@ -113,7 +117,7 @@ window.apiFetch = async function(endpoint, options = {}) {
 
     } catch (err) {
         console.error("API ERROR:", err.message);
-        if (typeof showToast === "function") showToast("Network error or Server is offline.", "error");
+        if (typeof window.showToast === "function") window.showToast("Network error or Server is offline.", "error");
         throw err;
     }
 };
@@ -138,6 +142,7 @@ window.getUser = function() {
 window.logout = function() {
     localStorage.clear();
     sessionStorage.clear();
+    // Use replace to prevent back-button weirdness
     window.location.replace('login.html');
 }
 

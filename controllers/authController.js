@@ -198,14 +198,19 @@ exports.socialLoginCallback = async (req, res) => {
         email: req.user.email 
     }));
 
-    // 🔥 THE ABSOLUTE MASTER FIX: Bypassing frontend logic entirely.
-    // Hamesha apni main site ke '/index.html' par redirect maaro!
-    const fallbackDomain = process.env.BASE_URL || "https://www.zamindekho.tech";
+    // 🔥 THE ABSOLUTE MASTER FIX (Works safely on Dev & Prod)
+    let origin = process.env.BASE_URL || "https://www.zamindekho.tech";
 
-    // Removing trailing slashes if any, to prevent double slashes.
-    const cleanDomain = fallbackDomain.replace(/\/+$/, '');
+    // Grab the origin from where the request actually came from
+    if (req.customRedirectUrl) {
+        try {
+            origin = new URL(req.customRedirectUrl).origin;
+        } catch (e) { /* Ignore parse error and use fallback */ }
+    }
 
-    // The final ticket is purely hardcoded to index.html to break the curse.
+    const cleanDomain = origin.replace(/\/+$/, '');
+
+    // Strictly forcing the path to /index.html regardless of what the browser asked for
     const finalDestination = `${cleanDomain}/index.html?token=${token}&user=${userData}`;
 
     res.redirect(finalDestination);
