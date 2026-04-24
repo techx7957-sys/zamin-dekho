@@ -10,7 +10,7 @@ exports.getContactInfo = (req, res) => {
         res.json({
             success: true,
             email: "Zamsupport@gmail.com", // 🌟 PUBLIC DISPLAY EMAIL (Masked)
-            phone: process.env.ADMIN_PHONE || "+917909830649"
+            phone: process.env.ADMIN_PHONE || "+918602347001"
         });
     } catch (error) {
         console.error("Error fetching contact info:", error);
