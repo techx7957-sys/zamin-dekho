@@ -167,8 +167,8 @@ mongoose.connect(process.env.MONGO_URI, {
 // ==========================================
 
 // 🟢 KEEP-ALIVE ROUTE (Prevent Replit from Sleeping - Connects to UptimeRobot)
-app.get('/api/ping', (req, res) => {
-    res.status(200).json({ success: true, message: "Zamin Dekho Server is Awake! 🚀" });
+app.all('/api/ping', (req, res) => {
+    res.status(200).send("OK");
 });
 
 app.use("/api/auth", authRoutes);
