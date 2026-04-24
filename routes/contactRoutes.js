@@ -1,59 +1,84 @@
-const express = require('express');
-const router = express.Router();
-const contactController = require('../controllers/contactController');
+const nodemailer = require('nodemailer');
 
-// 🛡️ SECURITY SHIELD 1: Rate Limiting (Anti-Spam & Anti-DDoS)
-// Requires: npm install express-rate-limit
-const rateLimit = require('express-rate-limit');
+// ==========================================
+// 📞 1. FETCH DYNAMIC CONTACT INFO
+// ==========================================
+exports.getContactInfo = (req, res) => {
+    try {
+        // 🔥 Replit Secrets (.env) se seedha utha raha hai!
+        // Agar galti se secret set nahi hai, toh ek default fallback use karega.
+        const phone = process.env.SUPPORT_PHONE || "+918602347001";
+        const email = process.env.SUPPORT_EMAIL || "support@zamindekho.com";
 
-const contactEmailLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes window
-    max: 3, // Limit each IP to strictly 3 emails per window
-    message: { 
-        success: false, 
-        message: "🚨 Security Alert: Too many messages sent from this IP. Please try again after 15 minutes to prevent spam." 
-    },
-    standardHeaders: true, 
-    legacyHeaders: false, 
-});
-
-// 🛡️ SECURITY SHIELD 2: Pre-flight Payload Validator
-const validateContactPayload = (req, res, next) => {
-    const { name, email, subject, message } = req.body;
-
-    if (!name || !email || !subject || !message) {
-        return res.status(400).json({ 
-            success: false, 
-            message: "🚨 Validation Error: All fields (Name, Email, Subject, Message) are strictly required!" 
+        res.status(200).json({
+            success: true,
+            phone: phone,
+            email: email
         });
+    } catch (error) {
+        console.error("Error fetching contact info:", error);
+        res.status(500).json({ success: false, message: "Failed to load contact info." });
     }
-
-    // Quick sanitization check before passing to controller
-    if (message.length > 2000) {
-        return res.status(400).json({ 
-            success: false, 
-            message: "🚨 Payload too large: Message exceeds the 2000 character limit." 
-        });
-    }
-
-    next();
 };
 
 // ==========================================
-// 📞 1. FETCH CONTACT INFO ROUTE
+// ✉️ 2. SEND SECURE SUPPORT EMAIL
 // ==========================================
-// Route to get dynamic phone/email for frontend UI (Safe to be called multiple times)
-router.get('/info', contactController.getContactInfo);
+exports.sendMessage = async (req, res) => {
+    try {
+        const { name, email, subject, message } = req.body;
 
-// ==========================================
-// ✉️ 2. SECURE EMAIL SUBMISSION ROUTE
-// ==========================================
-// Route to handle form submission with heavy Anti-Spam protection
-router.post(
-    '/send', 
-    contactEmailLimiter,     // 🛑 Block Spammers (Max 3/15mins)
-    validateContactPayload,  // 🛑 Block Empty/Malicious Payloads
-    contactController.sendMessage
-);
+        // Admin Email uthao jahan ye message bhejna hai
+        const senderEmail = (process.env.ADMIN_EMAILS || '').split(',')[0].trim();
+        const receiverEmail = process.env.SUPPORT_EMAIL || senderEmail;
 
-module.exports = router;
+        if (!senderEmail || !process.env.EMAIL_PASS) {
+            console.error("🚨 CRITICAL: Email credentials missing in .env!");
+            return res.status(500).json({ success: false, message: "Server email misconfiguration." });
+        }
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: senderEmail,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+
+        const mailOptions = {
+            from: `"ZaminDekho Support" <${senderEmail}>`,
+            replyTo: email, // 🔥 Jisse Admin direct user ko reply kar sake!
+            to: receiverEmail,
+            subject: `🚨 New Support Ticket: ${subject}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background: #f8fafc;">
+                    <div style="text-align: center; border-bottom: 2px solid #10b981; padding-bottom: 10px; margin-bottom: 20px;">
+                        <h2 style="color: #0f172a; margin: 0;">New Contact Form Message</h2>
+                    </div>
+                    <p style="color: #334155; font-size: 15px;"><strong>👤 Sender Name:</strong> ${name}</p>
+                    <p style="color: #334155; font-size: 15px;"><strong>✉️ Email Address:</strong> <a href="mailto:${email}">${email}</a></p>
+                    <p style="color: #334155; font-size: 15px;"><strong>📌 Subject:</strong> ${subject}</p>
+
+                    <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 20px;">
+                        <p style="color: #64748b; font-size: 12px; margin-top: 0; text-transform: uppercase;">Message Content</p>
+                        <p style="color: #1e293b; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${message}</p>
+                    </div>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Message sent securely to the support team! ✅" 
+        });
+
+    } catch (error) {
+        console.error("🔥 Email Sending Error:", error);
+        res.status(500).json({ 
+            success: false, 
+            message: "Failed to send message. Please try again later." 
+        });
+    }
+};

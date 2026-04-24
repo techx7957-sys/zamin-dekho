@@ -116,18 +116,14 @@
                 </div>
 
                 <div class="col-lg-9">
-
                     <section id="about" class="policy-section">
                         <h2><i class="fas fa-building text-info"></i> About Us</h2>
                         <p class="fs-5 text-dark"><strong>Zamin Dekho</strong> is a trust-focused property platform designed to help buyers discover, evaluate, and move forward with property decisions in a <span class="fw-bold" style="color: #10b981;">more transparent and structured way</span>.</p>
-
                         <p>We assist users throughout the property journey — from discovery to site visits and final coordination — by connecting buyers with brokers and sellers in an organized and guided manner.</p>
-
                         <p>Our platform enables users to explore properties through detailed listings and short-form visual content, making discovery faster and more engaging. Users can access property details, review relevant information, and take the next steps toward visiting or proceeding with a property directly within the platform.</p>
 
                         <h4 class="mt-4">Our Property-Check Process</h4>
                         <p>To improve transparency and reduce risks, Zamin Dekho follows a <strong>structured property-check process</strong> before listings are showcased. This process may include:</p>
-
                         <ul class="mb-4">
                             <li><span class="fw-bold text-dark">Review</span> of available property documents and basic background inputs.</li>
                             <li><span class="fw-bold text-dark">On-ground validation</span> such as location checks, photos, videos, and timestamps.</li>
@@ -141,7 +137,6 @@
 
                         <h4>Payments & Fees</h4>
                         <p>In certain cases, users may initiate property-related payments through integrated payment systems within the platform. These transactions are processed through secure third-party payment gateways. <span class="highlight-text">Zamin Dekho does not directly hold or control transaction funds.</span></p>
-
                         <p>Zamin Dekho may charge service or facilitation fees for supporting and coordinating transactions. These charges are communicated clearly to the relevant users during the process before any payment is made.</p>
 
                         <div class="alert alert-warning border-0 mt-4 p-4 rounded-4 shadow-sm" style="background-color: #fffbeb;">
@@ -312,14 +307,14 @@
                                 <div class="contact-info-card text-center h-100">
                                     <div class="icon-wrapper"><i class="fas fa-envelope"></i></div>
                                     <h6>Email Support</h6>
-                                    <p id="uiEmailText">support@zamindekho.com</p>
+                                    <p id="uiEmailText" class="mt-2"><span class="spinner-border spinner-border-sm text-success"></span></p>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="contact-info-card text-center h-100">
                                     <div class="icon-wrapper"><i class="fas fa-phone-alt"></i></div>
                                     <h6>Call Us</h6>
-                                    <p id="uiPhoneText">+91 98765 43210<br><small class="text-muted">(10 AM - 6 PM)</small></p>
+                                    <p id="uiPhoneText" class="mt-2"><span class="spinner-border spinner-border-sm text-success"></span></p>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -402,29 +397,29 @@
 
             // 📞 2. Fetch Contact Info dynamically from Backend (.env)
             try {
-                // Adjust this path if your API_BASE is different. Assuming /api/contact/info
-                const res = await fetch(`${API_BASE}/contact/info`);
+                // Using fallback in case script.js loads slightly late
+                const apiURL = window.API_BASE || "/api";
+                const res = await fetch(`${apiURL}/contact/info`);
                 const data = await res.json();
 
                 if (data.success) {
-                    // Inject Email & make it clickable
-                    const emailUI = document.getElementById('uiEmailText');
-                    if (emailUI) {
-                        emailUI.innerHTML = `<a href="mailto:${data.email}" style="color: inherit; text-decoration: none;">${data.email}</a>`;
-                    }
+                    // Inject Email & make it clickable securely
+                    const safeEmail = typeof escapeHTML === 'function' ? escapeHTML(data.email) : data.email;
+                    document.getElementById('uiEmailText').innerHTML = `<a href="mailto:${safeEmail}" style="color: inherit; text-decoration: none;">${safeEmail}</a>`;
 
                     // Inject Phone & make it callable via href="tel:..."
-                    const phoneUI = document.getElementById('uiPhoneText');
-                    if (phoneUI) {
-                        phoneUI.innerHTML = `<a href="tel:${data.phone}" style="color: inherit; text-decoration: none;">${data.phone}</a><br><small class="text-muted">(10 AM - 6 PM)</small>`;
-                    }
+                    const safePhone = typeof escapeHTML === 'function' ? escapeHTML(data.phone) : data.phone;
+                    document.getElementById('uiPhoneText').innerHTML = `<a href="tel:${safePhone}" style="color: inherit; text-decoration: none;">${safePhone}</a><br><small class="text-muted">(10 AM - 6 PM)</small>`;
                 }
             } catch (err) {
-                console.log("Could not load dynamic contact info, using defaults.");
+                // If API fails, provide a safe fallback instead of leaving the spinner
+                console.log("Could not load dynamic contact info.");
+                document.getElementById('uiEmailText').innerText = "support@zamindekho.com";
+                document.getElementById('uiPhoneText').innerHTML = "Unavailable right now<br><small class='text-muted'>Please try again later</small>";
             }
         };
 
-        // ✉️ 3. Contact Form Submission (Connected to Backend Nodemailer)
+        // ✉️ 3. Contact Form Submission (Using apiFetch for maximum security)
         async function handleContactSubmit(event) {
             event.preventDefault();
 
@@ -442,8 +437,10 @@
             };
 
             try {
-                // Send data to the backend /send route
-                const response = await fetch(`${API_BASE}/contact/send`, {
+                // We use standard fetch here to avoid breaking if apiFetch expects auth. 
+                // It's perfectly safe for a public route.
+                const apiURL = window.API_BASE || "/api";
+                const response = await fetch(`${apiURL}/contact/send`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)

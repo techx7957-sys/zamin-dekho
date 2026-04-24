@@ -236,7 +236,9 @@ window.showToast = function(message, type = "success") {
 window.updateNavbar = function() {
     const token = getToken();
     const user = getUser();
-    const links = document.querySelectorAll('a[href="login.html"]');
+
+    // 🔥 Sirf unhi links ko target karega jo button ki tarah dikhne chahiye (navbar ke andar)
+    const links = document.querySelectorAll('#authArea a[href="login.html"]');
 
     if (token) {
         links.forEach(link => {
@@ -255,6 +257,7 @@ window.updateNavbar = function() {
             link.style.color = "#fff";
             link.style.padding = "8px 16px";
             link.style.borderRadius = "50px";
+            link.style.border = "none"; // Purana outline hatane ke liye
         });
     }
 }
