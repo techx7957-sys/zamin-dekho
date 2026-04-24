@@ -1,9 +1,11 @@
+const express = require('express');
 const nodemailer = require('nodemailer');
+const router = express.Router();
 
 // ==========================================
 // 📞 1. FETCH DYNAMIC CONTACT INFO
 // ==========================================
-exports.getContactInfo = (req, res) => {
+const getContactInfo = (req, res) => {
     try {
         // 🔥 Replit Secrets (.env) se seedha utha raha hai!
         // Agar galti se secret set nahi hai, toh ek default fallback use karega.
@@ -24,7 +26,7 @@ exports.getContactInfo = (req, res) => {
 // ==========================================
 // ✉️ 2. SEND SECURE SUPPORT EMAIL
 // ==========================================
-exports.sendMessage = async (req, res) => {
+const sendMessage = async (req, res) => {
     try {
         const { name, email, subject, message } = req.body;
 
@@ -82,3 +84,10 @@ exports.sendMessage = async (req, res) => {
         });
     }
 };
+// ==========================================
+// 🛣️ ROUTES
+// ==========================================
+router.get('/info', getContactInfo);
+router.post('/send', sendMessage);
+
+module.exports = router;
