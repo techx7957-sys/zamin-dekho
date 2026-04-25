@@ -7,10 +7,12 @@ const router = express.Router();
 // ==========================================
 const getContactInfo = (req, res) => {
     try {
-        // 🔥 Replit Secrets (.env) se seedha utha raha hai!
-        // Agar galti se secret set nahi hai, toh ek default fallback use karega.
-        const phone = process.env.SUPPORT_PHONE || "+918602347001";
-        const email = process.env.SUPPORT_EMAIL || "support@zamindekho.com";
+        // 🔐 All contact info comes from environment variables — NEVER hardcoded.
+        const phone = process.env.SUPPORT_PHONE || process.env.ADMIN_PHONE || "";
+        const email = process.env.SUPPORT_EMAIL
+            || (process.env.SUPPORT_EMAILS || "").split(',')[0].trim()
+            || (process.env.ADMIN_EMAILS || "").split(',')[0].trim()
+            || "";
 
         res.status(200).json({
             success: true,

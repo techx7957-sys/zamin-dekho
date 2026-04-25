@@ -209,3 +209,19 @@ exports.approveBookingAmount = async (req, res) => {
         res.status(500).json({ success: false, message: "Error updating booking amount." });
     }
 };
+// ==========================================
+// 🔑 4. PUBLIC CONFIG (Frontend Razorpay Key)
+// ==========================================
+// Returns only the publishable key (safe to expose). Secret stays server-side.
+exports.getPublicConfig = (req, res) => {
+    if (!process.env.RAZORPAY_KEY_ID) {
+        return res.status(500).json({
+            success: false,
+            message: "Payment gateway not configured."
+        });
+    }
+    res.json({
+        success: true,
+        razorpayKey: process.env.RAZORPAY_KEY_ID
+    });
+};

@@ -149,8 +149,22 @@
         <script src="script.js"></script> 
 
         <script>
-            // 🛑 WARNING: ALWAYS USE TEST KEY FOR DEMO. DO NOT PUT LIVE KEY HERE YET!
-            const RAZORPAY_FRONTEND_KEY = "rzp_test_SRoMzyWoySJgae"; 
+            // 🔐 Razorpay key fetched from backend at runtime — NEVER hardcoded.
+            let RAZORPAY_FRONTEND_KEY = null;
+
+            async function loadRazorpayKey() {
+                try {
+                    const res = await fetch(`${API_BASE}/payment/config`);
+                    const data = await res.json();
+                    if (data.success && data.razorpayKey) {
+                        RAZORPAY_FRONTEND_KEY = data.razorpayKey;
+                    } else {
+                        console.error("Failed to load payment config:", data.message);
+                    }
+                } catch (e) {
+                    console.error("Payment config load error:", e);
+                }
+            }
 
             let propertyData = null;
             const urlParams = new URLSearchParams(window.location.search);
@@ -183,6 +197,7 @@
                     .then(() => window.location.href = "index.html");
                     return;
                 }
+                loadRazorpayKey();
                 loadUserData();
                 loadPropertyData();
             };
@@ -312,6 +327,16 @@
                         Swal.fire("Notice", orderData.message || "Failed to initiate payment. Please refresh.", "info"); 
                         resetPayButton(btn); 
                         return; 
+                    }
+
+                    // Safety check: if key didn't load, retry once
+                    if (!RAZORPAY_FRONTEND_KEY) {
+                        await loadRazorpayKey();
+                    }
+                    if (!RAZORPAY_FRONTEND_KEY) {
+                        Swal.fire("Payment Unavailable", "Payment gateway is not configured. Please contact support.", "error");
+                        resetPayButton(btn);
+                        return;
                     }
 
                     // Open Razorpay Popup

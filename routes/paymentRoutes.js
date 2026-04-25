@@ -58,6 +58,13 @@ const validateAdminApprovalPayload = (req, res, next) => {
 };
 
 // ==========================================
+// 🔑 0. PUBLIC CONFIG ROUTE (Frontend Razorpay Key)
+// ==========================================
+// Returns only the publishable key — no auth needed (it's safe to expose).
+router.get('/config', paymentController.getPublicConfig);
+
+
+// ==========================================
 // 💳 1. SECURE PAYMENT ROUTES (Buyer Only)
 // ==========================================
 

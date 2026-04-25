@@ -1,1 +1,7 @@
-echo -e "node_modules/\n.env" > .gitignore
+node_modules/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+uploads/

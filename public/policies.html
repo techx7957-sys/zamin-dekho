@@ -412,9 +412,9 @@
                     document.getElementById('uiPhoneText').innerHTML = `<a href="tel:${safePhone}" style="color: inherit; text-decoration: none;">${safePhone}</a><br><small class="text-muted">(10 AM - 6 PM)</small>`;
                 }
             } catch (err) {
-                // If API fails, provide a safe fallback instead of leaving the spinner
+                // If API fails, show neutral fallback (no hardcoded contact info).
                 console.log("Could not load dynamic contact info.");
-                document.getElementById('uiEmailText').innerText = "support@zamindekho.com";
+                document.getElementById('uiEmailText').innerText = "Unavailable right now";
                 document.getElementById('uiPhoneText').innerHTML = "Unavailable right now<br><small class='text-muted'>Please try again later</small>";
             }
         };
