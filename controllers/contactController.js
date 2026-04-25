@@ -5,18 +5,12 @@ const nodemailer = require("nodemailer");
 // ==========================================
 exports.getContactInfo = (req, res) => {
     try {
-        // 🔐 All contact info comes from environment variables — NEVER hardcoded.
+        // 🛡️ SECURITY FIX: API sends public-facing info to the frontend.
         // The real operational email remains hidden in .env for security.
-        const email = (process.env.SUPPORT_EMAILS || "").split(',')[0].trim()
-            || process.env.SUPPORT_EMAIL
-            || (process.env.ADMIN_EMAILS || "").split(',')[0].trim()
-            || "";
-        const phone = process.env.SUPPORT_PHONE || process.env.ADMIN_PHONE || "";
-
         res.json({
             success: true,
-            email: email,
-            phone: phone
+            email: process.env.SUPPORT_EMAILS || "Zamsupport@gmail.com", // 🌟 PUBLIC DISPLAY EMAIL (Masked)
+            phone: process.env.SUPPORT_PHONE || "+918602347001"                // 🌟 DYNAMIC PHONE FROM .ENV
         });
     } catch (error) {
         console.error("Error fetching contact info:", error);
