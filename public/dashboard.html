@@ -1039,23 +1039,49 @@
         }
 
         // ==========================================
-        // 🌟 4. PROPERTY POSTING LOGIC
+        // 🌟 4. PROPERTY POSTING LOGIC (STRICT ENGLISH LOCKED)
         // ==========================================
         async function detectLocation() {
             if (!navigator.geolocation) {
-                Swal.fire("Error", "Geolocation is not supported by your browser", "error"); return;
+                Swal.fire("Error", "Geolocation is not supported by your browser", "error"); 
+                return;
             }
+
             const addrInput = document.getElementById("address");
             addrInput.value = "Scanning satellite data...";
+
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
                     try {
-                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+                        // 🔥 THE MASTER FIX: Appended '&accept-language=en' and '&addressdetails=1' to strictly enforce English parsing
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&addressdetails=1&accept-language=en`);
                         const data = await res.json();
-                        addrInput.value = data.display_name;
-                    } catch (e) { addrInput.value = "Failed to detect. Please type manually."; }
+
+                        // If API successfully resolves standard international strings
+                        if (data && data.address) {
+                            const a = data.address;
+                            // Gather targeted details sequentially for precision accuracy
+                            const road = a.road || a.pedestrian || a.suburb || "";
+                            const area = a.neighbourhood || a.city_district || a.village || a.town || "";
+                            const city = a.city || a.state_district || a.county || "";
+                            const state = a.state || "";
+                            const postcode = a.postcode || "";
+
+                            // Construct unified structured English string dynamically
+                            let fullAddr = [road, area, city, state, postcode].filter(Boolean).join(", ");
+                            addrInput.value = fullAddr || data.display_name;
+                        } else {
+                            addrInput.value = data.display_name || "Location resolved. Please verify.";
+                        }
+                    } catch (e) { 
+                        addrInput.value = "Failed to detect precisely. Please type manually."; 
+                    }
                 },
-                () => { addrInput.value = ""; Swal.fire("Warning", "Location access denied. Please type manually.", "warning"); }
+                () => { 
+                    addrInput.value = ""; 
+                    Swal.fire("Warning", "Location access denied. Please type manually.", "warning"); 
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
 
@@ -1063,12 +1089,14 @@
             const btn = document.getElementById("submit-btn");
 
             if (!document.getElementById("land-name").value || !document.getElementById("land-price").value) {
-                Swal.fire("Required", "Please fill at least the Property Title and Price!", "warning"); return;
+                Swal.fire("Required", "Please fill at least the Property Title and Price!", "warning"); 
+                return;
             }
 
             const fallbackImg = document.getElementById("land-image").files[0];
             if (!finalImageBlob && !fallbackImg) {
-                Swal.fire("Verification Required", "Please capture a live photo to verify the property authenticity!", "warning"); return;
+                Swal.fire("Verification Required", "Please capture a live photo to verify the property authenticity!", "warning"); 
+                return;
             }
 
             btn.disabled = true;
@@ -1088,7 +1116,7 @@
             if (finalImageBlob) {
                 formData.append("image", finalImageBlob, "verified_property.jpg");
                 formData.append("capturedInApp", "true");
-                if (captureLat && captureLng) {
+                if (typeof captureLat !== 'undefined' && typeof captureLng !== 'undefined' && captureLat && captureLng) {
                     formData.append("latitude", captureLat);
                     formData.append("longitude", captureLng);
                 }
@@ -1097,7 +1125,7 @@
             }
 
             try {
-                // 🔒 Connected to global API_BASE and getToken
+                // 🔒 Connected to global API_BASE and getToken safely
                 const res = await fetch(`${API_BASE}/listings/create`, {
                     method: "POST",
                     headers: { Authorization: `Bearer ${getToken()}` },
@@ -1106,7 +1134,7 @@
                 const data = await res.json();
 
                 if (data.success) {
-                    sessionStorage.removeItem("cache_myListings"); // Clear cache so new property shows
+                    sessionStorage.removeItem("cache_myListings"); // Clear cache so new property shows natively
                     Swal.fire({
                         title: 'Success!',
                         text: data.message || "Property submitted for Admin Review! ✅",
@@ -1116,7 +1144,7 @@
                 } else if (data.isFraud) {
                     Swal.fire({ title: '🚨 FRAUD DETECTED', text: data.message, icon: 'error', confirmButtonColor: '#ef4444' });
                 } else {
-                     Swal.fire({ title: 'Oops!', text: data.message, icon: 'warning' });
+                    Swal.fire({ title: 'Oops!', text: data.message, icon: 'warning' });
                 }
             } catch (e) { 
                 Swal.fire("Server Error", "Could not upload property data. Max media limit is 5MB.", "error"); 
@@ -1127,18 +1155,32 @@
         }
 
         async function deleteListing(id) {
-            const result = await Swal.fire({ title: 'Remove Property?', text: "This action is permanent.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' });
+            const result = await Swal.fire({ 
+                title: 'Remove Property?', 
+                text: "This action is permanent.", 
+                icon: 'warning', 
+                showCancelButton: true, 
+                confirmButtonColor: '#ef4444' 
+            });
+
             if (result.isConfirmed) {
                 try {
-                    // 🔒 Connected to global API_BASE
-                    const res = await fetch(`${API_BASE}/listings/delete/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${getToken()}` }});
+                    // 🔒 Connected to global API_BASE seamlessly
+                    const res = await fetch(`${API_BASE}/listings/delete/${id}`, { 
+                        method: "DELETE", 
+                        headers: { Authorization: `Bearer ${getToken()}` }
+                    });
                     const data = await res.json();
                     if (data.success) { 
-                        sessionStorage.removeItem("cache_myListings"); // Clear cache
+                        sessionStorage.removeItem("cache_myListings"); // Clear structural caches
                         Swal.fire('Deleted!', '', 'success'); 
-                        loadMyListings(); // Will hit API since cache is cleared
-                    } else Swal.fire('Error', data.message, 'error');
-                } catch (e) { Swal.fire("Error", "Network issue.", "error"); }
+                        if (typeof loadMyListings === 'function') loadMyListings(); // Refresh UI layer instantly
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
+                    }
+                } catch (e) { 
+                    Swal.fire("Error", "Network issue.", "error"); 
+                }
             }
         }
 
