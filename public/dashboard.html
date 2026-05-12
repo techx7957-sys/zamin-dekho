@@ -907,7 +907,7 @@
         }
 
         // ==========================================
-        // 🌟 3. IN-APP CAMERA & GPS 
+        // 🌟 3. IN-APP CAMERA & GPS (HD QUALITY + LOW FILE SIZE)
         // ==========================================
         function initCameraSystem() {
             const video = document.getElementById('video');
@@ -919,49 +919,109 @@
             const capturedImg = document.getElementById('captured-photo');
             const fallbackInput = document.getElementById('land-image');
 
+            // Global variable track handling
+            window.stream = null;
+
             startBtn.onclick = async () => {
                 try {
+                    // 1. Silent native GPS triggering
                     if (navigator.geolocation) {
                         navigator.geolocation.getCurrentPosition(
-                            pos => { captureLat = pos.coords.latitude; captureLng = pos.coords.longitude; },
-                            err => console.log("GPS restricted")
+                            pos => { 
+                                window.captureLat = pos.coords.latitude; 
+                                window.captureLng = pos.coords.longitude; 
+                            },
+                            err => console.log("GPS restricted or delayed")
                         );
                     }
-                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-                    video.srcObject = stream;
+
+                    // 2. Kill orphan streams securely
+                    if (window.stream) {
+                        window.stream.getTracks().forEach(track => track.stop());
+                    }
+
+                    // 3. Request crisp input dimensions
+                    window.stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            facingMode: "environment",
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        }, 
+                        audio: false 
+                    });
+
+                    video.srcObject = window.stream;
+                    video.setAttribute('playsinline', true); // Bulletproof iOS override
+                    video.muted = true;
+
+                    // 4. Force playback execution to prevent black loading screen
+                    await video.play();
+
+                    // 5. Dynamic UI layout state switch
                     camContainer.style.display = 'block';
                     captureBtn.style.display = 'block';
                     startBtn.style.display = 'none';
                     photoPreview.style.display = 'none';
-                    fallbackInput.style.display = 'none';
+                    if (fallbackInput) fallbackInput.style.display = 'none';
+
                 } catch (err) {
-                    Swal.fire("Camera Access Denied", "Please allow camera permissions or upload manually.", "warning");
-                    fallbackInput.style.display = 'block';
+                    console.error("Camera Initialisation Error:", err);
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire("Camera Access Denied", "Please allow camera permissions in your address bar lock icon or upload manually.", "warning");
+                    }
+                    if (fallbackInput) fallbackInput.style.display = 'block';
                 }
             };
 
             captureBtn.onclick = () => {
+                if (!video || !window.stream) return;
+
                 const context = canvas.getContext('2d');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+
+                // 🔥 SMART SCALING ENGINE: Downscales raw heavy feeds to a standard sharp boundary
+                // Retains amazing physical quality while shrinking total array surface weight
+                const MAX_WIDTH = 1280;
+                let finalWidth = video.videoWidth || 1280;
+                let finalHeight = video.videoHeight || 720;
+
+                if (finalWidth > MAX_WIDTH) {
+                    finalHeight = Math.floor((finalHeight * MAX_WIDTH) / finalWidth);
+                    finalWidth = MAX_WIDTH;
+                }
+
+                canvas.width = finalWidth;
+                canvas.height = finalHeight;
+
+                // Render physical video state directly to compressed layer boundary
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+                // Stamp active telemetries safely
                 const now = new Date();
                 const timeStr = now.toLocaleString('en-IN');
 
-                context.font = "bold 25px Arial";
-                context.fillStyle = "rgba(255, 255, 255, 0.9)";
-                context.shadowColor = "black";
-                context.shadowBlur = 5;
-                context.fillText("ZAMIN DEKHO VERIFIED", 30, canvas.height - 60);
-                context.font = "20px Arial";
-                context.fillText(timeStr, 30, canvas.height - 30);
+                context.font = "bold 24px 'Inter', Arial, sans-serif";
+                context.fillStyle = "rgba(255, 255, 255, 0.95)";
+                context.shadowColor = "rgba(0, 0, 0, 0.8)";
+                context.shadowBlur = 6;
+                context.fillText("ZAMIN DEKHO VERIFIED", 25, canvas.height - 55);
+
+                context.font = "600 18px 'Inter', Arial, sans-serif";
+                context.fillText(timeStr, 25, canvas.height - 25);
+
+                // 🔥 SMART COMPRESSION: Dispatches natively encoded WebP/JPEG arrays at 0.75 compression curve
+                // Delivers eye-popping visual presentation while storing securely at minimal byte footprints
+                const outputMimeType = 'image/webp'; // Fallbacks smoothly internally if client browser lacks implementation
+                const compressionQuality = 0.75;
 
                 canvas.toBlob((blob) => {
-                    finalImageBlob = blob;
+                    if (!blob) return;
+
+                    // Saves global targets safely ready for binary network dispatch
+                    window.finalImageBlob = blob;
                     const url = URL.createObjectURL(blob);
                     capturedImg.src = url;
 
+                    // UI state updates
                     photoPreview.style.display = 'block';
                     camContainer.style.display = 'none';
                     captureBtn.style.display = 'none';
@@ -969,8 +1029,12 @@
                     startBtn.innerHTML = '<i class="fas fa-redo me-2"></i> Retake Verified Photo';
                     startBtn.style.display = 'block';
 
-                    stream.getTracks().forEach(track => track.stop());
-                }, 'image/jpeg', 0.85);
+                    // Clear absolute native usage states natively
+                    window.stream.getTracks().forEach(track => track.stop());
+                    window.stream = null;
+
+                    console.log(`📸 Processed Snapshot Output: ${(blob.size / 1024).toFixed(2)} KB`);
+                }, outputMimeType, compressionQuality);
             };
         }
 
