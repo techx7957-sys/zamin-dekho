@@ -434,35 +434,63 @@
                 fetchAll(); 
             }
 
+            // 🚀 THE ULTIMATE FIX: Reverse Geocoding locked strictly to International English
             function detectFastGPS() {
                 const input = document.getElementById('mainSearchInput');
                 const icon = document.getElementById('gpsIcon');
-                if (!navigator.geolocation) { Swal.fire("Error", "GPS is not supported by your browser!", "error"); return; }
+
+                if (!navigator.geolocation) { 
+                    Swal.fire("Error", "GPS is not supported by your browser!", "error"); 
+                    return; 
+                }
 
                 input.value = "Scanning 50km radius...";
                 icon.classList.add('fa-spin');
 
                 navigator.geolocation.getCurrentPosition(
                     async (pos) => {
+                        // Global scope variables defined in your script
                         userLat = pos.coords.latitude;
                         userLng = pos.coords.longitude;
 
                         try {
-                            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}&addressdetails=1`);
+                            // 🔥 THE MASTER FIX: Appended '&accept-language=en' to strictly enforce English parsing
+                            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}&addressdetails=1&accept-language=en`);
                             const data = await res.json();
-                            const addr = data.address;
+                            const addr = data.address || {};
+
+                            // Fallback sequence to extract accurate local identification
                             let district = addr.city || addr.state_district || addr.county || addr.town || addr.village || "";
                             district = district.replace(/ District/gi, '').trim(); 
                             const state = addr.state || "";
 
-                            input.value = (district && state) ? `Nearby: ${district}, ${state}` : "Properties near your location";
+                            // Populate UI smoothly with safe sanitization
+                            if (district && state) {
+                                input.value = `Nearby: ${district}, ${state}`;
+                            } else {
+                                input.value = "Properties near your location";
+                            }
+
                             icon.classList.remove('fa-spin');
                             icon.classList.add('gps-active'); 
 
-                            executeAdvancedSearch();
-                        } catch(e) { input.value = "Location found!"; icon.classList.remove('fa-spin'); icon.classList.add('gps-active'); executeAdvancedSearch(); }
+                            // Execute downstream search logic autonomously
+                            if (typeof executeAdvancedSearch === 'function') {
+                                executeAdvancedSearch();
+                            }
+                        } catch(e) { 
+                            input.value = "Location found!"; 
+                            icon.classList.remove('fa-spin'); 
+                            icon.classList.add('gps-active'); 
+                            if (typeof executeAdvancedSearch === 'function') executeAdvancedSearch(); 
+                        }
                     }, 
-                    (err) => { input.value = ""; icon.classList.remove('fa-spin'); Swal.fire("Warning", "Please allow location access to find nearby lands.", "warning"); }, 
+                    (err) => { 
+                        input.value = ""; 
+                        icon.classList.remove('fa-spin'); 
+                        Swal.fire("Warning", "Please allow location access to find nearby lands.", "warning"); 
+                    }, 
+                    // Optimized GPS configuration parameters for immediate native calculation
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
                 );
             }

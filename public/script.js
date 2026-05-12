@@ -9,6 +9,10 @@ window.API_BASE = API_BASE;
 const BACKEND_URL = "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev";
 const FRONTEND_URL = window.location.origin;
 
+// Global Scope GPS trackers
+window.userLat = null;
+window.userLng = null;
+
 // ==========================================
 // 🚀 INIT
 // ==========================================
@@ -261,3 +265,63 @@ window.updateNavbar = function() {
         });
     }
 }
+
+// ==========================================
+// 📍 GLOBAL NATIVE GPS ENGINE (PURE ENGLISH LOCKED)
+// ==========================================
+window.detectFastGPS = function() {
+    const input = document.getElementById('mainSearchInput');
+    const icon = document.getElementById('gpsIcon');
+
+    if (!input || !icon) return;
+
+    if (!navigator.geolocation) { 
+        if (typeof Swal !== 'undefined') Swal.fire("Error", "GPS is not supported by your browser!", "error"); 
+        return; 
+    }
+
+    input.value = "Scanning 50km radius...";
+    icon.classList.add('fa-spin');
+
+    navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+            window.userLat = pos.coords.latitude;
+            window.userLng = pos.coords.longitude;
+
+            try {
+                // 🔥 Master parameters applied: explicitly block regional scripts on all global endpoints
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${window.userLat}&lon=${window.userLng}&addressdetails=1&accept-language=en`);
+                const data = await res.json();
+                const addr = data.address || {};
+
+                let district = addr.city || addr.state_district || addr.county || addr.town || addr.village || "";
+                district = district.replace(/ District/gi, '').trim(); 
+                const state = addr.state || "";
+
+                if (district && state) {
+                    input.value = `Nearby: ${district}, ${state}`;
+                } else {
+                    input.value = "Properties near your location";
+                }
+
+                icon.classList.remove('fa-spin');
+                icon.classList.add('gps-active'); 
+
+                if (typeof executeAdvancedSearch === 'function') {
+                    executeAdvancedSearch();
+                }
+            } catch(e) { 
+                input.value = "Location found!"; 
+                icon.classList.remove('fa-spin'); 
+                icon.classList.add('gps-active'); 
+                if (typeof executeAdvancedSearch === 'function') executeAdvancedSearch(); 
+            }
+        }, 
+        (err) => { 
+            input.value = ""; 
+            icon.classList.remove('fa-spin'); 
+            if (typeof Swal !== 'undefined') Swal.fire("Warning", "Please allow location access to find nearby lands.", "warning"); 
+        }, 
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
+    );
+};
