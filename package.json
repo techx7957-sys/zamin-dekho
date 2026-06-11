@@ -14,7 +14,7 @@
   "dependencies": {
     "@google-cloud/vision": "^5.3.4",
     "bcryptjs": "^3.0.3",
-    "cloudinary": "^1.41.3",
+    "cloudinary": "^2.10.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^4.22.1",
@@ -27,7 +27,6 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^7.8.9",
     "multer": "^2.1.1",
-    "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^8.0.4",
     "passport": "^0.7.0",
     "passport-facebook": "^3.0.0",
