@@ -51,7 +51,7 @@
         /* Premium Sidebar Navigation */
         .sticky-sidebar { position: sticky; top: 120px; }
         .nav-pills { background: white; padding: 15px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
-        .nav-pills .nav-link { color: #64748b; font-weight: 600; padding: 14px 20px; border-radius: 12px; margin-bottom: 8px; text-align: left; transition: all 0.3s ease; background: transparent; display: flex; align-items: center; gap: 12px; font-size: 15px;}
+        .nav-pills .nav-link { color: #475569; font-weight: 600; padding: 14px 20px; border-radius: 12px; margin-bottom: 8px; text-align: left; transition: all 0.3s ease; background: transparent; display: flex; align-items: center; gap: 12px; font-size: 15px;}
         .nav-pills .nav-link:hover { background: #f8fafc; color: #0f172a; transform: translateX(5px);}
         .nav-pills .nav-link.active { background: #10b981; color: white; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); transform: translateX(5px); }
 
@@ -78,7 +78,7 @@
         .icon-wrapper { width: 50px; height: 50px; background: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; }
         .contact-info-card i { color: #10b981; font-size: 20px; }
         .contact-info-card h6 { font-weight: 800; margin-bottom: 8px; color: #0f172a; font-size: 16px;}
-        .contact-info-card p { margin: 0; font-size: 14px; color: #64748b; line-height: 1.5;}
+        .contact-info-card p { margin: 0; font-size: 14px; color: #475569; line-height: 1.5;}
     </style>
 </head>
 <body data-bs-spy="scroll" data-bs-target="#policy-nav" data-bs-smooth-scroll="true" tabindex="0">
@@ -413,7 +413,7 @@
                 }
             } catch (err) {
                 // If API fails, show neutral fallback (no hardcoded contact info).
-                console.log("Could not load dynamic contact info.");
+                // console.log("Could not load dynamic contact info.");
                 document.getElementById('uiEmailText').innerText = "Unavailable right now";
                 document.getElementById('uiPhoneText').innerHTML = "Unavailable right now<br><small class='text-muted'>Please try again later</small>";
             }

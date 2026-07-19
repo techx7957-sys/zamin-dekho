@@ -26,8 +26,8 @@
 
         .auth-area { display: flex; align-items: center; justify-content: center; gap: 12px; }
         .user-id-btn { background: #ffffff; border: 2px solid #e2e8f0; color: #1e293b; padding: 6px 18px 6px 6px; border-radius: 50px; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 10px; cursor: default; box-shadow: 0 2px 10px rgba(0,0,0,0.02);}
-        .logout-btn-premium { background: #fef2f2; border: 1px solid #fca5a5; color: #ef4444; padding: 10px 20px; border-radius: 50px; font-weight: 700; font-size: 14px; transition: 0.2s; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-        .logout-btn-premium:hover { background: #ef4444; color: white;}
+        .logout-btn-premium { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; padding: 10px 20px; border-radius: 50px; font-weight: 700; font-size: 14px; transition: 0.2s; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        .logout-btn-premium:hover { background: #b91c1c; color: white;}
 
         /* Navigation Pills */
         .nav-pills .nav-link { font-weight: 700; color: #475569; padding: 12px 25px; border-radius: 50px; margin: 0 5px 20px; border: 1px solid #e2e8f0; background: white; transition: 0.3s;}
@@ -37,7 +37,7 @@
         /* Form Styling */
         .container-form { max-width: 800px; margin: 0 auto; }
         .form-box { background: white; padding: 40px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03); margin-bottom: 25px; border: 1px solid #e2e8f0; }
-        .box-title { font-size: 16px; font-weight: 800; color: #3b82f6; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px;}
+        .box-title { font-size: 16px; font-weight: 800; color: #1d4ed8; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px;}
 
         label { font-size: 12px; font-weight: 800; color: #475569; margin-bottom: 8px; display: block; text-transform: uppercase; letter-spacing: 0.5px;}
         input, select, textarea { width: 100%; padding: 15px; border: 1px solid #cbd5e1; border-radius: 12px; margin-bottom: 20px; font-size: 15px; background: #f1f5f9; color: #1e293b; font-weight: 500; transition: 0.3s;}
@@ -45,7 +45,7 @@
 
         .submit-btn { background: #10b981; color: white; border: none; width: 100%; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 800; cursor: pointer; transition: 0.3s; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);}
         .submit-btn:hover { background: #059669; transform: translateY(-3px); box-shadow: 0 15px 30px rgba(16, 185, 129, 0.3);}
-        .detect-btn { background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; padding: 8px 15px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.2s;}
+        .detect-btn { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 8px 15px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.2s;}
         .detect-btn:hover { background: #3b82f6; color: white; }
 
         /* Property Cards */
@@ -931,7 +931,7 @@
                                 window.captureLat = pos.coords.latitude; 
                                 window.captureLng = pos.coords.longitude; 
                             },
-                            err => console.log("GPS restricted or delayed")
+                            err => { /* GPS restricted or delayed */ }
                         );
                     }
 
@@ -965,7 +965,7 @@
                     if (fallbackInput) fallbackInput.style.display = 'none';
 
                 } catch (err) {
-                    console.error("Camera Initialisation Error:", err);
+                    // console.error("Camera Initialisation Error:", err);
                     if (typeof Swal !== 'undefined') {
                         Swal.fire("Camera Access Denied", "Please allow camera permissions in your address bar lock icon or upload manually.", "warning");
                     }
@@ -1033,7 +1033,7 @@
                     window.stream.getTracks().forEach(track => track.stop());
                     window.stream = null;
 
-                    console.log(`📸 Processed Snapshot Output: ${(blob.size / 1024).toFixed(2)} KB`);
+                    // console.log(`📸 Processed Snapshot Output: ${(blob.size / 1024).toFixed(2)} KB`);
                 }, outputMimeType, compressionQuality);
             };
         }
