@@ -60,7 +60,7 @@
         /* Deal Progress Tracker */
         .deal-progress { display: flex; justify-content: space-between; position: relative; margin-bottom: 20px; padding: 0 10px; flex-shrink: 0;}
         .deal-progress::before { content: ''; position: absolute; top: 15px; left: 30px; right: 30px; height: 2px; background: #334155; z-index: 1; }
-        .step { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 5px; color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .step { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 5px; color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; }
         .step .icon { width: 32px; height: 32px; border-radius: 50%; background: #1e293b; border: 2px solid #334155; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: 0.3s; }
         .step.active { color: #10b981; }
         .step.active .icon { background: #10b981; border-color: #10b981; color: white; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
@@ -92,11 +92,11 @@
         .deal-actions { display: flex; gap: 10px; flex-shrink: 0; }
         .btn-pay-token { flex: 2; background: linear-gradient(45deg, #f59e0b, #d97706); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: 800; font-size: 15px; box-shadow: 0 5px 15px rgba(245, 158, 11, 0.3); transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px;}
         .btn-pay-token:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(245, 158, 11, 0.5); }
-        .btn-cancel { flex: 1; background: transparent; border: 2px solid #334155; color: #94a3b8; border-radius: 12px; font-weight: 700; transition: 0.3s;}
+        .btn-cancel { flex: 1; background: transparent; border: 2px solid #334155; color: #cbd5e1; border-radius: 12px; font-weight: 700; transition: 0.3s;}
         .btn-cancel:hover { background: #ef4444; color: white; border-color: #ef4444;}
 
         /* 🌟 Minimal Compliance Footer (App-Style) 🌟 */
-        .minimal-footer { text-align: center; padding: 10px 0; font-size: 11px; color: #64748b; font-weight: 600; width: 100%; background: #0f172a; flex-shrink: 0; border-top: 1px solid #1e293b;}
+        .minimal-footer { text-align: center; padding: 10px 0; font-size: 11px; color: #94a3b8; font-weight: 600; width: 100%; background: #0f172a; flex-shrink: 0; border-top: 1px solid #1e293b;}
         .minimal-footer a { color: #94a3b8; text-decoration: none; margin: 0 8px; transition: 0.2s;}
         .minimal-footer a:hover { color: #10b981; text-decoration: underline; }
     </style>
@@ -112,8 +112,8 @@
 
     <div class="top-bar">
         <div class="d-flex align-items-center gap-3">
-            <a href="dashboard.html" class="text-white text-decoration-none"><i class="fas fa-arrow-left"></i></a>
-            <h5 class="m-0 fw-bold">Deal Room</h5>
+            <a href="dashboard.html" class="text-white text-decoration-none" aria-label="Go back to dashboard"><i class="fas fa-arrow-left" aria-hidden="true"></i></a>
+            <h2 class="m-0 fw-bold" style="font-size:1.25rem;">Deal Room</h2>
         </div>
         <div class="secure-badge"><i class="fas fa-shield-alt"></i> ENCRYPTED</div>
     </div>
@@ -128,7 +128,7 @@
         </div>
 
         <div class="prop-info-card">
-            <img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=300" id="drImage" class="prop-img" alt="Property">
+            <img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=300" id="drImage" class="prop-img" alt="Property thumbnail" width="90" height="90" loading="lazy">
             <div class="prop-details">
                 <div class="secure-badge border-0 bg-secondary text-light mb-2 d-inline-block px-2 py-1" style="font-size: 10px;" id="drToken">VERIFYING...</div>
                 <h3 id="drName">Loading Property...</h3>
@@ -147,8 +147,8 @@
         </div>
 
         <div class="chat-input-area">
-            <input type="text" id="chatInput" class="chat-input" placeholder="Type a message to the broker..." autocomplete="off">
-            <button class="btn-send" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+            <input type="text" id="chatInput" class="chat-input" placeholder="Type a message to the broker..." autocomplete="off" aria-label="Type a message to the broker">
+            <button class="btn-send" onclick="sendMessage()" aria-label="Send message"><i class="fas fa-paper-plane" aria-hidden="true"></i></button>
         </div>
 
         <div class="deal-actions">
@@ -232,7 +232,7 @@
 
                     } catch (e) {
                         // Fallback ONLY for Development/Demo if server is unreachable
-                        console.warn("Server unreachable. Falling back to Demo Mode.");
+                        // console.warn("Server unreachable. Falling back to Demo Mode.");
                         setTimeout(() => {
                             unlockDealRoom({
                                 dealRoomToken: "DEMO-XYZ",

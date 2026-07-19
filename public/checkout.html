@@ -23,14 +23,14 @@
             .box-card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); border: 1px solid #e2e8f0; margin-bottom: 25px; }
             .box-title { font-weight: 800; font-size: 20px; border-bottom: 2px solid #f8fafc; padding-bottom: 15px; margin-bottom: 20px; }
 
-            label { font-size: 13px; font-weight: 700; color: #64748b; margin-bottom: 8px; display: block; text-transform: uppercase; }
+            label { font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 8px; display: block; text-transform: uppercase; }
             input { width: 100%; padding: 12px 15px; border: 1px solid #cbd5e1; border-radius: 10px; margin-bottom: 20px; font-size: 15px; background: #f8fafc; font-weight: 600; transition: all 0.2s ease;}
             input:focus { border-color: #10b981; outline: none; background: white; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
-            input:read-only { background-color: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+            input:read-only { background-color: #f1f5f9; color: #475569; cursor: not-allowed; }
 
             .payment-method { border: 2px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 15px; }
             .payment-method.active { border-color: #10b981; background: #ecfdf5; }
-            .pay-icon { font-size: 24px; color: #64748b; }
+            .pay-icon { font-size: 24px; color: #475569; }
             .payment-method.active .pay-icon { color: #10b981; }
 
             .summary-card { position: sticky; top: 100px; background: #0f172a; color: white; padding: 30px; border-radius: 20px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15); }
@@ -46,11 +46,11 @@
             .btn-pay:hover { background: #059669; transform: translateY(-3px); box-shadow: 0 15px 25px rgba(5, 150, 105, 0.4); }
             .btn-pay:disabled { background: #64748b; cursor: not-allowed; transform: none; box-shadow: none; }
 
-            .secure-footer { text-align: center; color: #64748b; font-size: 12px; font-weight: 600; margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+            .secure-footer { text-align: center; color: #475569; font-size: 12px; font-weight: 600; margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 8px; }
 
             /* Minimal Compliance Footer */
-            .minimal-footer { text-align: center; padding: 20px 0; margin-top: auto; font-size: 12px; color: #94a3b8; font-weight: 600; width: 100%;}
-            .minimal-footer a { color: #64748b; text-decoration: none; margin: 0 10px; transition: 0.2s;}
+            .minimal-footer { text-align: center; padding: 20px 0; margin-top: auto; font-size: 12px; color: #475569; font-weight: 600; width: 100%;}
+            .minimal-footer a { color: #475569; text-decoration: none; margin: 0 10px; transition: 0.2s;}
             .minimal-footer a:hover { color: #10b981; text-decoration: underline; }
         </style>
     </head>
@@ -74,16 +74,16 @@
                             <div class="box-title"><i class="fas fa-user-shield me-2 text-primary"></i> 1. Buyer Verification</div>
                             <div class="row">
                                 <div class="col-md-12">
-                                    <label>Full Name</label>
-                                    <input type="text" id="buyerName" readonly />
+                                    <label for="buyerName">Full Name</label>
+                                    <input type="text" id="buyerName" readonly aria-label="Full name (pre-filled from your account)" />
                                 </div>
                                 <div class="col-md-6">
-                                    <label>Email Address</label>
-                                    <input type="email" id="buyerEmail" readonly />
+                                    <label for="buyerEmail">Email Address</label>
+                                    <input type="email" id="buyerEmail" readonly aria-label="Email address (pre-filled from your account)" />
                                 </div>
                                 <div class="col-md-6">
-                                    <label>Phone Number <span class="text-danger">*</span></label>
-                                    <input type="tel" id="buyerPhone" placeholder="Enter 10-digit mobile number" maxlength="10" />
+                                    <label for="buyerPhone">Phone Number <span class="text-danger">*</span></label>
+                                    <input type="tel" id="buyerPhone" placeholder="Enter 10-digit mobile number" maxlength="10" aria-label="Phone number, required" />
                                 </div>
                             </div>
                         </div>
@@ -103,8 +103,8 @@
 
                     <div class="col-lg-5">
                         <div class="summary-card">
-                            <h4 class="fw-bold border-bottom border-secondary pb-3 mb-4"><i class="fas fa-shopping-cart me-2"></i> Order Summary</h4>
-                            <img src="https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=600" id="summaryImg" class="prop-img-mini" alt="Property Image" />
+                            <h3 class="fw-bold border-bottom border-secondary pb-3 mb-4"><i class="fas fa-shopping-cart me-2"></i> Order Summary</h3>
+                            <img src="https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=600" id="summaryImg" class="prop-img-mini" alt="Property preview image" width="400" height="140" loading="lazy" />
                             <h5 class="fw-bold text-white mb-2" id="summaryTitle">Loading Property Details...</h5>
                             <p class="small text-secondary mb-4 lh-base"><i class="fas fa-map-marker-alt me-1 text-danger"></i> <span id="summaryLoc">Locating...</span></p>
 
@@ -159,10 +159,10 @@
                     if (data.success && data.razorpayKey) {
                         RAZORPAY_FRONTEND_KEY = data.razorpayKey;
                     } else {
-                        console.error("Failed to load payment config:", data.message);
+                        // console.error("Failed to load payment config:", data.message);
                     }
                 } catch (e) {
-                    console.error("Payment config load error:", e);
+                    // console.error("Payment config load error:", e);
                 }
             }
 
@@ -211,7 +211,7 @@
                         document.getElementById("buyerEmail").value = data.user.email;
                         document.getElementById("buyerPhone").value = data.user.phone === "Not Provided" ? "" : data.user.phone;
                     }
-                } catch (e) { console.error("User load error", e); }
+                } catch (e) { /* console.error("User load error", e); */ }
             }
 
             async function loadPropertyData() {

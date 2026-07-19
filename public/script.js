@@ -54,7 +54,7 @@ function handleSocialLogin() {
             }
 
         } catch (e) {
-            console.error("Login Error:", e);
+            // console.error("Login Error:", e);
         }
     }
 }
@@ -120,7 +120,7 @@ window.apiFetch = async function(endpoint, options = {}) {
         return data;
 
     } catch (err) {
-        console.error("API ERROR:", err.message);
+        // console.error("API ERROR:", err.message);
         if (typeof window.showToast === "function") window.showToast("Network error or Server is offline.", "error");
         throw err;
     }

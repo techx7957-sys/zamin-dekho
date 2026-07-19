@@ -30,7 +30,7 @@
         .logout-btn-premium:hover { background: #ef4444; color: white;}
 
         /* Navigation Pills */
-        .nav-pills .nav-link { font-weight: 700; color: #64748b; padding: 12px 25px; border-radius: 50px; margin: 0 5px 20px; border: 1px solid #e2e8f0; background: white; transition: 0.3s;}
+        .nav-pills .nav-link { font-weight: 700; color: #475569; padding: 12px 25px; border-radius: 50px; margin: 0 5px 20px; border: 1px solid #e2e8f0; background: white; transition: 0.3s;}
         .nav-pills .nav-link:hover { border-color: #10b981; color: #10b981; background: #ecfdf5;}
         .nav-pills .nav-link.active { background-color: #10b981; color: white; border-color: #10b981; box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3); }
 
@@ -39,7 +39,7 @@
         .form-box { background: white; padding: 40px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03); margin-bottom: 25px; border: 1px solid #e2e8f0; }
         .box-title { font-size: 16px; font-weight: 800; color: #3b82f6; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px;}
 
-        label { font-size: 12px; font-weight: 800; color: #64748b; margin-bottom: 8px; display: block; text-transform: uppercase; letter-spacing: 0.5px;}
+        label { font-size: 12px; font-weight: 800; color: #475569; margin-bottom: 8px; display: block; text-transform: uppercase; letter-spacing: 0.5px;}
         input, select, textarea { width: 100%; padding: 15px; border: 1px solid #cbd5e1; border-radius: 12px; margin-bottom: 20px; font-size: 15px; background: #f1f5f9; color: #1e293b; font-weight: 500; transition: 0.3s;}
         input:focus, textarea:focus, select:focus { border-color: #3b82f6; outline: none; background: white; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
 
@@ -222,8 +222,8 @@
         <nav class="navbar navbar-expand-lg sticky-top">
             <div class="container-fluid px-lg-5">
                 <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</a>
-                <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#zaminNav">
-                    <span class="navbar-toggler-icon"></span>
+                <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#zaminNav" aria-label="Toggle navigation" aria-controls="zaminNav" aria-expanded="false">
+                    <span class="navbar-toggler-icon" aria-hidden="true"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="zaminNav">
                     <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center align-items-center gap-lg-2">
@@ -258,32 +258,32 @@
                     <div class="container-form">
                         <div class="form-box">
                             <div class="box-title"><i class="fas fa-mountain me-2"></i> 1. Property Details</div>
-                            <label>Land Title / Name</label>
+                            <label for="land-name">Land Title / Name</label>
                             <input type="text" id="land-name" placeholder="e.g. 5 Acre Farm House in Punjab" />
 
                             <div class="row">
                                 <div class="col-md-6">
-                                    <label>Estimated Price (₹)</label>
+                                    <label for="land-price">Estimated Price (₹)</label>
                                     <input type="number" id="land-price" placeholder="e.g. 5000000" />
                                 </div>
                                 <div class="col-md-6">
-                                    <label>Total Land Size</label>
+                                    <label for="land-size">Total Land Size</label>
                                     <input type="text" id="land-size" placeholder="e.g. 5 Acre, 2000 SqFt" />
                                 </div>
                             </div>
 
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">
-                                    <label>Land Length (Frontage)</label>
+                                    <label for="land-length">Land Length (Frontage)</label>
                                     <input type="text" id="land-length" placeholder="e.g. 50 Feet" />
                                 </div>
                                 <div class="col-md-6">
-                                    <label>Land Breadth (Depth)</label>
+                                    <label for="land-breadth">Land Breadth (Depth)</label>
                                     <input type="text" id="land-breadth" placeholder="e.g. 100 Feet" />
                                 </div>
                             </div>
 
-                            <label>Property Category</label>
+                            <label for="category">Property Category</label>
                             <select id="category">
                                 <option value="residential">Residential Plot / House</option>
                                 <option value="commercial">Commercial Land / Shop</option>
@@ -298,15 +298,15 @@
                             <label class="mt-3">Property Verification (Live Capture)</label>
 
                             <div id="camera-container" class="mb-3" style="display:none; position:relative;">
-                                <video id="video" width="100%" autoplay playsinline style="border-radius:16px; border:3px solid #10b981; background:#000;"></video>
-                                <canvas id="canvas" style="display:none;"></canvas>
+                                <video id="video" width="100%" autoplay playsinline style="border-radius:16px; border:3px solid #10b981; background:#000;" aria-label="Property verification camera feed"></video>
+                                <canvas id="canvas" style="display:none;" aria-hidden="true"></canvas>
                                 <div id="watermark-preview" style="position:absolute; bottom:15px; right:15px; color:white; font-size:12px; background:rgba(0,0,0,0.7); padding:5px 12px; border-radius:50px; font-weight: bold; backdrop-filter: blur(5px);">
                                     <i class="fas fa-check-circle text-success me-1"></i> Zamin Dekho Verified
                                 </div>
                             </div>
 
                             <div id="photo-preview-container" class="mb-4" style="display:none;">
-                                <img id="captured-photo" src="" style="width:100%; border-radius:16px; border:3px solid #3b82f6; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
+                                <img id="captured-photo" src="" alt="Captured property photo" loading="lazy" style="width:100%; border-radius:16px; border:3px solid #3b82f6; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
                                 <p class="text-success small fw-bold mt-2 text-center"><i class="fas fa-shield-check me-1"></i> Media Authenticated with GPS & Timestamp</p>
                             </div>
 
@@ -324,21 +324,21 @@
                         <div class="form-box">
                             <div class="box-title"><i class="fas fa-map-marked-alt me-2"></i> 2. Location & Description</div>
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <label class="m-0">Location / Address</label>
-                                <button type="button" class="detect-btn" onclick="detectLocation()"><i class="fas fa-crosshairs me-1"></i> Detect</button>
+                                <label class="m-0" for="address">Location / Address</label>
+                                <button type="button" class="detect-btn" onclick="detectLocation()"><i class="fas fa-crosshairs me-1" aria-hidden="true"></i> Detect</button>
                             </div>
-                            <textarea id="address" placeholder="Full address with city, district and landmarks..." rows="2"></textarea>
+                            <textarea id="address" placeholder="Full address with city, district and landmarks..." rows="2" aria-label="Property location and address"></textarea>
 
-                            <label>Road Connectivity</label>
-                            <select id="road-connectivity">
+                            <label for="road-connectivity">Road Connectivity</label>
+                            <select id="road-connectivity" aria-label="Road connectivity type">
                                 <option value="Highway Attached">Highway Attached (National/State)</option>
                                 <option value="Tar Road">Tar Road (City/Village)</option>
                                 <option value="Mud Road">Mud Road (Kachha Rasta)</option>
                                 <option value="No Road Access">No Road Access</option>
                             </select>
 
-                            <label>Additional Description / Features</label>
-                            <textarea id="extra-info" placeholder="Add details about water supply, electricity, legal clarity, etc." rows="3"></textarea>
+                            <label for="extra-info">Additional Description / Features</label>
+                            <textarea id="extra-info" placeholder="Add details about water supply, electricity, legal clarity, etc." rows="3" aria-label="Additional property description and features"></textarea>
                         </div>
 
                         <button class="submit-btn" id="submit-btn" onclick="submitProperty()">
@@ -376,8 +376,8 @@
                         <p class="text-muted fw-bold mb-4 text-center">Your feedback helps us maintain a 100% verified and professional broker network.</p>
 
                         <div class="rating-row">
-                            <span class="fw-bold text-dark"><i class="fas fa-user-tie text-primary me-2"></i> Professionalism</span>
-                            <select id="rateProf" class="form-select form-select-sm border-2">
+                            <span class="fw-bold text-dark"><i class="fas fa-user-tie text-primary me-2" aria-hidden="true"></i> Professionalism</span>
+                            <select id="rateProf" class="form-select form-select-sm border-2" aria-label="Rate broker professionalism">
                                 <option value="5">⭐⭐⭐⭐⭐ (5)</option>
                                 <option value="4">⭐⭐⭐⭐ (4)</option>
                                 <option value="3">⭐⭐⭐ (3)</option>
@@ -386,8 +386,8 @@
                             </select>
                         </div>
                         <div class="rating-row">
-                            <span class="fw-bold text-dark"><i class="fas fa-home text-primary me-2"></i> Info Accuracy</span>
-                            <select id="rateAcc" class="form-select form-select-sm border-2">
+                            <span class="fw-bold text-dark"><i class="fas fa-home text-primary me-2" aria-hidden="true"></i> Info Accuracy</span>
+                            <select id="rateAcc" class="form-select form-select-sm border-2" aria-label="Rate information accuracy">
                                 <option value="5">⭐⭐⭐⭐⭐ (5)</option>
                                 <option value="4">⭐⭐⭐⭐ (4)</option>
                                 <option value="3">⭐⭐⭐ (3)</option>
@@ -396,8 +396,8 @@
                             </select>
                         </div>
                         <div class="rating-row">
-                            <span class="fw-bold text-dark"><i class="fas fa-hands-helping text-primary me-2"></i> Helpfulness</span>
-                            <select id="rateHelp" class="form-select form-select-sm border-2">
+                            <span class="fw-bold text-dark"><i class="fas fa-hands-helping text-primary me-2" aria-hidden="true"></i> Helpfulness</span>
+                            <select id="rateHelp" class="form-select form-select-sm border-2" aria-label="Rate broker helpfulness">
                                 <option value="5">⭐⭐⭐⭐⭐ (5)</option>
                                 <option value="4">⭐⭐⭐⭐ (4)</option>
                                 <option value="3">⭐⭐⭐ (3)</option>
@@ -406,8 +406,8 @@
                             </select>
                         </div>
                         <div class="rating-row border-0 mb-4">
-                            <span class="fw-bold text-dark"><i class="fas fa-comments text-primary me-2"></i> Communication</span>
-                            <select id="rateComm" class="form-select form-select-sm border-2">
+                            <span class="fw-bold text-dark"><i class="fas fa-comments text-primary me-2" aria-hidden="true"></i> Communication</span>
+                            <select id="rateComm" class="form-select form-select-sm border-2" aria-label="Rate broker communication">
                                 <option value="5">⭐⭐⭐⭐⭐ (5)</option>
                                 <option value="4">⭐⭐⭐⭐ (4)</option>
                                 <option value="3">⭐⭐⭐ (3)</option>
@@ -453,8 +453,8 @@
             </div>
 
             <div class="support-input">
-                <input type="text" id="supportMsgInput" placeholder="Type your message here..." onkeypress="handleSupportKey(event)">
-                <button onclick="sendSupportMessage()"><i class="fas fa-paper-plane"></i></button>
+                <input type="text" id="supportMsgInput" placeholder="Type your message here..." onkeypress="handleSupportKey(event)" aria-label="Type your support message">
+                <button onclick="sendSupportMessage()" aria-label="Send support message"><i class="fas fa-paper-plane" aria-hidden="true"></i></button>
             </div>
         </div>
 

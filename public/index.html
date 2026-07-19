@@ -73,9 +73,9 @@
             }
 
             .search-input-group { flex-grow: 1; display: flex; align-items: center; padding: 0 20px; }
-            .search-input-group i.fa-search { color: #94a3b8; font-size: 18px; margin-right: 12px; }
+            .search-input-group i.fa-search { color: #64748b; font-size: 18px; margin-right: 12px; }
             .search-input-group input { border: none; outline: none; width: 100%; font-size: 16px; color: #1e293b; padding: 12px 0; font-weight: 600;}
-            .search-input-group input::placeholder { color: #94a3b8; font-weight: 500; }
+            .search-input-group input::placeholder { color: #6b7280; font-weight: 500; }
 
             .icon-actions { display: flex; gap: 18px; padding: 0 20px; align-items: center; }
             .icon-actions i { color: #3b82f6; font-size: 20px; cursor: pointer; transition: 0.2s; background: #eff6ff; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%;}
@@ -103,8 +103,8 @@
             }
 
             .panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f8fafc; padding-bottom: 15px; margin-bottom: 20px; }
-            .clear-btn { color: #ef4444; font-weight: 700; cursor: pointer; font-size: 14px; background: #fef2f2; padding: 5px 15px; border-radius: 50px; transition: 0.2s;}
-            .clear-btn:hover { background: #ef4444; color: white; }
+            .clear-btn { color: #b91c1c; font-weight: 700; cursor: pointer; font-size: 14px; background: #fef2f2; padding: 5px 15px; border-radius: 50px; transition: 0.2s;}
+            .clear-btn:hover { background: #b91c1c; color: white; }
 
             .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
             .form-check-label { font-size: 14px; font-weight: 600; color: #475569; cursor: pointer; }
@@ -139,8 +139,8 @@
                 <div class="container-fluid px-lg-5">
                     <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</a>
 
-                    <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#zaminNav">
-                        <span class="navbar-toggler-icon"></span>
+                    <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#zaminNav" aria-label="Toggle navigation" aria-controls="zaminNav" aria-expanded="false">
+                        <span class="navbar-toggler-icon" aria-hidden="true"></span>
                     </button>
 
                     <div class="collapse navbar-collapse" id="zaminNav">
@@ -172,7 +172,7 @@
 
             <div class="container search-wrapper">
                 <div class="main-search-bar" id="searchBarContainer">
-                    <select class="cat-select-btn" id="mainCategory">
+                    <select class="cat-select-btn" id="mainCategory" aria-label="Property category">
                         <option value="Residential">Residential</option>
                         <option value="Commercial">Commercial</option>
                         <option value="Agricultural">Agricultural</option>
@@ -180,13 +180,13 @@
                     </select>
 
                     <div class="search-input-group">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="mainSearchInput" placeholder="Search for farms, plots, or commercial land...">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                        <input type="text" id="mainSearchInput" placeholder="Search for farms, plots, or commercial land..." aria-label="Search properties by location or type">
                     </div>
 
                     <div class="icon-actions">
-                        <i class="fas fa-location-arrow" id="gpsIcon" title="Nearby Properties (50km)"></i>
-                        <i class="fas fa-microphone" id="micIcon" title="Voice Search"></i>
+                        <i class="fas fa-location-arrow" id="gpsIcon" title="Nearby Properties (50km)" role="button" tabindex="0" aria-label="Find nearby properties within 50km"></i>
+                        <i class="fas fa-microphone" id="micIcon" title="Voice Search" role="button" tabindex="0" aria-label="Start voice search"></i>
                     </div>
 
                     <div class="vertical-divider"></div>
@@ -196,15 +196,15 @@
 
                 <div class="filter-panel" id="filterPanel">
                     <div class="panel-header">
-                        <h6 class="fw-bold m-0 text-dark"><i class="fas fa-filter me-2 text-primary"></i> Select Property Types</h6>
-                        <span class="clear-btn" id="resetFiltersBtn"><i class="fas fa-redo-alt me-1"></i> Reset Filters</span>
+                        <h3 class="fw-bold m-0 text-dark fs-6"><i class="fas fa-filter me-2 text-primary" aria-hidden="true"></i> Select Property Types</h3>
+                        <span class="clear-btn" id="resetFiltersBtn" role="button" tabindex="0" aria-label="Reset all filters"><i class="fas fa-redo-alt me-1" aria-hidden="true"></i> Reset Filters</span>
                     </div>
 
                     <div class="property-types-section" id="propertyTypeGrid">
                         </div>
 
                     <div class="filter-pills-row">
-                        <select id="budgetFilter" class="filter-pill">
+                        <select id="budgetFilter" class="filter-pill" aria-label="Filter by budget">
                             <option value="0">Any Budget</option>
                             <option value="5000000">Below 50 Lakhs</option>
                             <option value="10000000">Below 1 Crore</option>
@@ -212,7 +212,7 @@
                             <option value="100000000">Below 10 Crores</option>
                             <option value="above_10">Above 10 Crores</option> 
                         </select>
-                        <select id="bedroomFilter" class="filter-pill">
+                        <select id="bedroomFilter" class="filter-pill" aria-label="Filter by number of bedrooms">
                             <option value="">Any Bedrooms</option>
                             <option value="1">1 Bedroom / Studio</option>
                             <option value="2">2 Bedrooms</option>
@@ -227,28 +227,28 @@
                 <div id="homeSections">
 
                     <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
-                        <h4 class="fw-bold m-0 text-dark"><i class="fas fa-history text-secondary me-2"></i> Recently Viewed Lands</h4>
+                        <h2 class="fw-bold m-0 text-dark fs-5"><i class="fas fa-history text-secondary me-2" aria-hidden="true"></i> Recently Viewed Lands</h2>
                     </div>
                     <div class="featured-row mb-2 pb-3" id="recentlyViewedGrid">
                         <div class="text-muted small fw-bold ps-2"><div class="spinner-grow text-secondary spinner-grow-sm"></div> Loading...</div>
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
-                        <h4 class="fw-bold m-0 text-dark"><i class="fas fa-thumbs-up text-primary me-2"></i> Recommended for You</h4>
+                        <h2 class="fw-bold m-0 text-dark fs-5"><i class="fas fa-thumbs-up text-primary me-2" aria-hidden="true"></i> Recommended for You</h2>
                     </div>
                     <div class="featured-row mb-2 pb-3" id="recommendedGrid">
                         <div class="text-muted small fw-bold ps-2"><div class="spinner-grow text-primary spinner-grow-sm"></div> Loading...</div>
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
-                        <h4 class="fw-bold m-0 text-dark"><i class="fas fa-map-marker-alt text-danger me-2"></i> Trending Locations</h4>
+                        <h2 class="fw-bold m-0 text-dark fs-5"><i class="fas fa-map-marker-alt text-danger me-2" aria-hidden="true"></i> Trending Locations</h2>
                     </div>
                     <div class="featured-row mb-2 pb-3" id="trendingLocationsGrid">
                         <div class="text-muted small fw-bold ps-2"><div class="spinner-grow text-danger spinner-grow-sm"></div> Loading...</div>
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
-                        <h4 class="fw-bold m-0 text-dark"><i class="fas fa-crown text-warning me-2"></i> Explore Premium Lands</h4>
+                        <h2 class="fw-bold m-0 text-dark fs-5"><i class="fas fa-crown text-warning me-2" aria-hidden="true"></i> Explore Premium Lands</h2>
                     </div>
                     <div class="featured-row mb-5 pb-3" id="premiumGrid">
                         <div class="text-muted small fw-bold ps-2"><div class="spinner-grow text-warning spinner-grow-sm"></div> Loading...</div>
@@ -262,7 +262,7 @@
                             <i class="fas fa-star"></i>
                         </span>
                         <div>
-                            <h3 class="fw-bold m-0 text-dark" id="resultsHeading">Newly Added Lands</h3>
+                            <h2 class="fw-bold m-0 text-dark fs-4" id="resultsHeading">Newly Added Lands</h2>
                             <p class="text-muted small fw-bold m-0 mt-1" id="resultSubtitle">100% verified listings from owners & brokers</p>
                         </div>
                     </div>
@@ -283,11 +283,11 @@
                   <div class="modal-body text-center pb-4 px-4">
 
                     <div class="position-relative d-inline-block mb-3">
-                      <img src="" id="modalUserAvatar" class="rounded-circle shadow-sm" style="width: 110px; height: 110px; border: 4px solid #ecfdf5; object-fit: cover;">
+                      <img src="" id="modalUserAvatar" class="rounded-circle shadow-sm" alt="User profile photo" width="110" height="110" loading="lazy" style="border: 4px solid #ecfdf5; object-fit: cover;">
                       <label for="avatarUpload" id="avatarEditBtn" class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle shadow-sm d-none" style="cursor: pointer; width: 35px; height: 35px; display:flex; align-items:center; justify-content:center; right: -5px;">
                           <i class="fas fa-camera"></i>
                       </label>
-                      <input type="file" id="avatarUpload" accept="image/*" class="d-none">
+                      <input type="file" id="avatarUpload" accept="image/*" class="d-none" aria-label="Upload profile photo">
                     </div>
 
                     <div id="nameDisplayContainer">
@@ -298,7 +298,7 @@
                     </div>
 
                     <div id="nameEditContainer" class="d-none mb-3 px-3">
-                        <input type="text" id="editNameInput" class="form-control text-center fw-bold mb-3 fs-5" placeholder="Enter Full Name">
+                        <input type="text" id="editNameInput" class="form-control text-center fw-bold mb-3 fs-5" placeholder="Enter Full Name" aria-label="Edit your full name">
                         <div class="d-flex gap-2">
                             <button class="btn btn-light fw-bold w-50" id="cancelEditBtn">Cancel</button>
                             <button class="btn btn-success fw-bold w-50 shadow-sm" id="saveProfileBtn"><i class="fas fa-save me-1"></i> Save</button>
