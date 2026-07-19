@@ -48,11 +48,19 @@ app.use((req, res, next) => {
 
 
 // ==========================================
-// 🛡️ HELMET (FULL SECURE CONFIG)
+// 🛡️ HELMET (ENV-AWARE SECURE CONFIG)
 // ==========================================
+const isProd = process.env.NODE_ENV === 'production';
+
 app.use(helmet({
     crossOriginResourcePolicy: false,
     frameguard: false,
+
+    // HSTS only in production — in dev/Replit it breaks the proxy
+    hsts: isProd
+        ? { maxAge: 15552000, includeSubDomains: true }
+        : false,
+
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'", "https:"],
@@ -62,7 +70,14 @@ app.use(helmet({
             connectSrc: ["'self'", "https:", "wss:"],
             fontSrc: ["'self'", "https:", "data:"],
             objectSrc: ["'none'"],
-            upgradeInsecureRequests: []
+
+            // upgrade-insecure-requests only in production — breaks Replit proxy in dev
+            ...(isProd ? { upgradeInsecureRequests: [] } : {}),
+
+            // frame-ancestors: allow Replit iframes in dev, lock down in production
+            frameAncestors: isProd
+                ? ["'self'", "https://zamindekho.tech", "https://www.zamindekho.tech"]
+                : ["'self'", "https://*.replit.com", "https://*.replit.dev", "https://*.replit.app", "https://*.sisko.replit.dev"]
         }
     }
 }));
