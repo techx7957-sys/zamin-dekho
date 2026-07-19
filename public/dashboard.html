@@ -306,7 +306,7 @@
                             </div>
 
                             <div id="photo-preview-container" class="mb-4" style="display:none;">
-                                <img id="captured-photo" src="" alt="Captured property photo" loading="lazy" style="width:100%; border-radius:16px; border:3px solid #3b82f6; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
+                                <img id="captured-photo" src="" alt="Captured property photo" width="600" height="400" loading="lazy" style="width:100%; border-radius:16px; border:3px solid #3b82f6; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
                                 <p class="text-success small fw-bold mt-2 text-center"><i class="fas fa-shield-check me-1"></i> Media Authenticated with GPS & Timestamp</p>
                             </div>
 
@@ -369,7 +369,7 @@
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content" style="border-radius: 24px; border: none; box-shadow: 0 25px 50px rgba(0,0,0,0.2);">
                     <div class="modal-header bg-dark text-white border-0 py-3 px-4">
-                        <h5 class="modal-title fw-bold"><i class="fas fa-star text-warning me-2"></i> Rate Broker Service</h5>
+                        <h3 class="modal-title h5 fw-bold"><i class="fas fa-star text-warning me-2"></i> Rate Broker Service</h3>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body p-4 text-start">
@@ -438,7 +438,7 @@
                         <i class="fas fa-headset text-white fs-6"></i>
                     </div>
                     <div>
-                        <h6 class="m-0 fw-bold" style="font-size: 15px; letter-spacing: 0.5px;">Zamin Support</h6>
+                        <p class="m-0 fw-bold" style="font-size: 15px; letter-spacing: 0.5px;">Zamin Support</p>
                         <small class="text-success fw-bold" style="font-size: 11px;"><i class="fas fa-circle me-1" style="font-size: 8px;"></i>Online</small>
                     </div>
                 </div>
@@ -462,7 +462,7 @@
 
     <footer class="bg-dark text-white text-center py-5 mt-auto" style="border-top: 4px solid #10b981;">
         <div class="container">
-            <h4 class="fw-bold text-success mb-3"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</h4>
+            <h3 class="h4 fw-bold text-success mb-3"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</h3>
             <p class="text-white-50 small mb-4" style="max-width: 500px; margin: 0 auto;">India's Most Secure & Transparent Real Estate Platform. Connecting verified buyers with genuine properties through Escrow.</p>
 
             <div class="d-flex justify-content-center gap-3 gap-md-5 mb-4 flex-wrap">
@@ -533,7 +533,7 @@
 
                 authArea.innerHTML = `
                     <div class="user-id-btn me-2">
-                        <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> ${escapeHTML(firstName)}
+                        <img src="${avatarUrl}" alt="${escapeHTML(firstName)}" width="24" height="24" loading="lazy" style="border-radius:50%; object-fit:cover;"> ${escapeHTML(firstName)}
                     </div>
                     <button onclick="typeof logout === 'function' ? logout() : (window.location.href='login.html')" class="logout-btn-premium">
                         <i class="fas fa-sign-out-alt"></i> Logout
@@ -818,7 +818,7 @@
                 <div class="col-lg-6">
                     <div class="property-card" style="display:flex; flex-direction:row; height:auto; align-items: stretch; border: 2px solid #e2e8f0;">
                         <div style="width: 160px; flex-shrink: 0; border-right: 1px solid #e2e8f0;">
-                            <img src="${imgSource}" style="width: 100%; height: 100%; object-fit: cover;">
+                            <img src="${imgSource}" alt="${safeName}" width="160" height="120" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
                         </div>
                         <div class="p-3 w-100 d-flex flex-column justify-content-between">
                             <div>
@@ -880,7 +880,7 @@
             <div class="col-lg-4 col-md-6">
                 <div class="property-card">
                     ${badgeHTML}
-                    <img src="${imgSource}" onerror="this.src='${fallbackImg}'" class="property-img" style="cursor:pointer;" onclick="window.location.href='property.html?id=${item._id}'">
+                    <img src="${imgSource}" onerror="this.src='${fallbackImg}'" class="property-img" alt="${safeName}" width="400" height="220" loading="lazy" style="cursor:pointer;" onclick="window.location.href='property.html?id=${item._id}'">
                     <div class="p-4">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <h3 class="fw-bold text-success m-0" style="font-family: 'JetBrains Mono', monospace;">₹ ${Number(item.landPrice || 0).toLocaleString("en-IN")}</h3>

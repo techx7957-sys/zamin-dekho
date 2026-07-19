@@ -330,7 +330,7 @@
 
         <footer class="bg-dark text-white text-center py-5 mt-5" style="border-top: 4px solid #10b981;">
             <div class="container">
-                <h4 class="fw-bold text-success mb-3"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</h4>
+                <h3 class="h4 fw-bold text-success mb-3"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</h3>
                 <p class="text-white-50 small mb-4" style="max-width: 500px; margin: 0 auto;">India's Most Secure & Transparent Real Estate Platform. Connecting verified buyers with genuine properties through Escrow.</p>
 
                 <div class="d-flex justify-content-center gap-3 gap-md-5 mb-4 flex-wrap">
@@ -614,7 +614,7 @@
                             ${badgeHTML}
                             ${!badgeHTML ? `<span class="badge bg-dark px-3 py-2 rounded-pill position-absolute shadow" style="top:15px; left:15px; font-weight:800; text-transform: uppercase; letter-spacing:0.5px;">${safeCategory}</span>` : ''}
                             ${verifiedBadge}
-                            <img src="${imgSource}" onerror="this.src='https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200'" class="property-img" alt="Property">
+                            <img src="${imgSource}" onerror="this.src='https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200'" class="property-img" alt="${safeLandName}" width="400" height="220" loading="lazy">
                         </div>
                         <div class="card-body p-4 d-flex flex-column justify-content-between">
                             <div>
@@ -804,12 +804,12 @@
                         // 🌟 REMOVED ONCLICK, Added ID for CSP delegation
                         authArea.innerHTML = `
                             <button data-bs-toggle="modal" data-bs-target="#userProfileModal" class="user-id-btn me-2">
-                                <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> ${escapeHTML(firstName)}
+                                <img src="${avatarUrl}" alt="${escapeHTML(firstName)}" width="24" height="24" loading="lazy" style="border-radius:50%; object-fit:cover;"> ${escapeHTML(firstName)}
                             </button>
                             <button id="navLogoutBtn" class="logout-btn-premium"><i class="fas fa-sign-out-alt"></i> Logout</button>
                         `;
                     } catch(e) {
-                         console.error("Error parsing user data:", e);
+                        // console.error("Error parsing user data:", e);
                     }
                 } else { 
                     authArea.innerHTML = `<a href="login.html" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm" style="background:#10b981;"><i class="fas fa-user me-2"></i> Login to Explore</a>`; 

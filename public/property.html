@@ -165,7 +165,7 @@
 
         <footer class="bg-dark text-white text-center py-5 mt-auto" style="border-top: 4px solid #10b981;">
             <div class="container">
-                <h4 class="fw-bold text-success mb-3"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</h4>
+                <h3 class="h4 fw-bold text-success mb-3"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</h3>
                 <p class="text-white-50 small mb-4" style="max-width: 500px; margin: 0 auto;">India's Most Secure & Transparent Real Estate Platform. Connecting verified buyers with genuine properties through Escrow.</p>
 
                 <div class="d-flex justify-content-center gap-3 gap-md-5 mb-4 flex-wrap">
@@ -245,7 +245,7 @@
 
                 const mediaHTML = isVideo 
                     ? `<video src="${imgSource}" class="prop-main-img mb-4" controls autoplay muted loop playsinline></video>`
-                    : `<img src="${imgSource}" onerror="this.src='https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200'" class="prop-main-img mb-4" alt="Property Image">`;
+                    : `<img src="${imgSource}" onerror="this.src='https://images.unsplash.com/photo-1524169358666-79f22c7100b6?q=80&w=1200'" class="prop-main-img mb-4" alt="${escapeHTML(item.landName) || 'Property image'}" width="800" height="500" loading="lazy">`;
 
                 document.getElementById("propertyContent").innerHTML = `
                 <div class="row g-4">
@@ -266,7 +266,7 @@
 
                             <hr class="my-4 border-secondary opacity-25">
 
-                            <h4 class="fw-bold mb-4 text-dark"><i class="fas fa-list-ul text-primary me-2"></i> Overview</h4>
+                            <h2 class="h4 fw-bold mb-4 text-dark"><i class="fas fa-list-ul text-primary me-2"></i> Overview</h2>
                             <div class="d-flex flex-wrap">
                                 <div class="feature-pill"><i class="fas fa-shield-alt text-success"></i> 100% Verified</div>
                                 ${safeSize && safeSize !== "Not Specified" ? `<div class="feature-pill"><i class="fas fa-vector-square"></i> Area: ${safeSize}</div>` : ""}
@@ -276,23 +276,23 @@
                                 <div class="feature-pill"><i class="fas fa-chart-line text-warning"></i> High Growth Area</div>
                             </div>
 
-                            <h4 class="fw-bold mt-5 mb-3 text-dark"><i class="fas fa-align-left text-primary me-2"></i> Property Description</h4>
+                            <h2 class="h4 fw-bold mt-5 mb-3 text-dark"><i class="fas fa-align-left text-primary me-2"></i> Property Description</h2>
                             <p class="text-muted fw-medium" style="font-size:16px; line-height:1.8;">
                                 ${safeExtraInfo || "A premium property located in a highly sought-after area. Perfect for investment or immediate use. Contact us for physical site visits and document verification."}
                             </p>
 
-                            <h4 class="fw-bold mt-5 mb-3 text-dark"><i class="fas fa-file-contract text-primary me-2"></i> Legal Documents</h4>
+                            <h2 class="h4 fw-bold mt-5 mb-3 text-dark"><i class="fas fa-file-contract text-primary me-2"></i> Legal Documents</h2>
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <div class="doc-card">
                                         <i class="fas fa-file-pdf"></i>
-                                        <div><h6 class="m-0 fw-bold">Title Deed</h6><small class="text-success fw-bold"><i class="fas fa-check"></i> Verified by Zamin</small></div>
+                                        <div><h3 class="h6 m-0 fw-bold">Title Deed</h3><small class="text-success fw-bold"><i class="fas fa-check"></i> Verified by Zamin</small></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="doc-card">
                                         <i class="fas fa-map"></i>
-                                        <div><h6 class="m-0 fw-bold">Boundary Map</h6><small class="text-success fw-bold"><i class="fas fa-check"></i> Verified by Zamin</small></div>
+                                        <div><h3 class="h6 m-0 fw-bold">Boundary Map</h3><small class="text-success fw-bold"><i class="fas fa-check"></i> Verified by Zamin</small></div>
                                     </div>
                                 </div>
                             </div>
@@ -302,12 +302,12 @@
 
                     <div class="col-lg-4">
                         <div class="action-card">
-                            <h5 class="text-muted fw-bold mb-2 text-uppercase" style="letter-spacing: 1px;">Asking Price</h5>
+                            <h2 class="h5 text-muted fw-bold mb-2 text-uppercase" style="letter-spacing: 1px;">Asking Price</h2>
                             <div class="prop-price mb-4">₹ ${Number(item.landPrice).toLocaleString("en-IN")}</div>
 
                             <div class="ai-valuation-box shadow-sm">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="fw-bold m-0 text-dark"><i class="fas fa-robot text-primary me-2"></i>Zamin AI Analysis</h6>
+                                    <h3 class="h6 fw-bold m-0 text-dark"><i class="fas fa-robot text-primary me-2"></i>Zamin AI Analysis</h3>
                                 </div>
 
                                 <div id="ai-loading" class="text-center py-3">
@@ -328,7 +328,7 @@
                                 </div>
                             </div>
 
-                            <h6 class="fw-bold text-start mb-3 mt-4 text-secondary"><i class="fas fa-satellite me-2"></i>Satellite Boundary View</h6>
+                            <h3 class="h6 fw-bold text-start mb-3 mt-4 text-secondary"><i class="fas fa-satellite me-2"></i>Satellite Boundary View</h3>
                             <div id="satelliteMap"></div>
 
                             <div class="alert text-start p-3 mb-4 rounded-3" style="font-size: 12.5px; border: 1px solid #fde68a; background-color: #fffbeb; color: #92400e;">
@@ -631,7 +631,7 @@
 
                         authArea.innerHTML = `
                             <button data-bs-toggle="modal" data-bs-target="#userProfileModal" class="user-id-btn me-2">
-                                <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;"> ${typeof escapeHTML === 'function' ? escapeHTML(firstName) : firstName}
+                                <img src="${avatarUrl}" alt="${typeof escapeHTML === 'function' ? escapeHTML(firstName) : firstName}" width="24" height="24" loading="lazy" style="border-radius:50%; object-fit:cover;"> ${typeof escapeHTML === 'function' ? escapeHTML(firstName) : firstName}
                             </button>
                             <button onclick="logout()" class="logout-btn-premium"><i class="fas fa-sign-out-alt"></i> Logout</button>
                         `;
