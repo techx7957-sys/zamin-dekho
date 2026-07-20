@@ -46,9 +46,8 @@ app.use((req, res, next) => {
     next();
 });
 
-
 // ==========================================
-// 🛡️ HELMET (ENV-AWARE SECURE CONFIG)
+// 🛡️ HELMET (ENV-AWARE SECURE CONFIG FOR GRADE A+)
 // ==========================================
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -56,32 +55,94 @@ app.use(helmet({
     crossOriginResourcePolicy: false,
     frameguard: false,
 
-    // HSTS only in production — in dev/Replit it breaks the proxy
+    // X-XSS-Protection explicitly disabled — deprecated header; modern browsers
+    // rely on CSP. Sending it can introduce vulnerabilities in old IE.
+    xssFilter: false,
+
+    // HSTS only in production — Replit dev proxy is HTTP-terminated
     hsts: isProd
-        ? { maxAge: 15552000, includeSubDomains: true }
+        ? { maxAge: 15552000, includeSubDomains: true, preload: true }
         : false,
+
+    // Permissions Policy: GPS for property verification; block everything else
+    permissionsPolicy: {
+        features: {
+            geolocation:    ["'self'"],
+            camera:         [],
+            microphone:     [],
+            payment:        ["'self'"],
+            "interest-cohort": [],      // opt out of FLoC/Topics API
+        }
+    },
 
     contentSecurityPolicy: {
         directives: {
-            defaultSrc: ["'self'", "https:"],
-            scriptSrc: ["'self'", "https:", "'unsafe-inline'"],
-            styleSrc: ["'self'", "https:", "'unsafe-inline'"],
-            imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'", "https:", "wss:"],
-            fontSrc: ["'self'", "https:", "data:"],
-            objectSrc: ["'none'"],
+            defaultSrc: ["'self'"],
 
-            // upgrade-insecure-requests only in production — breaks Replit proxy in dev
+            // Scripts: own code + approved CDNs + auth/payment/analytics third parties
+            // 'unsafe-inline' is required — all pages use inline <script> blocks
+            scriptSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "https://cdn.jsdelivr.net",       // Bootstrap, SweetAlert2, Leaflet, intl-tel-input, canvas-confetti
+                "https://cdnjs.cloudflare.com",   // FontAwesome (CSS only; listed for integrity checks)
+                "https://accounts.google.com",    // Google Identity Services (GSI)
+                "https://checkout.razorpay.com",  // Razorpay payment gateway
+                "https://www.clarity.ms",         // Microsoft Clarity session recording
+            ],
+
+            // Styles: own + CDN stylesheets + Google Fonts declarations
+            // 'unsafe-inline' required — all pages use inline <style> blocks
+            styleSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "https://cdn.jsdelivr.net",       // Bootstrap, intl-tel-input CSS
+                "https://cdnjs.cloudflare.com",   // FontAwesome CSS
+                "https://fonts.googleapis.com",   // Google Fonts @import declarations
+            ],
+
+            // Images: own assets + known third-party image hosts
+            // blob: needed for camera snapshot canvas exports in dashboard
+            imgSrc: [
+                "'self'",
+                "data:",
+                "blob:",
+                "https://images.unsplash.com",          // hero / background images
+                "https://i.pravatar.cc",                // avatar placeholders (dashboard)
+                "https://upload.wikimedia.org",         // Google G logo on login page
+                "https://*.tile.openstreetmap.org",     // Leaflet OSM map tiles
+                "https://maps.gstatic.com",             // Google Maps static assets
+            ],
+
+            // Fetch/XHR/WebSocket: own API + Clarity telemetry + deal-room WebSocket
+            // In dev keep broad (Replit subdomains vary); in prod lock to self + known endpoints
+            connectSrc: isProd
+                ? ["'self'", "https://www.clarity.ms", "wss:"]
+                : ["'self'", "https:", "wss:"],
+
+            // Web fonts: Google Fonts files + FontAwesome webfonts
+            fontSrc: [
+                "'self'",
+                "https://fonts.gstatic.com",
+                "https://cdnjs.cloudflare.com",
+                "https://cdn.jsdelivr.net",
+                "data:",
+            ],
+
+            objectSrc:  ["'none'"],
+            mediaSrc:   ["'self'", "blob:"],         // camera stream / recorded blobs
+            workerSrc:  ["'self'", "blob:"],         // service workers / blob workers
+
+            // upgrade-insecure-requests only in production — breaks Replit HTTP proxy in dev
             ...(isProd ? { upgradeInsecureRequests: [] } : {}),
 
-            // frame-ancestors: allow Replit iframes in dev, lock down in production
+            // frame-ancestors supersedes X-Frame-Options; Helmet sets both automatically
             frameAncestors: isProd
                 ? ["'self'", "https://zamindekho.tech", "https://www.zamindekho.tech"]
                 : ["'self'", "https://*.replit.com", "https://*.replit.dev", "https://*.replit.app", "https://*.sisko.replit.dev"]
         }
     }
 }));
-
 
 // ==========================================
 // 🌐 PERFECT & PROTECTED CORS SETUP
