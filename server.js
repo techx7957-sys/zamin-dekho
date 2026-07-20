@@ -222,8 +222,8 @@ app.use(passport.session());
 // ==========================================
 // 📁 STATIC FILES
 // ==========================================
-app.use(express.static(path.join(__dirname, "public")));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use(express.static(path.join(__dirname, "public"), { maxAge: "30d", etag: true }));
+app.use("/uploads", express.static(path.join(__dirname, "uploads"), { maxAge: "7d", etag: true }));
 
 
 // ==========================================
