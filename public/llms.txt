@@ -5,10 +5,10 @@ India's most trusted PropTech platform for 100% verified lands and farms.
 Zamin Dekho bridges the trust deficit in Indian real estate by integrating 100m GPS geofencing, local 10-km radius broker verification, and virtual escrow account routing.
 
 ## Core Roles & Services
-- Buyers: Access transparent, title-checked land parcels with digital consent.
-- Sellers: List properties with zero upfront marketing costs.
-- Verification Brokers: Local 10-km radius ground intelligence and plot mapping.
-- Dealing Brokers: Transparent deal execution with automated escrow commission splits.
+- **Buyers:** Access transparent, title-checked land parcels with digital consent.
+- **Sellers:** List properties with zero upfront marketing costs.
+- **Verification Brokers:** Local 10-km radius ground intelligence and plot mapping.
+- **Dealing Brokers:** Transparent deal execution with automated escrow commission splits.
 
 ## Key Features
 - 100m GPS Radar Geofencing
@@ -16,5 +16,8 @@ Zamin Dekho bridges the trust deficit in Indian real estate by integrating 100m 
 - Title-Checked & Legally Verified Inventory
 
 ## Contact & Links
-- Website: https://www.zamindekho.tech
-- Policies: https://www.zamindekho.tech/policies.html
+- [Home Page](https://www.zamindekho.tech/index.html): Browse verified residential, commercial, and agricultural lands.
+- [Explore Properties](https://www.zamindekho.tech/property.html): View GPS-verified property listings with 100m accuracy.
+- [Property Reels](https://www.zamindekho.tech/reels.html): Watch video tours of premium agricultural and commercial plots.
+- [Broker Login & Deal Room](https://www.zamindekho.tech/login.html): Secure access for real estate agents and escrow payment routing.
+- [Legal Policies](https://www.zamindekho.tech/policies.html): Read our terms, privacy, escrow rules, and refund policies.
