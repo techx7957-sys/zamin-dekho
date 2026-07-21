@@ -60,8 +60,9 @@ app.use(helmet({
     xssFilter: false,
 
     // HSTS only in production — Replit dev proxy is HTTP-terminated
+    // 63072000 = 2 years (minimum required for HSTS preload list submission)
     hsts: isProd
-        ? { maxAge: 15552000, includeSubDomains: true, preload: true }
+        ? { maxAge: 63072000, includeSubDomains: true, preload: true }
         : false,
 
     // Permissions Policy: GPS for property verification; block everything else
@@ -132,6 +133,9 @@ app.use(helmet({
             objectSrc:  ["'none'"],
             mediaSrc:   ["'self'", "blob:"],         // camera stream / recorded blobs
             workerSrc:  ["'self'", "blob:"],         // service workers / blob workers
+
+            // Restrict form submissions to own origin — closes ZAP "Missing form-action" alert
+            formAction: ["'self'"],
 
             // upgrade-insecure-requests only in production — breaks Replit HTTP proxy in dev
             ...(isProd ? { upgradeInsecureRequests: [] } : {}),
