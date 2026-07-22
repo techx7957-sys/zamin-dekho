@@ -113,6 +113,11 @@
             <a href="#" id="googleLoginBtn" class="social-btn">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" width="18" height="18" loading="lazy" alt="Google"> Continue with Google
             </a>
+            <!-- 🚀 NEW FACEBOOK BUTTON -->
+            <a href="#" id="facebookLoginBtn" class="social-btn" style="background: #1877F2; color: white; border: none;">
+                <i class="fab fa-facebook-f" style="font-size: 16px;"></i> Continue with Facebook
+            </a>
+            <!-- /FACEBOOK BUTTON -->
             <a href="#" id="twitterLoginBtn" class="social-btn" style="background: #0f172a; color: white; border: none;">
                 <i class="fab fa-x-twitter"></i> Continue with X
             </a>
@@ -158,6 +163,12 @@
         document.getElementById('googleLoginBtn').addEventListener('click', function(e) {
             e.preventDefault();
             window.location.href = window.API_BASE + '/auth/google?clientUrl=' + encodeURIComponent(window.location.origin);
+        });
+
+        // 🚀 NEW FACEBOOK LOGIC ADDED HERE
+        document.getElementById('facebookLoginBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = window.API_BASE + '/auth/facebook?clientUrl=' + encodeURIComponent(window.location.origin);
         });
 
         document.getElementById('twitterLoginBtn').addEventListener('click', function(e) {
