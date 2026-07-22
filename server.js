@@ -113,6 +113,13 @@ app.use(helmet({
                 "https://upload.wikimedia.org",         // Google G logo on login page
                 "https://*.tile.openstreetmap.org",     // Leaflet OSM map tiles
                 "https://maps.gstatic.com",             // Google Maps static assets
+
+                // 🚀 SOCIAL LOGIN AVATAR WHITELIST ADDED HERE
+                "https://lh3.googleusercontent.com",    // Google Profile Avatars
+                "https://pbs.twimg.com",                // Twitter/X Profile Avatars
+                "https://graph.facebook.com",           // Facebook Profile Avatars
+                "https://platform-lookaside.fbsbx.com", // Facebook Avatars Backup
+                "https://*.fbcdn.net"                   // Facebook Image CDN
             ],
 
             // Fetch/XHR/WebSocket: own API + Clarity telemetry + deal-room WebSocket

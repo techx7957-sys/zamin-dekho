@@ -122,4 +122,49 @@ router.get(
     authController.socialLoginCallback
 );
 
+// ==========================================
+// 📘 6. FACEBOOK OAUTH 2.0 ROUTES
+// ==========================================
+
+// 🟢 STEP 1: Facebook ko apna "Return Ticket" (clientUrl) do
+router.get(
+    "/facebook",
+    (req, res, next) => {
+        const safeDomain = process.env.BASE_URL || "http://localhost:5000";
+        const returnAddress = req.query.clientUrl || safeDomain;
+
+        passport.authenticate("facebook", {
+            scope: ["email", "public_profile"],
+            state: returnAddress // Facebook me bhi Google ki tarah state pass hota hai
+        })(req, res, next);
+    }
+);
+
+// 🟢 STEP 2: Facebook Callback (FORCED TO INDEX.HTML)
+router.get(
+    "/facebook/callback",
+    (req, res, next) => {
+        const safeDomain = process.env.BASE_URL || "http://localhost:5000";
+
+        passport.authenticate("facebook", {
+            session: false,
+            failureRedirect: `${safeDomain}/login.html`,
+        })(req, res, () => {
+            let finalRedirect = req.query.state || safeDomain;
+
+            // 🔥 THE MASTER FIX: Zabardasti path ko '/index.html' bana do for Facebook too!
+            try {
+                const urlObj = new URL(finalRedirect);
+                urlObj.pathname = '/index.html'; 
+                req.customRedirectUrl = urlObj.toString();
+            } catch (e) {
+                req.customRedirectUrl = `${safeDomain}/index.html`;
+            }
+
+            next();
+        });
+    },
+    authController.socialLoginCallback
+);
+
 module.exports = router;

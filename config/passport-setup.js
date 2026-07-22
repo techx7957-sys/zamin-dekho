@@ -1,6 +1,7 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const TwitterStrategy = require("passport-twitter-oauth2").Strategy;
+const FacebookStrategy = require("passport-facebook").Strategy; // 🚀 NEW: Facebook Strategy Imported
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 
@@ -115,6 +116,64 @@ passport.use(
                         email: email,
                         password: hashedPassword,
                         authProvider: "twitter",
+                        role: assignedRole, // 🛡️ Assign Admin if email matches, else Buyer
+                        isActive: true,
+                        phone: "Not Provided",
+                    });
+                } else if (assignedRole === 'admin' && user.role !== 'admin') {
+                     // 🛡️ Upgrade existing user to admin if they are on the list
+                     user.role = 'admin';
+                     await user.save();
+                }
+
+                // 🛡️ Check if user is blocked by admin
+                if (!user.isActive) {
+                    return done(new Error("Account blocked by Administrator."), null);
+                }
+
+                done(null, user);
+            } catch (err) {
+                done(err, null);
+            }
+        },
+    ),
+);
+
+// ==========================================
+// 3. FACEBOOK OAUTH 2.0 ENGINE (Smart Role Assignment)
+// ==========================================
+passport.use(
+    new FacebookStrategy(
+        {
+            clientID: process.env.FACEBOOK_APP_ID,
+            clientSecret: process.env.FACEBOOK_APP_SECRET,
+            // 🚀 FIX: Used dynamic BASE_URL similar to Google and Twitter
+            callbackURL: `${process.env.BASE_URL || 'http://localhost:5000'}/api/auth/facebook/callback`,
+            profileFields: ['id', 'displayName', 'emails', 'picture.type(large)'],
+            proxy: true,
+        },
+        async (accessToken, refreshToken, profile, done) => {
+            try {
+                let email =
+                    profile.emails && profile.emails.length > 0
+                        ? profile.emails[0].value
+                        : `${profile.id}@facebook.com`; // Fallback email logic just in case
+
+                let user = await User.findOne({ email: email });
+
+                // 👑 Check if the incoming email is the admin
+                const assignedRole = ADMIN_EMAILS.includes(email) ? 'admin' : 'buyer';
+
+                if (!user) {
+                    // Generate a secure random password for Social Auth users
+                    const randomPassword = Math.random().toString(36).slice(-10);
+                    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+                    user = await User.create({
+                        fullName: profile.displayName || "Facebook User",
+                        email: email,
+                        password: hashedPassword,
+                        authProvider: "facebook",
                         role: assignedRole, // 🛡️ Assign Admin if email matches, else Buyer
                         isActive: true,
                         phone: "Not Provided",
