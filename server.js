@@ -69,8 +69,8 @@ app.use(helmet({
     permissionsPolicy: {
         features: {
             geolocation:    ["'self'"],
-            camera:         [],
-            microphone:     [],
+            camera:         ["'self'"],
+            microphone:     ["'self'"],
             payment:        ["'self'"],
             "interest-cohort": [],      // opt out of FLoC/Topics API
         }
