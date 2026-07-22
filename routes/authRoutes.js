@@ -134,7 +134,7 @@ router.get(
         const returnAddress = req.query.clientUrl || safeDomain;
 
         passport.authenticate("facebook", {
-            scope: ["email", "public_profile"],
+            scope: ["email","public_profile"],
             state: returnAddress // Facebook me bhi Google ki tarah state pass hota hai
         })(req, res, next);
     }
