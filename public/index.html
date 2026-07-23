@@ -156,32 +156,50 @@ body { background: #f8fafc; font-family: 'Inter', sans-serif; overflow-x: hidden
                         <span class="navbar-toggler-icon" aria-hidden="true"></span>
                     </button>
 
-                    <!-- Offcanvas wrapper replacing the old collapse -->
-                    <div class="offcanvas offcanvas-end" tabindex="-1" id="zaminNav" aria-labelledby="zaminNavLabel">
+                    <!-- Google-style Left Sidebar (offcanvas-start + bg-white) -->
+                    <div class="offcanvas offcanvas-start bg-white shadow" tabindex="-1" id="zaminNav" aria-labelledby="zaminNavLabel" style="width: 320px; border-right: none;">
 
-                        <!-- Offcanvas Header (Visible only on mobile when menu is open) -->
-                        <div class="offcanvas-header border-bottom">
-                            <h5 class="offcanvas-title fw-bold text-success" id="zaminNavLabel"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</h5>
+                        <!-- Offcanvas Header -->
+                        <div class="offcanvas-header py-3 px-4 border-bottom d-lg-none">
+                            <h5 class="offcanvas-title fw-bold text-success fs-4" id="zaminNavLabel"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</h5>
                             <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                         </div>
 
-                        <!-- Offcanvas Body containing your original links -->
-                        <div class="offcanvas-body">
-                            <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center align-items-center gap-lg-2">
-                                <li class="nav-item"><a class="nav-link active" href="index.html"><i class="fas fa-search me-1"></i> Find Land</a></li>
-                                <li class="nav-item">
-                                    <a class="nav-link text-primary fw-bold" href="reels.html" style="background: #eff6ff;">
-                                        <i class="fas fa-play-circle me-1"></i> Property Reels
+                        <!-- Offcanvas Body -->
+                        <div class="offcanvas-body d-flex flex-column px-4 px-lg-0 pt-3 pt-lg-0">
+
+                            <!-- Links: Left aligned on mobile, Center aligned on Desktop -->
+                            <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-start text-lg-center align-items-start align-items-lg-center gap-lg-2 w-100 mt-2 mt-lg-0">
+
+                                <li class="nav-item w-100 w-lg-auto mb-2 mb-lg-0">
+                                    <a class="nav-link active text-start text-lg-center d-flex align-items-center justify-content-start justify-content-lg-center py-2 px-3 rounded-pill" href="index.html">
+                                        <i class="fas fa-search me-3 me-lg-1 text-secondary fs-5 fs-lg-6"></i> Find Land
                                     </a>
                                 </li>
 
-                                <li class="nav-item auth-required-link d-none"><a class="nav-link" href="dashboard.html#postTab"><i class="fas fa-plus-circle me-1"></i> Post Ad</a></li>
-                                <li class="nav-item auth-required-link d-none"><a class="nav-link" href="dashboard.html#bookingsTab"><i class="fas fa-ticket-alt me-1"></i> Bookings</a></li>
+                                <li class="nav-item w-100 w-lg-auto mb-2 mb-lg-0">
+                                    <a class="nav-link text-primary fw-bold text-start text-lg-center d-flex align-items-center justify-content-start justify-content-lg-center py-2 px-3 rounded-pill" href="reels.html" style="background: #eff6ff;">
+                                        <i class="fas fa-play-circle me-3 me-lg-1 fs-5 fs-lg-6"></i> Property Reels
+                                    </a>
+                                </li>
 
-                                <li id="adminLinkArea" class="nav-item ms-lg-3"></li>
+                                <li class="nav-item auth-required-link d-none w-100 w-lg-auto mb-2 mb-lg-0">
+                                    <a class="nav-link text-start text-lg-center d-flex align-items-center justify-content-start justify-content-lg-center py-2 px-3 rounded-pill" href="dashboard.html#postTab">
+                                        <i class="fas fa-plus-circle me-3 me-lg-1 text-secondary fs-5 fs-lg-6"></i> Post Ad
+                                    </a>
+                                </li>
+
+                                <li class="nav-item auth-required-link d-none w-100 w-lg-auto mb-2 mb-lg-0">
+                                    <a class="nav-link text-start text-lg-center d-flex align-items-center justify-content-start justify-content-lg-center py-2 px-3 rounded-pill" href="dashboard.html#bookingsTab">
+                                        <i class="fas fa-ticket-alt me-3 me-lg-1 text-secondary fs-5 fs-lg-6"></i> Bookings
+                                    </a>
+                                </li>
+
+                                <li id="adminLinkArea" class="nav-item ms-lg-3 w-100 w-lg-auto text-start text-lg-center mt-2 mt-lg-0"></li>
                             </ul>
 
-                            <div id="authArea" class="auth-area justify-content-center mt-3 mt-lg-0"></div>
+                            <!-- Auth Area: Bottom of slider on mobile, inline on desktop -->
+                            <div id="authArea" class="auth-area justify-content-start justify-content-lg-center mt-auto mt-lg-0 pt-4 pt-lg-0 pb-3 pb-lg-0 w-100 w-lg-auto border-top border-lg-0 d-flex flex-row"></div>
                         </div>
                     </div>
                 </div>
