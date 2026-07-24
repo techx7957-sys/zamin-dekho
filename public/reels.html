@@ -196,39 +196,8 @@
         .prop-title {
             font-family: 'Syne', sans-serif;
             font-size: 24px; font-weight: 800;
-            line-height: 1.2; margin-bottom: 8px;
+            line-height: 1.2; margin-bottom: 0px; /* Kept flush since bottom details are removed */
             text-shadow: 0 2px 8px rgba(0,0,0,0.9);
-        }
-
-        /* 🚀 IMPROVED ADDRESS & META INFO */
-        .prop-meta {
-            display: flex; flex-wrap: wrap; gap: 12px;
-            margin-bottom: 12px;
-        }
-        .prop-meta-item {
-            font-size: 15px; /* BIGGER FONT */
-            font-weight: 600; /* BOLDER */
-            color: #ffffff;
-            display: flex; align-items: center; gap: 6px;
-            text-shadow: 0 2px 6px rgba(0,0,0,0.9); /* Stronger shadow to read on white backgrounds */
-            background: rgba(0,0,0,0.3); /* Subtle dark glass behind text */
-            padding: 4px 8px;
-            border-radius: 6px;
-            backdrop-filter: blur(4px);
-        }
-        .prop-meta-item i { font-size: 14px; color: var(--green); }
-
-        .prop-price {
-            font-size: 28px; font-weight: 800;
-            color: var(--green);
-            font-family: 'Syne', sans-serif;
-            text-shadow: 0 2px 12px rgba(0,0,0,0.9);
-            line-height: 1;
-            margin-top: 5px;
-        }
-        .prop-price sup {
-            font-size: 15px; font-weight: 700;
-            vertical-align: super; margin-right: 2px;
         }
 
         /* ── ACTION BUTTONS ─────────────────────────────── */
@@ -731,6 +700,7 @@
 
         /* ── RESPONSIVE ───────────────────────────────── */
         @media (min-width: 500px) {
+            .reels-container { display: flex; justify-content: center; }
             .reel-card { max-width: 420px; margin: 0 auto; border-left: 1px solid #333; border-right: 1px solid #333; }
             .comments-panel, .details-panel { max-width: 420px; left: 50%; transform: translateX(-50%); }
             .panel-overlay { max-width: 420px; left: 50%; transform: translateX(-50%); }
@@ -1073,7 +1043,6 @@
                 }
             ];
 
-            // Inserting Dummy Data into your UI
             try {
                 if (dummyReels.length > 0) {
                     container.innerHTML = '';
@@ -1118,13 +1087,13 @@
             const verifiedBadge = item.isMediaAuthentic
                 ? `<span class="badge badge-verified"><i class="fas fa-shield-alt"></i> Verified</span>` : '';
 
-            // Replaced generic featured badge with 'Ad' badge
             const featuredBadge = isFeatured
                 ? `<span class="badge badge-ad"><i class="fas fa-bullhorn"></i> Ad</span>` : '';
 
             const newBadge = isNew && !isFeatured
                 ? `<span class="badge badge-new">New</span>` : '';
 
+            /* 🎯 PRICE, LOCATION, AND SIZE REMOVED FROM MAIN OVERLAY */
             container.innerHTML += `
                 <div class="reel-card" data-id="${item._id}"
                     ondblclick="doubleTapLike(event, this)">
@@ -1148,17 +1117,6 @@
                             <span class="poster-time">${timeAgo}</span>
                         </div>
                         <h2 class="prop-title">${safeStr(item.landName || 'Property')}</h2>
-                        <div class="prop-meta">
-                            <div class="prop-meta-item">
-                                <i class="fas fa-map-marker-alt"></i>
-                                ${safeStr(item.address || 'India')}
-                            </div>
-                            <div class="prop-meta-item">
-                                <i class="fas fa-vector-square"></i>
-                                ${safeStr(item.landSize || '—')}
-                            </div>
-                        </div>
-                        <div class="prop-price"><sup>₹</sup>${Number(item.landPrice).toLocaleString('en-IN')}</div>
                     </div>
 
                     <div class="reel-actions">
@@ -1172,13 +1130,11 @@
                             <span class="action-label">${comments}</span>
                         </button>
 
-                        <!-- Share button transformed to 'Send to Search' -->
                         <button class="action-btn" onclick="sendToSearch('${safeStr(item.landName)}', '${safeStr(item.address)}')">
                             <div class="action-icon"><i class="fas fa-paper-plane"></i></div>
                             <span class="action-label">Search</span>
                         </button>
 
-                        <!-- Sending isFeatured flag to openDetails -->
                         <button class="action-btn view-btn" onclick='openDetails(${JSON.stringify(item).replace(/'/g,"&apos;")}, ${isFeatured})'>
                             <div class="action-icon"><i class="fas fa-expand-alt"></i></div>
                             <span class="action-label">Details</span>
@@ -1194,9 +1150,8 @@
 
         function addScrollHint() { /* scroll hint is already in first reel */ }
 
-        // ─── SEND TO SEARCH (NEW FUNCTION) ────────────────────────────────────
+        // ─── SEND TO SEARCH ────────────────────────────────────
         function sendToSearch(name, address) {
-            // Combines name and address and redirects to the index search query
             const query = name + " " + address;
             window.location.href = 'index.html?search=' + encodeURIComponent(query);
         }
@@ -1231,7 +1186,6 @@
             const likeBtn = card.querySelector('.like-btn');
             if (!likeBtn.classList.contains('liked')) toggleLike(likeBtn);
 
-            // Floating heart animation
             const heart = document.createElement('i');
             heart.className = 'fas fa-heart';
             heart.style.cssText = `
@@ -1242,7 +1196,6 @@
             setTimeout(() => heart.remove(), 800);
         }
 
-        // Inject float-heart keyframe once
         const style = document.createElement('style');
         style.textContent = `@keyframes floatHeart { 0%{opacity:1;transform:scale(0.5)} 50%{opacity:1;transform:scale(1.3)} 100%{opacity:0;transform:scale(1) translateY(-40px)} }`;
         document.head.appendChild(style);
@@ -1251,7 +1204,6 @@
         function openComments(id, count) {
             activeReelId = id;
             document.getElementById('commentCountBadge').textContent = count;
-            // Reset to empty — real comments would load from API here
             document.getElementById('commentsList').innerHTML = `
                 <div class="empty-comments">
                     <i class="fas fa-comment-dots"></i>
@@ -1260,11 +1212,10 @@
             showPanel('commentsPanel');
         }
 
-        // Updated openDetails to handle Ad logic
+        /* 🎯 ALL DETAILS (Price, Location, Size, Road, Extra Info) LOADED HERE ON CLICK */
         function openDetails(item, isAd) {
             const safeStr = s => typeof escapeHTML === 'function' ? escapeHTML(s||'—') : (s||'—');
 
-            // Only generate the 'Book Site Visit' button if the reel is an Ad
             let bookVisitButtonHTML = '';
             if (isAd) {
                 bookVisitButtonHTML = `
@@ -1276,6 +1227,11 @@
             document.getElementById('detailsBody').innerHTML = `
                 <div class="details-price-big">₹${Number(item.landPrice).toLocaleString('en-IN')}</div>
                 <div class="details-title-big">${safeStr(item.landName)}</div>
+
+                <p style="color: rgba(255,255,255,0.7); font-size: 13px; margin-bottom: 16px; line-height: 1.4;">
+                    ${safeStr(item.extraInfo || 'No additional details provided.')}
+                </p>
+
                 <div class="details-grid">
                     <div class="detail-card">
                         <div class="detail-card-label">Size</div>
@@ -1321,7 +1277,6 @@
             if (!val) return;
 
             const list = document.getElementById('commentsList');
-            // Remove empty state if present
             const empty = list.querySelector('.empty-comments');
             if (empty) empty.remove();
 
@@ -1350,7 +1305,6 @@
 
             list.insertBefore(item, list.firstChild);
 
-            // Update count
             const badge = document.getElementById('commentCountBadge');
             badge.textContent = parseInt(badge.textContent) + 1;
 
@@ -1430,7 +1384,7 @@
                 const m = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
                 const s = String(recordSeconds % 60).padStart(2, '0');
                 document.getElementById('recordTimer').textContent = `${m}:${s}`;
-                if (recordSeconds >= 120) toggleRecording(); // Max 2 min
+                if (recordSeconds >= 120) toggleRecording();
             }, 1000);
         }
         function stopRecordingTimer() {
@@ -1454,7 +1408,6 @@
                     document.getElementById('r_lng').value = currentLng;
                     chip.innerHTML = '<i class="fas fa-check-circle"></i> GPS Locked';
                     chip.classList.add('locked');
-                    // Update form indicator
                     document.getElementById('gpsDot').classList.add('locked');
                     document.getElementById('gpsText').textContent = `GPS Locked · ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
                 },
@@ -1531,4 +1484,4 @@
         }
     </script>
 </body>
-</html>
+</html> 
