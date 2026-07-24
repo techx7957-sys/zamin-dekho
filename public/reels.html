@@ -86,63 +86,63 @@
             z-index: 2; pointer-events: none;
         }
 
-        /* ── TOP NAV (PERFECTED) ─────────────────────────────── */
+        /* ── TOP NAV ─────────────────────────────────────── */
         .top-nav {
             position: fixed; top: 0; left: 0; width: 100%;
-            padding: 15px 20px;
+            padding: 15px 4%; /* Responsive padding */
             z-index: 100;
             display: flex; justify-content: space-between; align-items: center;
-            flex-wrap: nowrap; /* Stops collapsing */
-            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%);
             pointer-events: none;
         }
         .top-nav > * { pointer-events: all; }
 
         .nav-brand {
             display: flex; align-items: center; gap: 10px;
-            flex-shrink: 0; /* Prevents squishing */
         }
         .nav-brand .brand-icon {
-            width: 38px; height: 38px; border-radius: 10px;
+            width: 36px; height: 36px; border-radius: 10px;
             background: var(--green);
             display: flex; align-items: center; justify-content: center;
-            font-size: 18px; color: #000; font-weight: 900;
+            font-size: 16px; color: #000; font-weight: 900;
+            flex-shrink: 0;
         }
         .nav-brand h3 {
             color: white; font-family: 'Syne', sans-serif;
-            font-size: 20px; font-weight: 800; margin: 0;
+            font-size: clamp(16px, 4vw, 20px); /* Smart sizing to stop overlap */
+            font-weight: 800; margin: 0;
             text-shadow: 0 2px 12px rgba(0,0,0,0.6);
-            white-space: nowrap; /* Stops text from breaking into 2 lines */
+            white-space: nowrap;
         }
         .nav-brand span {
             color: var(--green);
         }
 
         .nav-right { 
-            display: flex; align-items: center; gap: 12px; 
-            flex-shrink: 0; /* Prevents buttons from squishing */
+            display: flex; align-items: center; gap: clamp(8px, 2vw, 12px); 
+            justify-content: flex-end;
         }
 
         .btn-post-reel {
             display: none;
-            align-items: center; gap: 7px;
+            align-items: center; gap: 6px;
             background: var(--green);
             color: #000; border: none;
-            padding: 9px 18px; border-radius: 50px;
-            font-weight: 800; font-size: 13px;
+            padding: 8px 16px; border-radius: 50px;
+            font-weight: 800; font-size: clamp(11px, 3vw, 13px);
             cursor: pointer;
-            box-shadow: 0 0 15px rgba(0,192,127,0.5); /* Neon glow */
+            box-shadow: 0 0 15px rgba(0,192,127,0.4);
             transition: transform 0.15s, box-shadow 0.15s;
             white-space: nowrap;
         }
         .btn-post-reel:active { transform: scale(0.95); }
 
         .btn-exit {
-            width: 40px; height: 40px; border-radius: 50%;
+            width: 38px; height: 38px; border-radius: 50%;
             background: rgba(30, 30, 30, 0.8); border: 2px solid #333;
             color: white; backdrop-filter: blur(12px);
             display: flex; align-items: center; justify-content: center;
-            font-size: 15px; text-decoration: none; cursor: pointer;
+            font-size: 14px; text-decoration: none; cursor: pointer;
             transition: background 0.2s, border-color 0.2s;
             flex-shrink: 0;
         }
@@ -769,8 +769,9 @@
         @media (min-width: 500px) {
             .reels-container { display: flex; justify-content: center; }
             .reel-card { max-width: 420px; }
-            .top-nav, .comments-panel, .details-panel, .share-sheet { max-width: 420px; left: 50%; transform: translateX(-50%); }
+            .comments-panel, .details-panel, .share-sheet { max-width: 420px; left: 50%; transform: translateX(-50%); }
             .panel-overlay { max-width: 420px; left: 50%; transform: translateX(-50%); }
+            /* NOTICE: .top-nav has been removed from here so it spans 100% width on Desktop! */
         }
 
         @media (prefers-reduced-motion: reduce) {
