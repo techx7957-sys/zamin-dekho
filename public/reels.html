@@ -89,9 +89,10 @@
         /* ── TOP NAV ─────────────────────────────────────── */
         .top-nav {
             position: fixed; top: 0; left: 0; width: 100%;
-            padding: 15px 4%; /* Responsive padding */
+            padding: 15px 4%; 
             z-index: 100;
             display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: nowrap;
             background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, transparent 100%);
             pointer-events: none;
         }
@@ -99,20 +100,20 @@
 
         .nav-brand {
             display: flex; align-items: center; gap: 10px;
+            flex-shrink: 0; 
         }
         .nav-brand .brand-icon {
-            width: 36px; height: 36px; border-radius: 10px;
+            width: 38px; height: 38px; border-radius: 10px;
             background: var(--green);
             display: flex; align-items: center; justify-content: center;
-            font-size: 16px; color: #000; font-weight: 900;
-            flex-shrink: 0;
+            font-size: 18px; color: #000; font-weight: 900;
         }
         .nav-brand h3 {
             color: white; font-family: 'Syne', sans-serif;
-            font-size: clamp(16px, 4vw, 20px); /* Smart sizing to stop overlap */
+            font-size: clamp(16px, 4vw, 20px); 
             font-weight: 800; margin: 0;
             text-shadow: 0 2px 12px rgba(0,0,0,0.6);
-            white-space: nowrap;
+            white-space: nowrap; 
         }
         .nav-brand span {
             color: var(--green);
@@ -168,6 +169,7 @@
         .badge-verified { background: var(--blue); color: white; }
         .badge-featured { background: var(--amber); color: white; }
         .badge-new      { background: var(--green); color: #000; }
+        .badge-ad       { background: var(--red); color: white; }
 
         .poster-row {
             display: flex; align-items: center; gap: 8px;
@@ -482,7 +484,7 @@
         .detail-card-value i { color: var(--green); font-size: 12px; }
         .btn-visit {
             width: 100%;
-            background: var(--green); color: #000;
+            background: var(--red); color: #fff; /* Red highlight for Ad */
             border: none; padding: 14px;
             border-radius: 14px; font-size: 15px;
             font-weight: 800; cursor: pointer;
@@ -501,7 +503,7 @@
             text-decoration: none;
         }
 
-        /* ── SHARE SHEET ──────────────────────────────── */
+        /* ── SHARE SHEET (Kept intact just in case) ──────────────────────────────── */
         .share-sheet {
             position: fixed; bottom: -100%; left: 0; width: 100%;
             background: #111;
@@ -771,7 +773,6 @@
             .reel-card { max-width: 420px; }
             .comments-panel, .details-panel, .share-sheet { max-width: 420px; left: 50%; transform: translateX(-50%); }
             .panel-overlay { max-width: 420px; left: 50%; transform: translateX(-50%); }
-            /* NOTICE: .top-nav has been removed from here so it spans 100% width on Desktop! */
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -854,7 +855,7 @@
         </div>
     </div>
 
-    <!-- SHARE SHEET -->
+    <!-- SHARE SHEET (Kept hidden but safe as requested) -->
     <div class="share-sheet" id="shareSheet">
         <div class="panel-handle"></div>
         <div class="share-title">Share this property</div>
@@ -1028,7 +1029,7 @@
             const mediaUrl  = typeof resolveImageUrl === 'function' ? resolveImageUrl(item.imageUrl) : item.imageUrl;
             const isVideo   = /\.(mp4|webm|ogg)/i.test(mediaUrl) || mediaUrl.includes('video/upload');
             const isNew     = index < 3;
-            const isFeatured = Math.random() > 0.72;
+            const isFeatured = Math.random() > 0.72; // Creates dummy "Ads"
             const likes      = Math.floor(Math.random() * 500) + 50;
             const comments   = Math.floor(Math.random() * 40) + 2;
             const timeAgo    = ['2h ago','5h ago','1d ago','3d ago'][Math.floor(Math.random()*4)];
@@ -1042,9 +1043,12 @@
 
             const verifiedBadge = item.isMediaAuthentic
                 ? `<span class="badge badge-verified"><i class="fas fa-shield-alt"></i> Verified</span>` : '';
+
+            // Replaced generic featured badge with 'Ad' badge
             const featuredBadge = isFeatured
-                ? `<span class="badge badge-featured"><i class="fas fa-star"></i> Featured</span>` : '';
-            const newBadge = isNew
+                ? `<span class="badge badge-ad"><i class="fas fa-bullhorn"></i> Ad</span>` : '';
+
+            const newBadge = isNew && !isFeatured
                 ? `<span class="badge badge-new">New</span>` : '';
 
             container.innerHTML += `
@@ -1094,12 +1098,14 @@
                             <span class="action-label">${comments}</span>
                         </button>
 
-                        <button class="action-btn" onclick="openShare('${item._id}', '${safeStr(item.landName)}')">
-                            <div class="action-icon"><i class="fas fa-share-alt"></i></div>
-                            <span class="action-label">Share</span>
+                        <!-- Share button transformed to 'Send to Search' -->
+                        <button class="action-btn" onclick="sendToSearch('${safeStr(item.landName)}', '${safeStr(item.address)}')">
+                            <div class="action-icon"><i class="fas fa-paper-plane"></i></div>
+                            <span class="action-label">Search</span>
                         </button>
 
-                        <button class="action-btn view-btn" onclick="openDetails(${JSON.stringify(item).replace(/"/g,'&quot;')})">
+                        <!-- Sending isFeatured flag to openDetails -->
+                        <button class="action-btn view-btn" onclick='openDetails(${JSON.stringify(item).replace(/'/g,"&apos;")}, ${isFeatured})'>
                             <div class="action-icon"><i class="fas fa-expand-alt"></i></div>
                             <span class="action-label">Details</span>
                         </button>
@@ -1113,6 +1119,13 @@
         }
 
         function addScrollHint() { /* scroll hint is already in first reel */ }
+
+        // ─── SEND TO SEARCH (NEW FUNCTION) ────────────────────────────────────
+        function sendToSearch(name, address) {
+            // Combines name and address and redirects to the index search query
+            const query = name + " " + address;
+            window.location.href = 'index.html?search=' + encodeURIComponent(query);
+        }
 
         // ─── VIDEO AUTO-PLAY ──────────────────────────────────────────────────
         function setupVideoAutoPlay() {
@@ -1173,8 +1186,19 @@
             showPanel('commentsPanel');
         }
 
-        function openDetails(item) {
+        // Updated openDetails to handle Ad logic
+        function openDetails(item, isAd) {
             const safeStr = s => typeof escapeHTML === 'function' ? escapeHTML(s||'—') : (s||'—');
+
+            // Only generate the 'Book Site Visit' button if the reel is an Ad
+            let bookVisitButtonHTML = '';
+            if (isAd) {
+                bookVisitButtonHTML = `
+                    <a href="property.html?id=${item._id}" class="btn-visit">
+                        <i class="fas fa-calendar-check"></i> Book Site Visit (Ad)
+                    </a>`;
+            }
+
             document.getElementById('detailsBody').innerHTML = `
                 <div class="details-price-big">₹${Number(item.landPrice).toLocaleString('en-IN')}</div>
                 <div class="details-title-big">${safeStr(item.landName)}</div>
@@ -1196,21 +1220,21 @@
                         <div class="detail-card-value"><i class="fas fa-road"></i>${safeStr(item.roadAccess || 'Contact broker')}</div>
                     </div>
                 </div>
-                <a href="property.html?id=${item._id}" class="btn-visit">
-                    <i class="fas fa-calendar-check"></i> Book Site Visit
-                </a>
+
+                ${bookVisitButtonHTML}
+
                 <a href="property.html?id=${item._id}" class="btn-visit-secondary">
                     <i class="fas fa-info-circle"></i> Full Property Details
                 </a>`;
             showPanel('detailsPanel');
         }
 
+        // (Original Share Sheet features maintained below just in case)
         let shareItemId, shareItemName;
         function openShare(id, name) {
             shareItemId = id; shareItemName = name;
             showPanel('shareSheet');
         }
-
         function shareWhatsApp() {
             const url = `${location.origin}/property.html?id=${shareItemId}`;
             window.open(`https://wa.me/?text=${encodeURIComponent(`🏡 ${shareItemName} - Check this property on Zamin Dekho!\n${url}`)}`);
