@@ -503,7 +503,7 @@
             text-decoration: none;
         }
 
-        /* ── SHARE SHEET (Kept intact just in case) ──────────────────────────────── */
+        /* ── SHARE SHEET (Kept hidden but safe as requested) ──────────────────────────────── */
         .share-sheet {
             position: fixed; bottom: -100%; left: 0; width: 100%;
             background: #111;
@@ -994,16 +994,149 @@
             loadReels();
         };
 
-        // ─── LOAD REELS ───────────────────────────────────────────────────────
+        // ─── LOAD REELS (10 CREATIVE DUMMY REELS) ─────────────────────────────
         async function loadReels() {
             const container = document.getElementById('reelsContainer');
-            try {
-                const res  = await fetch(`${API_BASE}/listings/all`);
-                const data = await res.json();
 
-                if (data.success && data.listings.length > 0) {
+            // 10 Human-Made Creative Dummy Reels
+            const dummyReels = [
+                {
+                    _id: "reel_001",
+                    imageUrl: "https://cdn.pixabay.com/video/2019/08/17/26101-355416047_tiny.mp4",
+                    landName: "Riverside Peace: 2-Acre Farm Plot 🌊",
+                    landPrice: 3500000,
+                    landSize: "2 Acres",
+                    category: "Agricultural",
+                    address: "Kharora Outskirts, Chhattisgarh",
+                    roadAccess: "Tar Road (Pakki Sadak)",
+                    extraInfo: "नदी के किनारे एकदम शांत जगह! मिट्टी बहुत उपजाऊ है, फार्महाउस या डेयरी के लिए बेस्ट है। 🐄",
+                    postedBy: { fullName: "Ramesh Sahu (Owner)" },
+                    isMediaAuthentic: true
+                },
+                {
+                    _id: "reel_002",
+                    imageUrl: "https://cdn.pixabay.com/video/2020/03/10/33471-396568221_tiny.mp4",
+                    landName: "Prime Highway Commercial Goldmine 🏪",
+                    landPrice: 12000000,
+                    landSize: "5000 Sq.Ft",
+                    category: "Commercial",
+                    address: "NH-30 Highway, Raipur",
+                    roadAccess: "Highway / Main Road",
+                    extraInfo: "ढाबा या पेट्रोल पंप खोलने के लिए परफेक्ट लोकेशन। दिन-रात का ट्रैफिक है। पेपर एकदम क्लियर हैं! 🚀",
+                    postedBy: { fullName: "Verma Properties" },
+                    isMediaAuthentic: true
+                },
+                {
+                    _id: "reel_003",
+                    imageUrl: "https://cdn.pixabay.com/video/2021/08/11/84687-588365691_tiny.mp4",
+                    landName: "Boutique Cafe Space in Bandra ☕",
+                    landPrice: 45000000,
+                    landSize: "800 Sq.Ft",
+                    category: "Commercial",
+                    address: "Bandra West, Mumbai",
+                    roadAccess: "Tar Road (Pakki Sadak)",
+                    extraInfo: "Premium corner plot in a high-footfall area. Ideal for a luxury cafe or retail outlet. Immediate registry.",
+                    postedBy: { fullName: "Mumbai Elite Realty" },
+                    isMediaAuthentic: false
+                },
+                {
+                    _id: "reel_004",
+                    imageUrl: "https://cdn.pixabay.com/video/2022/11/01/137330-766795493_tiny.mp4",
+                    landName: "Hidden Gem: Mountain View Plot ⛰️",
+                    landPrice: 1800000,
+                    landSize: "1.5 Acres",
+                    category: "Residential",
+                    address: "Mahabaleshwar Outskirts, MH",
+                    roadAccess: "Mud Road (Kachha Rasta)",
+                    extraInfo: "पहाड़ों के बीच एक छोटी सी जन्नत! वीकेंड होम बनाने के लिए शानदार है। बारिश में यहाँ का नज़ारा देखने लायक होता है। 🌧️",
+                    postedBy: { fullName: "Amit Deshmukh" },
+                    isMediaAuthentic: true
+                },
+                {
+                    _id: "reel_005",
+                    imageUrl: "https://cdn.pixabay.com/video/2016/10/24/6055-188569837_tiny.mp4",
+                    landName: "Organic Mango Orchard 🥭",
+                    landPrice: 5500000,
+                    landSize: "4 Acres",
+                    category: "Agricultural",
+                    address: "Abhanpur, Chhattisgarh",
+                    roadAccess: "Tar Road (Pakki Sadak)",
+                    extraInfo: "पहले से ही 200 आम के पेड़ लगे हुए हैं। ट्यूबवेल कनेक्शन और बाउंड्री वाल कम्प्लीट है। कमाई पहले दिन से शुरू!",
+                    postedBy: { fullName: "Kisan Realty" },
+                    isMediaAuthentic: true
+                },
+                {
+                    _id: "reel_006",
+                    imageUrl: "https://cdn.pixabay.com/video/2018/06/20/16872-276686000_tiny.mp4",
+                    landName: "Luxury Villa Plot in Smart City 🏡",
+                    landPrice: 8500000,
+                    landSize: "2400 Sq.Ft",
+                    category: "Residential",
+                    address: "Atal Nagar (Nava Raipur), CG",
+                    roadAccess: "Highway / Main Road",
+                    extraInfo: "VIP एरिया! 24x7 बिजली, पानी और सिक्यूरिटी। सामने 60 फ़ीट की डामर रोड है। सिर्फ सीरियस बायर्स कॉल करें।",
+                    postedBy: { fullName: "Smart City Associates" },
+                    isMediaAuthentic: true
+                },
+                {
+                    _id: "reel_007",
+                    imageUrl: "https://cdn.pixabay.com/video/2019/11/04/28574-370591244_tiny.mp4",
+                    landName: "Massive Industrial Warehouse Space 🏭",
+                    landPrice: 32000000,
+                    landSize: "2 Acres",
+                    category: "Industrial",
+                    address: "Urla Industrial Area, Raipur",
+                    roadAccess: "Highway / Main Road",
+                    extraInfo: "Heavy logistics के लिए परफेक्ट। कंटेनर ट्रक आसानी से अंदर जा सकते हैं। 3-Phase बिजली कनेक्शन अवेलेबल है। ⚡",
+                    postedBy: { fullName: "CG Industrial Brokers" },
+                    isMediaAuthentic: false
+                },
+                {
+                    _id: "reel_008",
+                    imageUrl: "https://cdn.pixabay.com/video/2020/08/15/47285-450096181_tiny.mp4",
+                    landName: "Sunset Valley: Weekend Farm 🏕️",
+                    landPrice: 2200000,
+                    landSize: "1 Acre",
+                    category: "Agricultural",
+                    address: "Kharora - Tilda Road, CG",
+                    roadAccess: "Mud Road (Kachha Rasta)",
+                    extraInfo: "शहर की भीड़ से दूर, खुद का छोटा सा फार्म बनाएं। ज़मीन के साथ एक छोटा सा पुराना कुआँ भी है। प्राइस नेगोशिएबल है!",
+                    postedBy: { fullName: "Santosh Tiwari" },
+                    isMediaAuthentic: true
+                },
+                {
+                    _id: "reel_009",
+                    imageUrl: "https://cdn.pixabay.com/video/2017/02/09/7811-204121516_tiny.mp4",
+                    landName: "Corner Shop Plot in Main Market 🛍️",
+                    landPrice: 6500000,
+                    landSize: "1200 Sq.Ft",
+                    category: "Commercial",
+                    address: "Kharora Main Market, CG",
+                    roadAccess: "Tar Road (Pakki Sadak)",
+                    extraInfo: "कॉर्नर की ज़मीन है, दोनों तरफ से रास्ता! कॉम्प्लेक्स या ज्वेलरी शॉप के लिए बहुत तगड़ी जगह है। 💎",
+                    postedBy: { fullName: "Lalaji Real Estate" },
+                    isMediaAuthentic: true
+                },
+                {
+                    _id: "reel_010",
+                    imageUrl: "https://cdn.pixabay.com/video/2023/10/22/186005-877114407_tiny.mp4",
+                    landName: "Eco-Village Lakeview Land 🍃",
+                    landPrice: 4200000,
+                    landSize: "3 Acres",
+                    category: "Agricultural",
+                    address: "Bhatapara Outskirts, CG",
+                    roadAccess: "Tar Road (Pakki Sadak)",
+                    extraInfo: "पूरी तरह से हरा-भरा एरिया। नेचर लवर्स और योगा रिट्रीट बनाने वालों के लिए बेस्ट इन्वेस्टमेंट। 🧘‍♂️",
+                    postedBy: { fullName: "Green Earth Realty" },
+                    isMediaAuthentic: true
+                }
+            ];
+
+            // Inserting Dummy Data into your UI
+            try {
+                if (dummyReels.length > 0) {
                     container.innerHTML = '';
-                    data.listings.forEach((item, index) => renderReel(item, index, container));
+                    dummyReels.forEach((item, index) => renderReel(item, index, container));
                     setupVideoAutoPlay();
                     addScrollHint();
                 } else {
