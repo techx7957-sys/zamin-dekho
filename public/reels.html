@@ -8,7 +8,7 @@
             y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
         })(window, document, "clarity", "script", "xouh8ekw8v");
     </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap">
     <meta charset="UTF-8">
@@ -19,7 +19,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js" integrity="sha384-YB/DdIkloKoRpclWB8bNcYXWakt57USgtQPDzvnIDHYU0lasD5eWlXVo1S4ODukY" crossorigin="anonymous"></script>
 
     <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
             --green:   #00c07f;
@@ -56,6 +56,7 @@
             position: relative;
             background: #111; 
             overflow: hidden;
+            flex-shrink: 0; /* Prevents squishing on desktop */
         }
 
         /* Media */
@@ -65,7 +66,7 @@
             display: block;
         }
         img.reel-media {
-            animation: slowZoom 25s infinite alternate ease-in-out; /* Smooth zoom to feel like video */
+            animation: slowZoom 25s infinite alternate ease-in-out;
         }
         @keyframes slowZoom {
             from { transform: scale(1); }
@@ -174,7 +175,11 @@
         .poster-row {
             display: flex; align-items: center; gap: 8px;
             margin-bottom: 10px;
+            padding: 4px; border-radius: 50px;
+            transition: background 0.2s;
         }
+        .poster-row:active { background: rgba(255,255,255,0.1); } 
+
         .poster-avatar {
             width: 32px; height: 32px; border-radius: 50%;
             border: 2px solid var(--green);
@@ -196,7 +201,7 @@
         .prop-title {
             font-family: 'Syne', sans-serif;
             font-size: 24px; font-weight: 800;
-            line-height: 1.2; margin-bottom: 0px; /* Kept flush since bottom details are removed */
+            line-height: 1.2; margin-bottom: 0px; 
             text-shadow: 0 2px 8px rgba(0,0,0,0.9);
         }
 
@@ -283,7 +288,7 @@
         .scroll-hint i { color: white; font-size: 18px; }
         .scroll-hint span { color: rgba(255,255,255,0.6); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* ── COMMENTS PANEL ─────────────────────────────── */
+        /* ── PANELS (DETAILS, COMMENTS, USER PROFILE) ─────────────────────────────── */
         .panel-overlay {
             position: fixed; inset: 0;
             background: rgba(0,0,0,0.6);
@@ -293,6 +298,30 @@
         }
         .panel-overlay.active { display: block; }
 
+        .details-panel {
+            position: fixed; bottom: -100%; left: 0; width: 100%; height: 60vh;
+            background: #0f0f0f;
+            border-radius: 22px 22px 0 0;
+            z-index: 1000;
+            transition: bottom 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+            display: flex; flex-direction: column;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            overflow: hidden;
+        }
+        .details-panel.active { bottom: 0; }
+
+        .user-panel {
+            position: fixed; bottom: -100%; left: 0; width: 100%; height: 50vh;
+            background: #111;
+            border-radius: 22px 22px 0 0;
+            z-index: 1000;
+            transition: bottom 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+            display: flex; flex-direction: column;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            overflow: hidden;
+        }
+        .user-panel.active { bottom: 0; }
+
         .comments-panel {
             position: fixed; bottom: -100%; left: 0; width: 100%; height: 70vh;
             background: #111;
@@ -301,6 +330,7 @@
             transition: bottom 0.35s cubic-bezier(0.32, 0.72, 0, 1);
             display: flex; flex-direction: column;
             border-top: 1px solid rgba(255,255,255,0.08);
+            overflow: hidden;
         }
         .comments-panel.active { bottom: 0; }
 
@@ -331,94 +361,14 @@
             cursor: pointer; font-size: 13px;
         }
 
-        .comments-list {
-            flex: 1; overflow-y: auto;
-            padding: 16px 20px;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255,255,255,0.1) transparent;
-        }
-
-        .comment-item {
-            display: flex; gap: 10px;
-            margin-bottom: 16px;
-            animation: slideInComment 0.25s ease-out;
-        }
-        @keyframes slideInComment {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        .comment-avatar {
-            width: 34px; height: 34px; border-radius: 50%;
-            object-fit: cover; flex-shrink: 0;
-            border: 1.5px solid rgba(255,255,255,0.1);
-        }
-        .comment-bubble {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.08);
-            padding: 9px 13px; border-radius: 4px 14px 14px 14px;
-            flex: 1;
-        }
-        .comment-name {
-            font-size: 12px; font-weight: 700;
-            color: rgba(255,255,255,0.5);
-            margin-bottom: 4px;
-        }
-        .comment-name.own { color: var(--green); }
-        .comment-body {
-            font-size: 13px; color: rgba(255,255,255,0.85);
-            line-height: 1.5;
-        }
-
-        .empty-comments {
-            text-align: center; padding: 40px 20px;
-            color: rgba(255,255,255,0.3);
-        }
-        .empty-comments i { font-size: 36px; margin-bottom: 10px; display: block; }
-        .empty-comments p { font-size: 13px; }
-
-        .comment-input-row {
-            padding: 12px 16px;
-            background: rgba(255,255,255,0.03);
-            border-top: 1px solid rgba(255,255,255,0.06);
-            display: flex; gap: 10px; align-items: center;
-        }
-        .comment-input {
-            flex: 1;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 50px; padding: 10px 18px;
-            color: white; font-size: 13px; outline: none;
-            font-family: 'Inter', sans-serif;
-        }
-        .comment-input::placeholder { color: rgba(255,255,255,0.3); }
-        .comment-input:focus { border-color: var(--green); background: rgba(0,192,127,0.06); }
-        .comment-send {
-            width: 40px; height: 40px; border-radius: 50%;
-            background: var(--green); color: #000;
-            border: none; font-size: 15px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; flex-shrink: 0;
-            transition: transform 0.15s;
-        }
-        .comment-send:active { transform: scale(0.9); }
-
-        /* ── PROPERTY DETAILS SHEET ────────────────────── */
-        .details-panel {
-            position: fixed; bottom: -100%; left: 0; width: 100%; height: 55vh;
-            background: #0f0f0f;
-            border-radius: 22px 22px 0 0;
-            z-index: 1000;
-            transition: bottom 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-            display: flex; flex-direction: column;
-            border-top: 1px solid rgba(255,255,255,0.08);
-            overflow: hidden;
-        }
-        .details-panel.active { bottom: 0; }
         .details-body {
             flex: 1; overflow-y: auto; padding: 20px;
             scrollbar-width: thin;
             scrollbar-color: rgba(255,255,255,0.1) transparent;
         }
+
+        /* Panel Specific Styles */
+        .comments-list { padding: 16px 20px; flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent;}
         .details-price-big {
             font-family: 'Syne', sans-serif;
             font-size: 32px; font-weight: 800;
@@ -449,260 +399,71 @@
         }
         .detail-card-value i { color: var(--green); font-size: 12px; }
         .btn-visit {
-            width: 100%;
-            background: var(--red); color: #fff; /* Red highlight for Ad */
-            border: none; padding: 14px;
-            border-radius: 14px; font-size: 15px;
-            font-weight: 800; cursor: pointer;
-            display: flex; align-items: center;
-            justify-content: center; gap: 8px;
+            width: 100%; background: var(--red); color: #fff; border: none; padding: 14px;
+            border-radius: 14px; font-size: 15px; font-weight: 800; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
         .btn-visit-secondary {
-            width: 100%;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: white; padding: 12px;
-            border-radius: 14px; font-size: 14px;
-            font-weight: 700; cursor: pointer; margin-top: 10px;
-            display: flex; align-items: center;
-            justify-content: center; gap: 8px;
-            text-decoration: none;
+            width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+            color: white; padding: 12px; border-radius: 14px; font-size: 14px; font-weight: 700; 
+            cursor: pointer; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
         }
 
-        /* ── CAMERA OVERLAY ─────────────────────────────── */
-        .camera-overlay {
-            position: fixed; inset: 0;
-            background: #000; z-index: 2000;
-            display: none; flex-direction: column;
-        }
+        /* Comment styles */
+        .comment-item { display: flex; gap: 10px; margin-bottom: 16px; animation: slideInComment 0.25s ease-out; }
+        @keyframes slideInComment { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .comment-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1.5px solid rgba(255,255,255,0.1); }
+        .comment-bubble { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); padding: 9px 13px; border-radius: 4px 14px 14px 14px; flex: 1; }
+        .comment-name { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
+        .comment-name.own { color: var(--green); }
+        .comment-body { font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.5; }
+        .empty-comments { text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.3); }
+        .empty-comments i { font-size: 36px; margin-bottom: 10px; display: block; }
+        .comment-input-row { padding: 12px 16px; background: rgba(255,255,255,0.03); border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 10px; align-items: center; }
+        .comment-input { flex: 1; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 50px; padding: 10px 18px; color: white; font-size: 13px; outline: none; }
+        .comment-send { width: 40px; height: 40px; border-radius: 50%; background: var(--green); color: #000; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+        /* CAMERA & UPLOAD CSS Kept from Original */
+        .camera-overlay { position: fixed; inset: 0; background: #000; z-index: 2000; display: none; flex-direction: column; }
         .camera-overlay.active { display: flex; }
-
-        #cameraFeed {
-            flex: 1; width: 100%; object-fit: cover; background: #111;
-        }
-
-        .camera-top-bar {
-            position: absolute; top: 0; left: 0; width: 100%;
-            padding: 20px; z-index: 10;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .gps-chip {
-            background: rgba(0,0,0,0.55); backdrop-filter: blur(10px);
-            color: white; padding: 7px 14px;
-            border-radius: 50px; font-size: 12px; font-weight: 600;
-            display: flex; align-items: center; gap: 6px;
-            border: 1px solid rgba(255,255,255,0.15);
-        }
-        .gps-chip.locked { border-color: var(--green); color: var(--green); background: rgba(0,192,127,0.12); }
-        .gps-chip.failed { border-color: var(--red); color: var(--red); }
-
-        .camera-controls {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            padding: 24px 30px 44px;
-            background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-
-        .cam-side-btn {
-            width: 46px; height: 46px; border-radius: 50%;
-            background: rgba(255,255,255,0.15); backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: white; font-size: 18px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-        }
-
-        .record-btn-wrap {
-            display: flex; flex-direction: column;
-            align-items: center; gap: 8px;
-        }
-        .record-outer {
-            width: 76px; height: 76px; border-radius: 50%;
-            border: 3px solid white;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-        }
-        .record-inner {
-            width: 58px; height: 58px; border-radius: 50%;
-            background: var(--red);
-            transition: border-radius 0.2s, transform 0.2s;
-        }
-        .record-outer.recording .record-inner {
-            border-radius: 10px; transform: scale(0.8);
-        }
-        .recording-timer {
-            color: white; font-size: 12px; font-weight: 700;
-            opacity: 0;
-        }
+        #cameraFeed { flex: 1; width: 100%; object-fit: cover; background: #111; }
+        .camera-top-bar { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
+        .gps-chip { background: rgba(0,0,0,0.55); color: white; padding: 7px 14px; border-radius: 50px; font-size: 12px; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.15); }
+        .gps-chip.locked { border-color: var(--green); color: var(--green); }
+        .camera-controls { position: absolute; bottom: 0; left: 0; width: 100%; padding: 24px 30px 44px; display: flex; justify-content: space-between; align-items: center; }
+        .cam-side-btn { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+        .record-btn-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .record-outer { width: 76px; height: 76px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; }
+        .record-inner { width: 58px; height: 58px; border-radius: 50%; background: var(--red); transition: 0.2s; }
+        .record-outer.recording .record-inner { border-radius: 10px; transform: scale(0.8); }
+        .recording-timer { color: white; font-size: 12px; opacity: 0; }
         .record-outer.recording + .recording-timer { opacity: 1; }
-
-        /* Recording pulse ring */
-        @keyframes recordPulse {
-            0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.6); }
-            100% { box-shadow: 0 0 0 20px rgba(239,68,68,0); }
-        }
-        .record-outer.recording { animation: recordPulse 1s infinite; }
-
-        /* ── UPLOAD FORM ─────────────────────────────────── */
-        .upload-form-screen {
-            position: fixed; inset: 0;
-            background: #0a0a0a;
-            z-index: 2001;
-            display: none;
-            flex-direction: column;
-            overflow-y: auto;
-        }
+        .upload-form-screen { position: fixed; inset: 0; background: #0a0a0a; z-index: 2001; display: none; flex-direction: column; overflow-y: auto; }
         .upload-form-screen.active { display: flex; }
-
-        .upload-header {
-            position: sticky; top: 0;
-            background: rgba(10,10,10,0.95); backdrop-filter: blur(16px);
-            padding: 18px 20px;
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            z-index: 10;
-        }
-        .upload-header h5 {
-            font-family: 'Syne', sans-serif;
-            font-size: 17px; font-weight: 800;
-            color: white; margin: 0;
-            display: flex; align-items: center; gap: 8px;
-        }
-        .upload-header h5 i { color: var(--green); }
-
-        .video-preview-box {
-            margin: 20px; border-radius: 16px;
-            overflow: hidden; background: #111;
-            position: relative;
-        }
-        #recordedPreview {
-            width: 100%; max-height: 220px;
-            object-fit: contain; display: block;
-        }
-        .preview-overlay-badge {
-            position: absolute; top: 10px; left: 10px;
-            background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
-            color: var(--green); padding: 5px 12px;
-            border-radius: 50px; font-size: 11px; font-weight: 700;
-            border: 1px solid var(--green);
-            display: flex; align-items: center; gap: 5px;
-        }
-
+        .upload-header { position: sticky; top: 0; background: rgba(10,10,10,0.95); padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 10; border-bottom: 1px solid rgba(255,255,255,0.08);}
+        .video-preview-box { margin: 20px; border-radius: 16px; overflow: hidden; background: #111; position: relative; }
+        #recordedPreview { width: 100%; max-height: 220px; object-fit: contain; display: block; }
         .form-body { padding: 0 20px 40px; }
+        .form-field { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 13px 16px; color: white; width: 100%; margin-bottom: 10px;}
+        .btn-publish { width: 100%; background: var(--green); color: #000; padding: 16px; border-radius: 16px; font-weight: 800; font-size: 16px; border: none; margin-top: 20px; display: flex; justify-content: center; gap: 8px;}
 
-        .form-section-label {
-            font-size: 11px; font-weight: 800;
-            color: rgba(255,255,255,0.4);
-            text-transform: uppercase; letter-spacing: 0.8px;
-            margin-bottom: 10px; margin-top: 22px;
-        }
-
-        .form-field {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px; padding: 13px 16px;
-            color: white; font-size: 14px;
-            font-family: 'Inter', sans-serif;
-            width: 100%; outline: none;
-            transition: border-color 0.2s, background 0.2s;
-        }
-        .form-field:focus {
-            border-color: var(--green);
-            background: rgba(0,192,127,0.05);
-        }
-        .form-field::placeholder { color: rgba(255,255,255,0.25); }
-
-        .form-row { display: flex; gap: 10px; }
-        .form-row .form-field { flex: 1; }
-
-        textarea.form-field { resize: none; }
-
-        select.form-field { appearance: none; cursor: pointer; }
-        select.form-field option { background: #1a1a1a; }
-
-        .gps-indicator {
-            display: flex; align-items: center; gap: 8px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 12px; padding: 12px 16px;
-            margin-top: 22px;
-        }
-        .gps-dot {
-            width: 8px; height: 8px; border-radius: 50%;
-            background: var(--amber); flex-shrink: 0;
-        }
-        .gps-dot.locked { background: var(--green); animation: pulse 1.5s infinite; }
-        .gps-dot.failed { background: var(--red); }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
-        }
-        .gps-text { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.6); }
-
-        .btn-publish {
-            width: 100%; margin-top: 28px;
-            background: var(--green); color: #000;
-            border: none; padding: 16px;
-            border-radius: 16px; font-size: 16px;
-            font-family: 'Syne', sans-serif;
-            font-weight: 800; cursor: pointer;
-            display: flex; align-items: center;
-            justify-content: center; gap: 10px;
-            box-shadow: 0 6px 24px rgba(0,192,127,0.35);
-            transition: transform 0.15s, box-shadow 0.15s;
-        }
-        .btn-publish:active { transform: scale(0.97); }
-        .btn-publish:disabled {
-            opacity: 0.6; cursor: not-allowed;
-        }
-
-        /* Toast notification */
-        .toast {
-            position: fixed; top: 80px; left: 50%;
-            transform: translateX(-50%) translateY(-20px);
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
-            color: white; padding: 10px 20px; border-radius: 50px;
-            font-size: 13px; font-weight: 600;
-            z-index: 9999; opacity: 0;
-            transition: opacity 0.3s, transform 0.3s;
-            border: 1px solid rgba(255,255,255,0.1);
-            white-space: nowrap;
-            pointer-events: none;
-        }
-        .toast.show {
-            opacity: 1; transform: translateX(-50%) translateY(0);
-        }
-
-        /* Empty state */
-        .empty-state {
-            height: 100vh;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            color: rgba(255,255,255,0.4); text-align: center; padding: 40px;
-        }
-        .empty-state i { font-size: 48px; margin-bottom: 16px; color: rgba(255,255,255,0.2); }
-        .empty-state h4 { font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.6); margin-bottom: 8px; }
-        .empty-state p { font-size: 13px; line-height: 1.6; }
-
-        /* Loading state */
-        .loading-state {
-            height: 100vh;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 16px;
-        }
-        .loader-ring {
-            width: 44px; height: 44px; border-radius: 50%;
-            border: 3px solid rgba(0,192,127,0.2);
-            border-top-color: var(--green);
-            animation: spin 0.8s linear infinite;
-        }
+        .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 50px; opacity: 0; transition: 0.3s; z-index: 9999; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .empty-state { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: rgba(255,255,255,0.4); text-align: center; }
+        .loading-state { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+        .loader-ring { width: 44px; height: 44px; border-radius: 50%; border: 3px solid rgba(0,192,127,0.2); border-top-color: var(--green); animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .loading-state p { color: rgba(255,255,255,0.5); font-size: 14px; font-weight: 500; }
 
-        /* ── RESPONSIVE ───────────────────────────────── */
+        /* ── THE LIFESAVER FIX FOR DESKTOP SQUISH ───────────────────────────────── */
         @media (min-width: 500px) {
-            .reels-container { display: flex; justify-content: center; }
-            .reel-card { max-width: 420px; margin: 0 auto; border-left: 1px solid #333; border-right: 1px solid #333; }
-            .comments-panel, .details-panel { max-width: 420px; left: 50%; transform: translateX(-50%); }
+            .reels-container { 
+                display: flex; 
+                flex-direction: column; /* This fixes the horizontal shrinking! */
+                align-items: center; 
+            }
+            .reel-card { max-width: 420px; width: 100%; flex-shrink: 0; margin: 0; border-left: 1px solid #333; border-right: 1px solid #333; }
+            .comments-panel, .details-panel, .user-panel { max-width: 420px; left: 50%; transform: translateX(-50%); }
             .panel-overlay { max-width: 420px; left: 50%; transform: translateX(-50%); }
         }
 
@@ -752,9 +513,7 @@
                 Comments
                 <span class="comment-count" id="commentCountBadge">0</span>
             </div>
-            <button class="panel-close" onclick="closeAllPanels()">
-                <i class="fas fa-times"></i>
-            </button>
+            <button class="panel-close" onclick="closeAllPanels()"><i class="fas fa-times"></i></button>
         </div>
         <div class="comments-list" id="commentsList">
             <div class="empty-comments">
@@ -763,12 +522,8 @@
             </div>
         </div>
         <div class="comment-input-row">
-            <input class="comment-input" id="newCommentInput"
-                type="text" placeholder="Ask about road access, price, size..."
-                onkeydown="if(event.key==='Enter') addComment()">
-            <button class="comment-send" onclick="addComment()">
-                <i class="fas fa-paper-plane"></i>
-            </button>
+            <input class="comment-input" id="newCommentInput" type="text" placeholder="Ask about road access, price, size..." onkeydown="if(event.key==='Enter') addComment()">
+            <button class="comment-send" onclick="addComment()"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
 
@@ -777,11 +532,21 @@
         <div class="panel-handle"></div>
         <div class="panel-header">
             <div class="panel-title">Property Details</div>
-            <button class="panel-close" onclick="closeAllPanels()">
-                <i class="fas fa-times"></i>
-            </button>
+            <button class="panel-close" onclick="closeAllPanels()"><i class="fas fa-times"></i></button>
         </div>
         <div class="details-body" id="detailsBody">
+            <!-- filled dynamically -->
+        </div>
+    </div>
+
+    <!-- USER PROFILE PANEL -->
+    <div class="user-panel" id="userProfilePanel">
+        <div class="panel-handle"></div>
+        <div class="panel-header">
+            <div class="panel-title"><i class="fas fa-user-circle text-green me-2"></i> User Profile</div>
+            <button class="panel-close" onclick="closeAllPanels()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="details-body text-center" id="userProfileBody">
             <!-- filled dynamically -->
         </div>
     </div>
@@ -789,28 +554,16 @@
     <!-- CAMERA OVERLAY -->
     <div class="camera-overlay" id="cameraOverlay">
         <div class="camera-top-bar">
-            <div class="gps-chip" id="gpsChip">
-                <i class="fas fa-spinner fa-spin"></i> Locating GPS...
-            </div>
-            <button class="cam-side-btn" onclick="closeCamera()">
-                <i class="fas fa-times"></i>
-            </button>
+            <div class="gps-chip" id="gpsChip"><i class="fas fa-spinner fa-spin"></i> Locating GPS...</div>
+            <button class="cam-side-btn" onclick="closeCamera()"><i class="fas fa-times"></i></button>
         </div>
-
         <video id="cameraFeed" autoplay muted playsinline></video>
-
         <div class="camera-controls">
-            <button class="cam-side-btn" onclick="switchCamera()" title="Flip camera">
-                <i class="fas fa-sync-alt"></i>
-            </button>
-
+            <button class="cam-side-btn" onclick="switchCamera()" title="Flip camera"><i class="fas fa-sync-alt"></i></button>
             <div class="record-btn-wrap">
-                <div class="record-outer" id="recordOuter" onclick="toggleRecording()">
-                    <div class="record-inner" id="recordInner"></div>
-                </div>
+                <div class="record-outer" id="recordOuter" onclick="toggleRecording()"><div class="record-inner" id="recordInner"></div></div>
                 <span class="recording-timer" id="recordTimer">00:00</span>
             </div>
-
             <div style="width:46px;"></div>
         </div>
     </div>
@@ -819,65 +572,34 @@
     <div class="upload-form-screen" id="uploadFormScreen">
         <div class="upload-header">
             <h5><i class="fas fa-upload"></i> Post Property Reel</h5>
-            <button class="panel-close" onclick="closeUploadForm()" style="width:36px;height:36px;">
-                <i class="fas fa-times"></i>
-            </button>
+            <button class="panel-close" onclick="closeUploadForm()" style="width:36px;height:36px;"><i class="fas fa-times"></i></button>
         </div>
-
         <div class="video-preview-box">
             <video id="recordedPreview" controls playsinline class="w-100"></video>
-            <div class="preview-overlay-badge">
-                <i class="fas fa-shield-alt"></i> GPS-Authenticated Media
-            </div>
+            <div class="preview-overlay-badge"><i class="fas fa-shield-alt"></i> GPS-Authenticated Media</div>
         </div>
-
         <div class="form-body">
-            <div class="gps-indicator" id="gpsIndicator">
-                <div class="gps-dot" id="gpsDot"></div>
-                <span class="gps-text" id="gpsText">Waiting for GPS lock...</span>
+            <input type="text" id="r_title" class="form-field" placeholder="Property Title (e.g. 2 Acre Farm)" required>
+            <div class="form-row">
+                <input type="number" id="r_price" class="form-field" placeholder="Price (₹)" required>
+                <input type="text" id="r_size" class="form-field" placeholder="Size" required>
             </div>
-
-            <div class="form-section-label">Property Info</div>
-            <input type="text" id="r_title" class="form-field"
-                placeholder="e.g. 2 Acre Farm in Raipur" required>
-
-            <div class="form-row" style="margin-top:10px;">
-                <input type="number" id="r_price" class="form-field"
-                    placeholder="Price (₹)" required>
-                <input type="text" id="r_size" class="form-field"
-                    placeholder="Size (e.g. 2 Acre)" required>
-            </div>
-
-            <div class="form-section-label">Category</div>
             <select id="r_category" class="form-field">
-                <option value="agricultural">🌾 Agricultural / Farm</option>
-                <option value="residential">🏡 Residential Plot</option>
-                <option value="commercial">🏪 Commercial Land</option>
-                <option value="industrial">🏭 Industrial Land</option>
+                <option value="agricultural">Agricultural / Farm</option>
+                <option value="residential">Residential Plot</option>
+                <option value="commercial">Commercial Land</option>
+                <option value="industrial">Industrial Land</option>
             </select>
-
-            <div class="form-section-label">Location</div>
-            <textarea id="r_address" class="form-field" rows="2"
-                placeholder="Village, Tehsil, District, State" required></textarea>
-
-            <div class="form-section-label">Road Access</div>
+            <textarea id="r_address" class="form-field" rows="2" placeholder="Full Address" required></textarea>
             <select id="r_road" class="form-field">
-                <option value="highway">🛣️ Highway / Main Road</option>
-                <option value="tar">🔵 Tar Road (Pakki Sadak)</option>
-                <option value="mud">🟤 Mud Road (Kachha Rasta)</option>
-                <option value="none">❌ No Road Access</option>
+                <option value="highway">Highway / Main Road</option>
+                <option value="tar">Tar Road</option>
+                <option value="mud">Mud Road</option>
+                <option value="none">No Road Access</option>
             </select>
-
-            <div class="form-section-label">Additional Notes</div>
-            <textarea id="r_extra" class="form-field" rows="2"
-                placeholder="Electricity, water, negotiable price, etc."></textarea>
-
-            <input type="hidden" id="r_lat">
-            <input type="hidden" id="r_lng">
-
-            <button type="button" id="submitReelBtn" class="btn-publish" onclick="submitReel()">
-                <i class="fas fa-paper-plane"></i> Publish Reel
-            </button>
+            <textarea id="r_extra" class="form-field" rows="2" placeholder="Additional Notes"></textarea>
+            <input type="hidden" id="r_lat"><input type="hidden" id="r_lng">
+            <button type="button" id="submitReelBtn" class="btn-publish" onclick="submitReel()">Publish Reel</button>
         </div>
     </div>
 
@@ -886,9 +608,7 @@
     <script>
         // ─── STATE ────────────────────────────────────────────────────────────
         let activeReelId   = null;
-        let activeReelItem = null;
         let currentLat = null, currentLng = null;
-
         let mediaRecorder, recordedChunks = [], videoBlob;
         let currentStream, isRecording = false, facingMode = "environment";
         let recordTimerInterval, recordSeconds = 0;
@@ -909,7 +629,6 @@
         async function loadReels() {
             const container = document.getElementById('reelsContainer');
 
-            // 10 Human-Made Creative Dummy Reels
             const dummyReels = [
                 {
                     _id: "reel_001",
@@ -1043,61 +762,41 @@
                 }
             ];
 
-            try {
-                if (dummyReels.length > 0) {
-                    container.innerHTML = '';
-                    dummyReels.forEach((item, index) => renderReel(item, index, container));
-                    setupVideoAutoPlay();
-                    addScrollHint();
-                } else {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <i class="fas fa-seedling"></i>
-                            <h4>No reels yet</h4>
-                            <p>Be the first to post a property reel<br>and reach thousands of buyers.</p>
-                        </div>`;
-                }
-            } catch (e) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-wifi"></i>
-                        <h4>Could not load reels</h4>
-                        <p>Check your connection<br>and try again.</p>
-                    </div>`;
+            if (dummyReels.length > 0) {
+                container.innerHTML = '';
+                dummyReels.forEach((item, index) => renderReel(item, index, container));
+                setupVideoAutoPlay();
+                addScrollHint();
             }
         }
 
         function renderReel(item, index, container) {
             const safeStr = s => typeof escapeHTML === 'function' ? escapeHTML(s||'') : (s||'');
-            const mediaUrl  = typeof resolveImageUrl === 'function' ? resolveImageUrl(item.imageUrl) : item.imageUrl;
+
+            // 🎯 USER DATA OVERRIDE LOGIC
+            const loggedInUser = typeof getUser === 'function' ? getUser() : null;
+            const posterName = loggedInUser && loggedInUser.fullName ? loggedInUser.fullName : (item.postedBy?.fullName || 'Verified Owner');
+            const avatarIdx  = (index % 70) + 1;
+            const posterImg = loggedInUser && loggedInUser.avatar ? loggedInUser.avatar : `https://i.pravatar.cc/100?img=${avatarIdx}`;
+
+            const mediaUrl  = item.imageUrl;
             const isVideo   = /\.(mp4|webm|ogg)/i.test(mediaUrl) || mediaUrl.includes('video/upload');
             const isNew     = index < 3;
-            const isFeatured = Math.random() > 0.72; // Creates dummy "Ads"
+            const isFeatured = Math.random() > 0.72; // Ads logic
             const likes      = Math.floor(Math.random() * 500) + 50;
             const comments   = Math.floor(Math.random() * 40) + 2;
             const timeAgo    = ['2h ago','5h ago','1d ago','3d ago'][Math.floor(Math.random()*4)];
-            const avatarIdx  = (index % 70) + 1;
 
             const mediaEl = isVideo
                 ? `<video src="${mediaUrl}" class="reel-media scroll-video" loop muted playsinline preload="metadata"></video>`
-                : `<img src="${mediaUrl}" class="reel-media"
-                    onerror="this.src='https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1080&h=1920&q=80&fit=crop'"
-                    alt="${safeStr(item.landName)}">`;
+                : `<img src="${mediaUrl}" class="reel-media" alt="${safeStr(item.landName)}">`;
 
-            const verifiedBadge = item.isMediaAuthentic
-                ? `<span class="badge badge-verified"><i class="fas fa-shield-alt"></i> Verified</span>` : '';
+            const verifiedBadge = item.isMediaAuthentic ? `<span class="badge badge-verified"><i class="fas fa-shield-alt"></i> Verified</span>` : '';
+            const featuredBadge = isFeatured ? `<span class="badge badge-ad"><i class="fas fa-bullhorn"></i> Ad</span>` : '';
+            const newBadge = isNew && !isFeatured ? `<span class="badge badge-new">New</span>` : '';
 
-            const featuredBadge = isFeatured
-                ? `<span class="badge badge-ad"><i class="fas fa-bullhorn"></i> Ad</span>` : '';
-
-            const newBadge = isNew && !isFeatured
-                ? `<span class="badge badge-new">New</span>` : '';
-
-            /* 🎯 PRICE, LOCATION, AND SIZE REMOVED FROM MAIN OVERLAY */
             container.innerHTML += `
-                <div class="reel-card" data-id="${item._id}"
-                    ondblclick="doubleTapLike(event, this)">
-
+                <div class="reel-card" data-id="${item._id}" ondblclick="doubleTapLike(event, this)">
                     ${mediaEl}
                     <div class="reel-gradient-top"></div>
                     <div class="reel-gradient-bottom"></div>
@@ -1108,14 +807,15 @@
                         <div class="badge-row">
                             ${verifiedBadge}${featuredBadge}${newBadge}
                         </div>
-                        <div class="poster-row">
-                            <img class="poster-avatar"
-                                src="https://i.pravatar.cc/100?img=${avatarIdx}"
-                                alt="Poster">
-                            <span class="poster-name">${safeStr(item.postedBy?.fullName || 'Verified Owner')}</span>
+
+                        <!-- 🎯 USER PROFILE CLICK TRIGGER -->
+                        <div class="poster-row" onclick="openUserProfile()" style="cursor: pointer;">
+                            <img class="poster-avatar" src="${posterImg}" alt="Poster">
+                            <span class="poster-name">${safeStr(posterName)}</span>
                             <div class="poster-dot"></div>
                             <span class="poster-time">${timeAgo}</span>
                         </div>
+
                         <h2 class="prop-title">${safeStr(item.landName || 'Property')}</h2>
                     </div>
 
@@ -1148,7 +848,49 @@
                 </div>`;
         }
 
-        function addScrollHint() { /* scroll hint is already in first reel */ }
+        // ─── USER PROFILE MODAL ──────────────────────────────────────
+        function openUserProfile() {
+            const user = typeof getUser === 'function' ? getUser() : null;
+            const body = document.getElementById('userProfileBody');
+
+            if (user && user.fullName) {
+                const safeName = escapeHTML(user.fullName || 'User');
+                const avatar = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(safeName)}&background=10b981&color=fff&size=120`;
+
+                body.innerHTML = `
+                    <div style="padding: 20px 10px; text-align: center;">
+                        <img src="${avatar}" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid #00c07f; margin-bottom: 15px; object-fit: cover;">
+                        <h3 style="color: white; font-family: 'Syne', sans-serif; font-size: 24px; margin-bottom: 5px;">${safeName}</h3>
+                        <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin-bottom: 25px;">${escapeHTML(user.email || 'No Email Provided')}</p>
+
+                        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px; text-align: left;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px; margin-bottom: 15px;">
+                                <div>
+                                    <p style="color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px;">Account ID</p>
+                                    <p style="color: white; font-family: monospace; font-size: 18px; font-weight: bold; margin: 0;">#${user._id ? user._id.substring(user._id.length - 6) : 'ZMN-12345'}</p>
+                                </div>
+                                <i class="fas fa-check-circle" style="color: #00c07f; font-size: 24px;"></i>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: white; font-size: 14px; font-weight: 600;">Account Role</span>
+                                <span style="background: var(--blue); color: white; font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 6px; letter-spacing: 1px;">${user.role ? user.role.toUpperCase() : 'BUYER'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                body.innerHTML = `
+                    <div style="padding: 40px 10px; text-align: center;">
+                        <i class="fas fa-user-circle" style="font-size: 70px; color: rgba(255,255,255,0.2); margin-bottom: 20px;"></i>
+                        <h3 style="color: white; font-family: 'Syne', sans-serif; font-size: 22px; margin-bottom: 10px;">Guest User</h3>
+                        <p style="color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 30px; line-height: 1.5;">You are currently browsing anonymously. Login to view your profile and manage properties.</p>
+                        <a href="login.html" class="btn-publish" style="text-decoration: none; max-width: 250px; margin: 0 auto;">Login to Zamin Dekho</a>
+                    </div>
+                `;
+            }
+            showPanel('userProfilePanel');
+        }
 
         // ─── SEND TO SEARCH ────────────────────────────────────
         function sendToSearch(name, address) {
@@ -1212,7 +954,7 @@
             showPanel('commentsPanel');
         }
 
-        /* 🎯 ALL DETAILS (Price, Location, Size, Road, Extra Info) LOADED HERE ON CLICK */
+        // Updated openDetails to handle Ad logic
         function openDetails(item, isAd) {
             const safeStr = s => typeof escapeHTML === 'function' ? escapeHTML(s||'—') : (s||'—');
 
@@ -1265,8 +1007,9 @@
         }
         function closeAllPanels() {
             document.getElementById('panelOverlay').classList.remove('active');
-            ['commentsPanel','detailsPanel'].forEach(id => {
-                document.getElementById(id).classList.remove('active');
+            ['commentsPanel','detailsPanel','userProfilePanel'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.classList.remove('active');
             });
         }
 
@@ -1484,4 +1227,4 @@
         }
     </script>
 </body>
-</html> 
+</html>
