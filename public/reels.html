@@ -54,7 +54,7 @@
             height: 100vh; width: 100vw;
             scroll-snap-align: start;
             position: relative;
-            background: #0d0d0d;
+            background: #111; 
             overflow: hidden;
         }
 
@@ -65,11 +65,11 @@
             display: block;
         }
         img.reel-media {
-            animation: slowZoom 18s infinite alternate ease-in-out;
+            animation: slowZoom 25s infinite alternate ease-in-out; /* Smooth zoom to feel like video */
         }
         @keyframes slowZoom {
             from { transform: scale(1); }
-            to   { transform: scale(1.12); }
+            to   { transform: scale(1.15); }
         }
 
         /* Gradients — top & bottom */
@@ -82,7 +82,7 @@
         .reel-gradient-bottom {
             position: absolute; bottom: 0; left: 0;
             width: 100%; height: 65%;
-            background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 45%, transparent 100%);
+            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 45%, transparent 100%);
             z-index: 2; pointer-events: none;
         }
 
@@ -151,18 +151,18 @@
 
         /* ── BOTTOM INFO ────────────────────────────────── */
         .reel-info {
-            position: absolute; bottom: 28px; left: 16px;
+            position: absolute; bottom: 35px; left: 16px;
             z-index: 10; width: calc(100% - 90px);
             color: white;
         }
 
         .badge-row {
             display: flex; gap: 6px; flex-wrap: wrap;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
         .badge {
-            font-size: 10px; font-weight: 800;
-            padding: 4px 10px; border-radius: 6px;
+            font-size: 11px; font-weight: 800;
+            padding: 5px 12px; border-radius: 6px;
             text-transform: uppercase; letter-spacing: 0.5px;
             display: inline-flex; align-items: center; gap: 4px;
         }
@@ -173,58 +173,67 @@
 
         .poster-row {
             display: flex; align-items: center; gap: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
         .poster-avatar {
-            width: 28px; height: 28px; border-radius: 50%;
+            width: 32px; height: 32px; border-radius: 50%;
             border: 2px solid var(--green);
             object-fit: cover;
         }
         .poster-name {
-            font-size: 13px; font-weight: 600;
-            color: rgba(255,255,255,0.9);
+            font-size: 14px; font-weight: 600;
+            color: #fff;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.8);
         }
         .poster-dot {
             width: 4px; height: 4px; border-radius: 50%;
-            background: var(--text-dim);
+            background: rgba(255,255,255,0.8);
         }
         .poster-time {
-            font-size: 11px; color: var(--text-dim);
+            font-size: 12px; color: rgba(255,255,255,0.8);
         }
 
         .prop-title {
             font-family: 'Syne', sans-serif;
-            font-size: 22px; font-weight: 800;
-            line-height: 1.2; margin-bottom: 7px;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+            font-size: 24px; font-weight: 800;
+            line-height: 1.2; margin-bottom: 8px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
         }
 
+        /* 🚀 IMPROVED ADDRESS & META INFO */
         .prop-meta {
-            display: flex; flex-wrap: wrap; gap: 10px;
-            margin-bottom: 10px;
+            display: flex; flex-wrap: wrap; gap: 12px;
+            margin-bottom: 12px;
         }
         .prop-meta-item {
-            font-size: 12px; font-weight: 500;
-            color: rgba(255,255,255,0.75);
-            display: flex; align-items: center; gap: 4px;
+            font-size: 15px; /* BIGGER FONT */
+            font-weight: 600; /* BOLDER */
+            color: #ffffff;
+            display: flex; align-items: center; gap: 6px;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.9); /* Stronger shadow to read on white backgrounds */
+            background: rgba(0,0,0,0.3); /* Subtle dark glass behind text */
+            padding: 4px 8px;
+            border-radius: 6px;
+            backdrop-filter: blur(4px);
         }
-        .prop-meta-item i { font-size: 11px; color: var(--green); }
+        .prop-meta-item i { font-size: 14px; color: var(--green); }
 
         .prop-price {
-            font-size: 26px; font-weight: 800;
+            font-size: 28px; font-weight: 800;
             color: var(--green);
             font-family: 'Syne', sans-serif;
-            text-shadow: 0 2px 12px rgba(0,192,127,0.3);
+            text-shadow: 0 2px 12px rgba(0,0,0,0.9);
             line-height: 1;
+            margin-top: 5px;
         }
         .prop-price sup {
-            font-size: 14px; font-weight: 700;
+            font-size: 15px; font-weight: 700;
             vertical-align: super; margin-right: 2px;
         }
 
         /* ── ACTION BUTTONS ─────────────────────────────── */
         .reel-actions {
-            position: absolute; bottom: 36px; right: 14px;
+            position: absolute; bottom: 40px; right: 14px;
             z-index: 10;
             display: flex; flex-direction: column;
             align-items: center; gap: 22px;
@@ -234,7 +243,7 @@
             background: none; border: none;
             color: white; cursor: pointer;
             display: flex; flex-direction: column;
-            align-items: center; gap: 4px;
+            align-items: center; gap: 6px;
             padding: 0; text-decoration: none;
             -webkit-tap-highlight-color: transparent;
             transition: transform 0.15s;
@@ -242,10 +251,10 @@
         .action-btn:active { transform: scale(0.88); }
 
         .action-icon {
-            width: 46px; height: 46px; border-radius: 50%;
-            background: rgba(255,255,255,0.12);
+            width: 48px; height: 48px; border-radius: 50%;
+            background: rgba(255,255,255,0.15);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.25);
             display: flex; align-items: center; justify-content: center;
             font-size: 20px; color: white;
             transition: background 0.2s, transform 0.15s;
@@ -265,8 +274,8 @@
         }
 
         .action-label {
-            font-size: 11px; font-weight: 700;
-            color: rgba(255,255,255,0.9);
+            font-size: 12px; font-weight: 700;
+            color: rgba(255,255,255,0.95);
             text-shadow: 0 1px 4px rgba(0,0,0,0.8);
         }
 
@@ -274,18 +283,6 @@
             background: var(--green-dim);
             border-color: var(--green);
             color: var(--green);
-        }
-
-        /* Video mute toggle */
-        .mute-btn {
-            position: absolute; bottom: 175px; right: 14px;
-            z-index: 10;
-            width: 36px; height: 36px; border-radius: 50%;
-            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2);
-            color: white; font-size: 14px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; backdrop-filter: blur(8px);
-            display: none;
         }
 
         /* Progress bar */
@@ -502,41 +499,6 @@
             justify-content: center; gap: 8px;
             text-decoration: none;
         }
-
-        /* ── SHARE SHEET (Kept hidden but safe as requested) ──────────────────────────────── */
-        .share-sheet {
-            position: fixed; bottom: -100%; left: 0; width: 100%;
-            background: #111;
-            border-radius: 22px 22px 0 0;
-            z-index: 1000;
-            transition: bottom 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-            padding: 16px 20px 30px;
-            border-top: 1px solid rgba(255,255,255,0.08);
-        }
-        .share-sheet.active { bottom: 0; }
-        .share-title {
-            text-align: center; font-size: 15px;
-            font-weight: 700; color: white;
-            margin: 8px 0 20px;
-        }
-        .share-options {
-            display: flex; justify-content: space-around;
-        }
-        .share-option {
-            display: flex; flex-direction: column;
-            align-items: center; gap: 8px;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .share-icon {
-            width: 54px; height: 54px; border-radius: 16px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 22px;
-        }
-        .share-label { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); }
-        .share-whatsapp { background: #25D366; color: white; }
-        .share-copy     { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.15); }
-        .share-more     { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.15); }
 
         /* ── CAMERA OVERLAY ─────────────────────────────── */
         .camera-overlay {
@@ -769,9 +731,8 @@
 
         /* ── RESPONSIVE ───────────────────────────────── */
         @media (min-width: 500px) {
-            .reels-container { display: flex; justify-content: center; }
-            .reel-card { max-width: 420px; }
-            .comments-panel, .details-panel, .share-sheet { max-width: 420px; left: 50%; transform: translateX(-50%); }
+            .reel-card { max-width: 420px; margin: 0 auto; border-left: 1px solid #333; border-right: 1px solid #333; }
+            .comments-panel, .details-panel { max-width: 420px; left: 50%; transform: translateX(-50%); }
             .panel-overlay { max-width: 420px; left: 50%; transform: translateX(-50%); }
         }
 
@@ -852,26 +813,6 @@
         </div>
         <div class="details-body" id="detailsBody">
             <!-- filled dynamically -->
-        </div>
-    </div>
-
-    <!-- SHARE SHEET (Kept hidden but safe as requested) -->
-    <div class="share-sheet" id="shareSheet">
-        <div class="panel-handle"></div>
-        <div class="share-title">Share this property</div>
-        <div class="share-options">
-            <div class="share-option" onclick="shareWhatsApp()">
-                <div class="share-icon share-whatsapp"><i class="fab fa-whatsapp"></i></div>
-                <span class="share-label">WhatsApp</span>
-            </div>
-            <div class="share-option" onclick="copyLink()">
-                <div class="share-icon share-copy"><i class="fas fa-link"></i></div>
-                <span class="share-label">Copy Link</span>
-            </div>
-            <div class="share-option" onclick="nativeShare()">
-                <div class="share-icon share-more"><i class="fas fa-share-alt"></i></div>
-                <span class="share-label">More</span>
-            </div>
         </div>
     </div>
 
@@ -1002,7 +943,7 @@
             const dummyReels = [
                 {
                     _id: "reel_001",
-                    imageUrl: "https://cdn.pixabay.com/video/2019/08/17/26101-355416047_tiny.mp4",
+                    imageUrl: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1080&h=1920&q=80",
                     landName: "Riverside Peace: 2-Acre Farm Plot 🌊",
                     landPrice: 3500000,
                     landSize: "2 Acres",
@@ -1015,7 +956,7 @@
                 },
                 {
                     _id: "reel_002",
-                    imageUrl: "https://cdn.pixabay.com/video/2020/03/10/33471-396568221_tiny.mp4",
+                    imageUrl: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1080&h=1920&q=80",
                     landName: "Prime Highway Commercial Goldmine 🏪",
                     landPrice: 12000000,
                     landSize: "5000 Sq.Ft",
@@ -1028,7 +969,7 @@
                 },
                 {
                     _id: "reel_003",
-                    imageUrl: "https://cdn.pixabay.com/video/2021/08/11/84687-588365691_tiny.mp4",
+                    imageUrl: "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=1080&h=1920&q=80",
                     landName: "Boutique Cafe Space in Bandra ☕",
                     landPrice: 45000000,
                     landSize: "800 Sq.Ft",
@@ -1041,7 +982,7 @@
                 },
                 {
                     _id: "reel_004",
-                    imageUrl: "https://cdn.pixabay.com/video/2022/11/01/137330-766795493_tiny.mp4",
+                    imageUrl: "https://images.unsplash.com/photo-1448630360428-65456885c650?auto=format&fit=crop&w=1080&h=1920&q=80",
                     landName: "Hidden Gem: Mountain View Plot ⛰️",
                     landPrice: 1800000,
                     landSize: "1.5 Acres",
@@ -1054,7 +995,7 @@
                 },
                 {
                     _id: "reel_005",
-                    imageUrl: "https://cdn.pixabay.com/video/2016/10/24/6055-188569837_tiny.mp4",
+                    imageUrl: "https://images.unsplash.com/photo-1592424001844-3d024e101a08?auto=format&fit=crop&w=1080&h=1920&q=80",
                     landName: "Organic Mango Orchard 🥭",
                     landPrice: 5500000,
                     landSize: "4 Acres",
@@ -1067,7 +1008,7 @@
                 },
                 {
                     _id: "reel_006",
-                    imageUrl: "https://cdn.pixabay.com/video/2018/06/20/16872-276686000_tiny.mp4",
+                    imageUrl: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1080&h=1920&q=80",
                     landName: "Luxury Villa Plot in Smart City 🏡",
                     landPrice: 8500000,
                     landSize: "2400 Sq.Ft",
@@ -1080,7 +1021,7 @@
                 },
                 {
                     _id: "reel_007",
-                    imageUrl: "https://cdn.pixabay.com/video/2019/11/04/28574-370591244_tiny.mp4",
+                    imageUrl: "https://images.unsplash.com/photo-1586528116311-ad8ed745f43c?auto=format&fit=crop&w=1080&h=1920&q=80",
                     landName: "Massive Industrial Warehouse Space 🏭",
                     landPrice: 32000000,
                     landSize: "2 Acres",
@@ -1093,7 +1034,7 @@
                 },
                 {
                     _id: "reel_008",
-                    imageUrl: "https://cdn.pixabay.com/video/2020/08/15/47285-450096181_tiny.mp4",
+                    imageUrl: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1080&h=1920&q=80",
                     landName: "Sunset Valley: Weekend Farm 🏕️",
                     landPrice: 2200000,
                     landSize: "1 Acre",
@@ -1106,7 +1047,7 @@
                 },
                 {
                     _id: "reel_009",
-                    imageUrl: "https://cdn.pixabay.com/video/2017/02/09/7811-204121516_tiny.mp4",
+                    imageUrl: "https://images.unsplash.com/photo-1555636222-cae831e670b3?auto=format&fit=crop&w=1080&h=1920&q=80",
                     landName: "Corner Shop Plot in Main Market 🛍️",
                     landPrice: 6500000,
                     landSize: "1200 Sq.Ft",
@@ -1119,7 +1060,7 @@
                 },
                 {
                     _id: "reel_010",
-                    imageUrl: "https://cdn.pixabay.com/video/2023/10/22/186005-877114407_tiny.mp4",
+                    imageUrl: "https://images.unsplash.com/photo-1433086966358-54859d0ed716?auto=format&fit=crop&w=1080&h=1920&q=80",
                     landName: "Eco-Village Lakeview Land 🍃",
                     landPrice: 4200000,
                     landSize: "3 Acres",
@@ -1362,37 +1303,13 @@
             showPanel('detailsPanel');
         }
 
-        // (Original Share Sheet features maintained below just in case)
-        let shareItemId, shareItemName;
-        function openShare(id, name) {
-            shareItemId = id; shareItemName = name;
-            showPanel('shareSheet');
-        }
-        function shareWhatsApp() {
-            const url = `${location.origin}/property.html?id=${shareItemId}`;
-            window.open(`https://wa.me/?text=${encodeURIComponent(`🏡 ${shareItemName} - Check this property on Zamin Dekho!\n${url}`)}`);
-        }
-        function copyLink() {
-            const url = `${location.origin}/property.html?id=${shareItemId}`;
-            navigator.clipboard.writeText(url).then(() => showToast('Link copied!'));
-            closeAllPanels();
-        }
-        function nativeShare() {
-            const url = `${location.origin}/property.html?id=${shareItemId}`;
-            if (navigator.share) {
-                navigator.share({ title: shareItemName, url });
-            } else {
-                copyLink();
-            }
-        }
-
         function showPanel(id) {
             document.getElementById('panelOverlay').classList.add('active');
             document.getElementById(id).classList.add('active');
         }
         function closeAllPanels() {
             document.getElementById('panelOverlay').classList.remove('active');
-            ['commentsPanel','detailsPanel','shareSheet'].forEach(id => {
+            ['commentsPanel','detailsPanel'].forEach(id => {
                 document.getElementById(id).classList.remove('active');
             });
         }
