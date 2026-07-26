@@ -131,4 +131,16 @@ router.put(
   adminController.toggleUserStatus
 );
 
+// ==========================================
+// 🕵️ 6. SECURITY & SYSTEM LOGS (Admin Only)
+// ==========================================
+
+// Route: Fetch all login logs 
+router.get(
+  "/login-logs",
+  verifyToken,
+  authorizeRoles("admin"),
+  adminController.getLoginLogs
+);
+
 module.exports = router;

@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const twilio = require('twilio'); 
 const User = require('../models/User');
 const Broker = require('../models/Broker');
+const LoginLog = require('../models/LoginLog'); // 🕵️ ADDED: LoginLog Model Import
 
 // 👑 ADMIN ACCESS SHIELD (100% PROTECTED)
 const ADMIN_EMAILS = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase()) : [];
@@ -166,6 +167,17 @@ exports.login = async (req, res) => {
 
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
+        // 🕵️ LOGIN TRACKING LOGIC (For Email/Password)
+        if (!ADMIN_EMAILS.includes(safeEmail)) {
+            try {
+                await LoginLog.create({
+                    email: safeEmail,
+                    provider: 'Local Email',
+                    ipAddress: req.ip || req.connection.remoteAddress
+                });
+            } catch (err) { console.error("Login tracking error:", err.message); }
+        }
+
         const userObj = user.toObject();
         delete userObj.password; 
 
@@ -191,6 +203,19 @@ exports.socialLoginCallback = async (req, res) => {
     }
 
     const token = jwt.sign({ id: req.user._id, role: userRole }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    // 🕵️ LOGIN TRACKING LOGIC (For Web Social Logins like Google, Facebook, X)
+    if (!ADMIN_EMAILS.includes(safeEmail)) {
+        try {
+            const providerName = req.user.provider ? req.user.provider.charAt(0).toUpperCase() + req.user.provider.slice(1) : 'Social Web';
+            await LoginLog.create({
+                email: safeEmail,
+                provider: providerName,
+                ipAddress: req.ip || req.connection.remoteAddress
+            });
+        } catch (err) { console.error("Login tracking error:", err.message); }
+    }
+
     const userData = encodeURIComponent(JSON.stringify({ 
         _id: req.user._id, 
         fullName: req.user.fullName, 
@@ -304,6 +329,17 @@ exports.verifyFlutterGoogleToken = async (req, res) => {
             process.env.JWT_SECRET, 
             { expiresIn: "7d" }
         );
+
+        // 🕵️ LOGIN TRACKING LOGIC (For Flutter Google App)
+        if (!ADMIN_EMAILS.includes(safeEmail)) {
+            try {
+                await LoginLog.create({
+                    email: safeEmail,
+                    provider: 'Flutter Google',
+                    ipAddress: req.ip || req.connection.remoteAddress
+                });
+            } catch (err) { console.error("Login tracking error:", err.message); }
+        }
 
         const userObj = user.toObject();
         delete userObj.password;

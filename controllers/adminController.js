@@ -2,6 +2,7 @@ const Lead = require('../models/Lead');
 const Listing = require('../models/Listing');
 const User = require('../models/User');
 const Broker = require('../models/Broker');
+const LoginLog = require('../models/LoginLog'); // 🕵️ ADDED: LoginLog Model Import
 
 // ==========================================
 // 👥 1. USER MANAGEMENT (Admin Only)
@@ -258,4 +259,22 @@ exports.getDashboardStats = async (req, res) => {
             stats: { totalLeads, tokenPaidDeals, closedDeals, activeListings, pendingListings, flaggedBrokersCount }
         });
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
+};
+
+// ==========================================
+// 🕵️ 10. ADMIN DASHBOARD - LOGIN TRACKING LOGS
+// ==========================================
+exports.getLoginLogs = async (req, res) => {
+    try {
+        // 🛡️ SECURITY FIX: Strict Admin Check
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: "Access Denied. Admins only." });
+        }
+
+        const logs = await LoginLog.find().sort({ loginTime: -1 }).limit(50);
+        res.json({ success: true, count: logs.length, logs });
+    } catch (error) { 
+        console.error("Fetch Login Logs Error:", error);
+        res.status(500).json({ success: false, error: error.message }); 
+    }
 };
