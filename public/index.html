@@ -186,7 +186,13 @@
 
             /* Modal Styling */
             .modal-content { border-radius: 24px; border: none; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
-        </style>
+            /* ✨ 1 Inch (approx 90px) gap between CRM Panel and User Menu on Desktop ✨ */
+                    @media (min-width: 992px) {
+                        .desktop-auth-gap {
+                            margin-left: 90px !important; 
+                        }
+                    }
+        </style> 
     </head>
     <body>
 
@@ -234,7 +240,7 @@
                             </ul>
 
                             <!-- Auth Area: User Avatar & Logout -->
-                            <div id="authArea" class="auth-area ms-lg-auto mt-3 mt-lg-0"></div>
+                            <div id="authArea" class="auth-area desktop-auth-gap mt-3 mt-lg-0"></div>
                         </div>
                     </div>
                 </div>
