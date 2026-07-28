@@ -198,6 +198,48 @@
                     margin-left: 38px !important; 
                 }
             }
+            /* ✨ Mobile Responsive Fixes for Screen Overflow & Search Bar ✨ */
+            html, body {
+                max-width: 100vw;
+                overflow-x: hidden;
+            }
+
+            @media (max-width: 767.98px) {
+                .search-wrapper {
+                    padding-left: 15px;
+                    padding-right: 15px;
+                }
+                .main-search-bar {
+                    flex-direction: column;
+                    align-items: stretch;
+                    padding: 15px;
+                    gap: 10px;
+                }
+                .cat-select-btn {
+                    border-right: none;
+                    border-bottom: 2px solid #f1f5f9;
+                    width: 100%;
+                    text-align: left;
+                    padding: 10px 5px;
+                }
+                .search-input-group {
+                    padding: 10px 5px;
+                    width: 100%;
+                }
+                .icon-actions {
+                    justify-content: flex-end; /* Mic aur GPS icon ko right side rakhne ke liye */
+                    padding: 0 5px 10px 0;
+                    width: 100%;
+                }
+                .vertical-divider {
+                    display: none; /* Mobile pe is seedhi line ki zarurat nahi */
+                }
+                .btn-search-main {
+                    margin-left: 0;
+                    width: 100%;
+                    padding: 15px;
+                }
+            }
         </style> 
     </head>
     <body>
