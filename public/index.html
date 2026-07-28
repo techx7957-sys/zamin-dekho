@@ -47,30 +47,43 @@
             .nav-link { font-weight: 700; color: #475569 !important; font-size: 15px; transition: 0.3s; border-radius: 8px; padding: 8px 18px !important; margin: 0 2px;}
             .nav-link:hover, .nav-link.active { color: #059669 !important; background: #ecfdf5; }
 
-            /* ✨ NEW: Side Drawer Styling ✨ */
+            /* ✨ NEW: Side Drawer Styling (Right Side, Full Height, Pure White) ✨ */
             .custom-side-drawer {
-                width: 2.5in !important; /* 2.5 inches width as requested */
-                background-color: #ffffff !important;
-                z-index: 1055 !important; /* Keeps it above everything else */
+                width: 2.5in !important; /* Exactly 2.5 inches */
+                background-color: #ffffff !important; /* Pure White */
+                z-index: 1055 !important; /* Above everything */
+                height: 100vh !important; /* Screen jitna lamba */
+                border-left: 1px solid #e2e8f0;
             }
-            @media (max-width: 991.98px) {
-                .custom-side-drawer .offcanvas-body {
-                    padding: 1rem;
-                }
-                .custom-side-drawer .nav-link {
-                    margin-bottom: 10px;
-                    text-align: left;
-                }
-                .custom-side-drawer .auth-area {
-                    flex-direction: column;
-                    align-items: flex-start;
-                    width: 100%;
-                }
-                .custom-side-drawer .auth-area button, .custom-side-drawer .auth-area a {
-                    width: 100%;
-                    margin-bottom: 10px;
-                    justify-content: center;
-                }
+
+            /* Ensures options stack vertically inside the drawer */
+            .custom-side-drawer .offcanvas-body {
+                display: flex;
+                flex-direction: column;
+                padding: 1.5rem 1rem;
+            }
+            .custom-side-drawer .navbar-nav {
+                flex-direction: column !important;
+                width: 100%;
+            }
+            .custom-side-drawer .nav-link {
+                text-align: left !important;
+                padding: 12px 15px !important;
+                margin-bottom: 10px;
+                display: block;
+            }
+            .custom-side-drawer .auth-area {
+                flex-direction: column;
+                align-items: stretch;
+                width: 100%;
+                margin-top: auto; /* Push to bottom or keep in flow */
+                padding-top: 20px;
+            }
+            .custom-side-drawer .auth-area button, 
+            .custom-side-drawer .auth-area a {
+                width: 100%;
+                justify-content: center;
+                margin-bottom: 12px;
             }
 
             /* NEW PREMIUM AUTH UI */
@@ -173,39 +186,39 @@
     <body>
 
         <main>
-            <nav class="navbar navbar-expand-lg sticky-top">
+            <nav class="navbar sticky-top">
                 <div class="container-fluid px-lg-5">
                     <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</a>
 
-                    <!-- ✨ CHANGED: Trigger the Offcanvas Drawer instead of regular collapse ✨ -->
+                    <!-- ✨ Hamburger Menu that opens drawer ✨ -->
                     <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#zaminNavDrawer" aria-controls="zaminNavDrawer" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon" aria-hidden="true"></span>
                     </button>
 
-                    <!-- ✨ CHANGED: Offcanvas Drawer implementation ✨ -->
-                    <div class="offcanvas offcanvas-start custom-side-drawer" tabindex="-1" id="zaminNavDrawer" aria-labelledby="zaminNavDrawerLabel">
+                    <!-- ✨ CHANGED: offcanvas-end makes it open from right to left ✨ -->
+                    <div class="offcanvas offcanvas-end custom-side-drawer" tabindex="-1" id="zaminNavDrawer" aria-labelledby="zaminNavDrawerLabel">
 
-                        <div class="offcanvas-header border-bottom d-lg-none">
+                        <div class="offcanvas-header border-bottom">
                             <h5 class="offcanvas-title fw-bold text-success" id="zaminNavDrawerLabel"><i class="fas fa-leaf me-2"></i>Menu</h5>
                             <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                         </div>
 
                         <div class="offcanvas-body">
-                            <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center text-lg-start align-items-lg-center gap-lg-2 w-100 justify-content-lg-center">
+                            <!-- Horizontal hata ke flex-column add kiya for vertical list -->
+                            <ul class="navbar-nav flex-column mb-auto">
                                 <li class="nav-item"><a class="nav-link active" href="index.html"><i class="fas fa-search me-1"></i> Find Land</a></li>
                                 <li class="nav-item">
                                     <a class="nav-link text-primary fw-bold" href="reels.html" style="background: #eff6ff;">
                                         <i class="fas fa-play-circle me-1"></i> Property Reels
                                     </a>
                                 </li>
-
                                 <li class="nav-item auth-required-link d-none"><a class="nav-link" href="dashboard.html#postTab"><i class="fas fa-plus-circle me-1"></i> Post Ad</a></li>
                                 <li class="nav-item auth-required-link d-none"><a class="nav-link" href="dashboard.html#bookingsTab"><i class="fas fa-ticket-alt me-1"></i> Bookings</a></li>
-
-                                <li id="adminLinkArea" class="nav-item ms-lg-3"></li>
+                                <li id="adminLinkArea" class="nav-item"></li>
                             </ul>
 
-                            <div id="authArea" class="auth-area justify-content-center mt-3 mt-lg-0"></div>
+                            <!-- Ye section drawer ke bottom area mein stack hoga -->
+                            <div id="authArea" class="auth-area"></div>
                         </div>
                     </div>
                 </div>
@@ -482,7 +495,6 @@
                 fetchAll(); 
             }
 
-            // 🚀 THE ULTIMATE FIX: Reverse Geocoding locked strictly to International English
             function detectFastGPS() {
                 const input = document.getElementById('mainSearchInput');
                 const icon = document.getElementById('gpsIcon');
@@ -497,22 +509,18 @@
 
                 navigator.geolocation.getCurrentPosition(
                     async (pos) => {
-                        // Global scope variables defined in your script
                         userLat = pos.coords.latitude;
                         userLng = pos.coords.longitude;
 
                         try {
-                            // 🔥 THE MASTER FIX: Appended '&accept-language=en' to strictly enforce English parsing
                             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}&addressdetails=1&accept-language=en`);
                             const data = await res.json();
                             const addr = data.address || {};
 
-                            // Fallback sequence to extract accurate local identification
                             let district = addr.city || addr.state_district || addr.county || addr.town || addr.village || "";
                             district = district.replace(/ District/gi, '').trim(); 
                             const state = addr.state || "";
 
-                            // Populate UI smoothly with safe sanitization
                             if (district && state) {
                                 input.value = `Nearby: ${district}, ${state}`;
                             } else {
@@ -522,7 +530,6 @@
                             icon.classList.remove('fa-spin');
                             icon.classList.add('gps-active'); 
 
-                            // Execute downstream search logic autonomously
                             if (typeof executeAdvancedSearch === 'function') {
                                 executeAdvancedSearch();
                             }
@@ -538,7 +545,6 @@
                         icon.classList.remove('fa-spin'); 
                         Swal.fire("Warning", "Please allow location access to find nearby lands.", "warning"); 
                     }, 
-                    // Optimized GPS configuration parameters for immediate native calculation
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
                 );
             }
@@ -639,7 +645,6 @@
                 return arr;
             }
 
-            // 🚀 MASTER FIX: Bulletproof Vercel Image URLs and XSS protection
             function getCardHTML(item, badgeHTML = '') {
                 const imgSource = typeof resolveImageUrl === 'function' ? resolveImageUrl(item.imageUrl) : item.imageUrl;
 
@@ -655,7 +660,6 @@
 
                 const verifiedBadge = `<div class="badge-verified"><i class="fas fa-shield-check text-success"></i> Zamin Verified</div>`;
 
-                // 🌟 REMOVED ONCLICK, Added data-id for CSP event delegation
                 return `
                     <div class="property-card h-100" data-id="${item._id}">
                         <div class="img-wrapper">
@@ -726,7 +730,6 @@
                         }
                     } else {
                         resCount.innerText = "0 Results";
-                        // 🌟 REMOVED ONCLICK from Clear Filter button, added class
                         mainGrid.innerHTML = `<div class="text-center w-100 py-5"><i class="fas fa-search-minus fs-1 text-muted mb-3"></i><h4 class="text-muted fw-bold">No properties found in this criteria!</h4><button class="btn btn-outline-primary mt-3 rounded-pill fw-bold clear-filters-dynamic-btn">Clear Filters</button></div>`;
                         if(!isSearch) {
                             premiumGrid.innerHTML = `<div class="text-muted small ps-2 fw-bold">No premium ads yet.</div>`;
@@ -849,55 +852,45 @@
 
                         document.getElementById('modalUserId').innerText = (user && user._id) ? `#${user._id.substring(user._id.length - 6)}` : 'N/A';
 
-                        // 🌟 REMOVED ONCLICK, Added ID for CSP delegation
                         authArea.innerHTML = `
                             <button data-bs-toggle="modal" data-bs-target="#userProfileModal" class="user-id-btn me-2">
                                 <img src="${avatarUrl}" alt="${escapeHTML(firstName)}" width="24" height="24" loading="lazy" style="border-radius:50%; object-fit:cover;"> ${escapeHTML(firstName)}
                             </button>
                             <button id="navLogoutBtn" class="logout-btn-premium"><i class="fas fa-sign-out-alt"></i> Logout</button>
                         `;
-                    } catch(e) {
-                        // console.error("Error parsing user data:", e);
-                    }
+                    } catch(e) {}
                 } else { 
-                    authArea.innerHTML = `<a href="login.html" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm" style="background:#059669;"><i class="fas fa-user me-2"></i> Login to Explore</a>`; 
+                    authArea.innerHTML = `<a href="login.html" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm" style="background:#059669; width:100%; justify-content:center; display:flex;"><i class="fas fa-user me-2"></i> Login to Explore</a>`; 
                 }
             }
 
-            // 🌟 MASTER EVENT LISTENER (REPLACES ALL ONCLICK)
             document.addEventListener('click', function(e) {
-                // 1. Hide filter panel if clicked outside search wrapper
                 if(!e.target.closest('.search-wrapper') && !e.target.closest('.filter-panel')) {
                     const panel = document.getElementById('filterPanel');
                     if(panel) panel.style.display = 'none';
                 }
 
-                // 2. Dynamic Logout Button
                 if (e.target.closest('#navLogoutBtn')) {
                     if (typeof logout === 'function') logout();
                 }
 
-                // 3. Dynamic Property Card Click
                 const card = e.target.closest('.property-card');
                 if (card) {
                     const id = card.getAttribute('data-id');
                     if (id) window.location.href = `property.html?id=${id}`;
                 }
 
-                // 4. Dynamic Clear Filters Button
                 if (e.target.closest('.clear-filters-dynamic-btn')) {
                     resetFilters();
                     executeAdvancedSearch();
                 }
             });
 
-            // 🌟 CONNECTING STATIC ELEMENTS
             window.addEventListener('DOMContentLoaded', () => { 
                 updateCustomNavbarUI(); 
                 updateCategoryUI(); 
                 fetchAll(); 
 
-                // Binding search & filter actions safely
                 document.getElementById('mainCategory')?.addEventListener('change', updateCategoryUI);
                 document.getElementById('mainSearchInput')?.addEventListener('click', () => toggleFilterPanel(true));
                 document.getElementById('gpsIcon')?.addEventListener('click', detectFastGPS);
@@ -905,7 +898,6 @@
                 document.getElementById('mainSearchBtn')?.addEventListener('click', executeAdvancedSearch);
                 document.getElementById('resetFiltersBtn')?.addEventListener('click', resetFilters);
 
-                // Binding Modal elements safely
                 document.getElementById('modalCloseBtnTop')?.addEventListener('click', cancelProfileEdit);
                 document.getElementById('avatarUpload')?.addEventListener('change', previewAvatar);
                 document.getElementById('enableEditBtn')?.addEventListener('click', enableProfileEdit);
