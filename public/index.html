@@ -192,6 +192,12 @@
                             margin-left: 90px !important; 
                         }
                     }
+            /* ✨ 1 cm (approx 38px) gap between Find Land and Property Reels on Desktop ✨ */
+            @media (min-width: 992px) {
+                .reel-gap {
+                    margin-left: 38px !important; 
+                }
+            }
         </style> 
     </head>
     <body>
@@ -225,7 +231,7 @@
                                     <a class="nav-link nav-pill-green" href="index.html"><i class="fas fa-search me-1"></i> Find Land</a>
                                 </li>
                                 <!-- Blue Pill -->
-                                <li class="nav-item">
+                                <li class="nav-item reel-gap">
                                     <a class="nav-link nav-pill-blue" href="reels.html"><i class="fas fa-play-circle me-1"></i> Property Reels</a>
                                 </li>
                                 <!-- Normal Pills -->
