@@ -36,7 +36,7 @@
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js" integrity="sha384-YB/DdIkloKoRpclWB8bNcYXWakt57USgtQPDzvnIDHYU0lasD5eWlXVo1S4ODukY" crossorigin="anonymous"></script>
 
         <style>
-body { background: #f8fafc; font-family: 'Inter', sans-serif; overflow-x: hidden; display: flex; flex-direction: column; min-height: 100vh; }
+            body { background: #f8fafc; font-family: 'Inter', sans-serif; overflow-x: hidden; display: flex; flex-direction: column; min-height: 100vh; }
             main { flex: 1; } 
 
             /* Navbar Styling */
@@ -46,6 +46,32 @@ body { background: #f8fafc; font-family: 'Inter', sans-serif; overflow-x: hidden
             /* Nav Links Styling */
             .nav-link { font-weight: 700; color: #475569 !important; font-size: 15px; transition: 0.3s; border-radius: 8px; padding: 8px 18px !important; margin: 0 2px;}
             .nav-link:hover, .nav-link.active { color: #059669 !important; background: #ecfdf5; }
+
+            /* ✨ NEW: Side Drawer Styling ✨ */
+            .custom-side-drawer {
+                width: 2.5in !important; /* 2.5 inches width as requested */
+                background-color: #ffffff !important;
+                z-index: 1055 !important; /* Keeps it above everything else */
+            }
+            @media (max-width: 991.98px) {
+                .custom-side-drawer .offcanvas-body {
+                    padding: 1rem;
+                }
+                .custom-side-drawer .nav-link {
+                    margin-bottom: 10px;
+                    text-align: left;
+                }
+                .custom-side-drawer .auth-area {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    width: 100%;
+                }
+                .custom-side-drawer .auth-area button, .custom-side-drawer .auth-area a {
+                    width: 100%;
+                    margin-bottom: 10px;
+                    justify-content: center;
+                }
+            }
 
             /* NEW PREMIUM AUTH UI */
             .auth-area { display: flex; align-items: center; gap: 12px; }
@@ -151,26 +177,36 @@ body { background: #f8fafc; font-family: 'Inter', sans-serif; overflow-x: hidden
                 <div class="container-fluid px-lg-5">
                     <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</a>
 
-                    <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#zaminNav" aria-label="Toggle navigation" aria-controls="zaminNav" aria-expanded="false">
+                    <!-- ✨ CHANGED: Trigger the Offcanvas Drawer instead of regular collapse ✨ -->
+                    <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#zaminNavDrawer" aria-controls="zaminNavDrawer" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon" aria-hidden="true"></span>
                     </button>
 
-                    <div class="collapse navbar-collapse" id="zaminNav">
-                        <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center align-items-center gap-lg-2">
-                            <li class="nav-item"><a class="nav-link active" href="index.html"><i class="fas fa-search me-1"></i> Find Land</a></li>
-                            <li class="nav-item">
-                                <a class="nav-link text-primary fw-bold" href="reels.html" style="background: #eff6ff;">
-                                    <i class="fas fa-play-circle me-1"></i> Property Reels
-                                </a>
-                            </li>
+                    <!-- ✨ CHANGED: Offcanvas Drawer implementation ✨ -->
+                    <div class="offcanvas offcanvas-start custom-side-drawer" tabindex="-1" id="zaminNavDrawer" aria-labelledby="zaminNavDrawerLabel">
 
-                            <li class="nav-item auth-required-link d-none"><a class="nav-link" href="dashboard.html#postTab"><i class="fas fa-plus-circle me-1"></i> Post Ad</a></li>
-                            <li class="nav-item auth-required-link d-none"><a class="nav-link" href="dashboard.html#bookingsTab"><i class="fas fa-ticket-alt me-1"></i> Bookings</a></li>
+                        <div class="offcanvas-header border-bottom d-lg-none">
+                            <h5 class="offcanvas-title fw-bold text-success" id="zaminNavDrawerLabel"><i class="fas fa-leaf me-2"></i>Menu</h5>
+                            <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                        </div>
 
-                            <li id="adminLinkArea" class="nav-item ms-lg-3"></li>
-                        </ul>
+                        <div class="offcanvas-body">
+                            <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center text-lg-start align-items-lg-center gap-lg-2 w-100 justify-content-lg-center">
+                                <li class="nav-item"><a class="nav-link active" href="index.html"><i class="fas fa-search me-1"></i> Find Land</a></li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-primary fw-bold" href="reels.html" style="background: #eff6ff;">
+                                        <i class="fas fa-play-circle me-1"></i> Property Reels
+                                    </a>
+                                </li>
 
-                        <div id="authArea" class="auth-area justify-content-center mt-3 mt-lg-0"></div>
+                                <li class="nav-item auth-required-link d-none"><a class="nav-link" href="dashboard.html#postTab"><i class="fas fa-plus-circle me-1"></i> Post Ad</a></li>
+                                <li class="nav-item auth-required-link d-none"><a class="nav-link" href="dashboard.html#bookingsTab"><i class="fas fa-ticket-alt me-1"></i> Bookings</a></li>
+
+                                <li id="adminLinkArea" class="nav-item ms-lg-3"></li>
+                            </ul>
+
+                            <div id="authArea" class="auth-area justify-content-center mt-3 mt-lg-0"></div>
+                        </div>
                     </div>
                 </div>
             </nav>
