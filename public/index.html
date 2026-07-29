@@ -192,10 +192,16 @@
                             margin-left: 90px !important; 
                         }
                     }
-            /* ✨ 1 cm (approx 38px) gap between Find Land and Property Reels on Desktop ✨ */
+            /* ✨ 1 cm (approx 38px) Vertical gap in Drawer (Mobile) & Horizontal gap on Desktop ✨ */
+            @media (max-width: 991.98px) {
+                .reel-gap {
+                    margin-top: 38px !important; /* Drawer ke andar upar se 1 cm space dega */
+                }
+            }
+
             @media (min-width: 992px) {
                 .reel-gap {
-                    margin-left: 38px !important; 
+                    margin-left: 38px !important; /* Desktop par left se 1 cm space dega */
                 }
             }
             /* ✨ Mobile Responsive Fixes for Screen Overflow & Search Bar ✨ */
