@@ -98,11 +98,6 @@ exports.sendMessage = async (req, res) => {
 
     } catch (error) {
         console.error("🔥 Nodemailer Dispatch Error:", error.message);
-
-        // 🔥 MAGIC FIX: Ye Nodemailer ka exact error tumhare frontend popup mein bhej dega
-        res.status(500).json({ 
-            success: false, 
-            message: `Nodemailer Error: ${error.message}` 
-        });
+        res.status(500).json({ success: false, message: "System failed to dispatch message. Please try again later." });
     }
 };
