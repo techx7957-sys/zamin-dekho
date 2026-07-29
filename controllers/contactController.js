@@ -41,15 +41,15 @@ exports.sendMessage = async (req, res) => {
             return res.status(400).json({ success: false, message: "Payload too large. Please keep the message concise." });
         }
 
-        // 🛡️ SECURITY SHIELD 4: Verify if Real Email Credentials exist in .env
-        const realInbox = process.env.SUPPORT_EMAILS || process.env.ADMIN_EMAILS; 
+        // 🛡️ SECURITY SHIELD 4: STRICTLY USE SUPPORT EMAILS ONLY (Admin hata diya)
+        const realInbox = process.env.SUPPORT_EMAILS; 
+
         if (!realInbox || !process.env.EMAIL_PASS) {
-            console.error("❌ CRITICAL: Missing Email Credentials in .env");
+            console.error("❌ CRITICAL: Missing Support Email or App Password in .env");
             return res.status(500).json({ success: false, message: "Email service is temporarily unavailable." });
         }
 
         // ⚙️ Initialize Nodemailer Transporter
-        // Grabs the first email safely in case you stored multiple emails separated by commas
         const primaryEmail = realInbox.split(',')[0].trim();
 
         const transporter = nodemailer.createTransport({
@@ -57,7 +57,7 @@ exports.sendMessage = async (req, res) => {
             port: 465,
             secure: true, 
             auth: {
-                user: primaryEmail,             // Asli Email (.env se aayega)
+                user: primaryEmail,             // process.env.SUPPORT_EMAILS se aayega
                 pass: process.env.EMAIL_PASS    // Asli App Password (.env se aayega)
             }
         });
@@ -73,7 +73,7 @@ exports.sendMessage = async (req, res) => {
         // 📧 Email Layout Construction
         const mailOptions = {
             from: `"${safeName} (Zamin Dekho App)" <${primaryEmail}>`, 
-            to: realInbox,                                     // Seedha tere ASLI inbox mein aayega
+            to: realInbox,                                     // Seedha tumhare Support inbox mein aayega
             replyTo: safeEmail,                                // Reply click karne par directly user ko mail jayega
             subject: `🚨 New Inquiry | Zamin Dekho: ${safeSubject}`,
             html: `

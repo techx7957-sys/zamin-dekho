@@ -8,10 +8,10 @@ const router = express.Router();
 const getContactInfo = (req, res) => {
     try {
         // 🔐 All contact info comes from environment variables — NEVER hardcoded.
-        const phone = process.env.SUPPORT_PHONE || process.env.ADMIN_PHONE || "";
+        const phone = process.env.SUPPORT_PHONE || "";
+        // Removed ADMIN_EMAILS fallback. Strictly use SUPPORT_EMAILS
         const email = process.env.SUPPORT_EMAIL
             || (process.env.SUPPORT_EMAILS || "").split(',')[0].trim()
-            || (process.env.ADMIN_EMAILS || "").split(',')[0].trim()
             || "";
 
         res.status(200).json({
@@ -32,27 +32,26 @@ const sendMessage = async (req, res) => {
     try {
         const { name, email, subject, message } = req.body;
 
-        // Admin Email uthao jahan ye message bhejna hai
-        const senderEmail = (process.env.ADMIN_EMAILS || '').split(',')[0].trim();
-        const receiverEmail = process.env.SUPPORT_EMAIL || senderEmail;
+        // 🔥 Sirf SUPPORT_EMAILS uthao (zamdekhosupport@gmail.com)
+        const supportEmail = (process.env.SUPPORT_EMAILS || '').split(',')[0].trim();
 
-        if (!senderEmail || !process.env.EMAIL_PASS) {
-            console.error("🚨 CRITICAL: Email credentials missing in .env!");
+        if (!supportEmail || !process.env.EMAIL_PASS) {
+            console.error("🚨 CRITICAL: Support Email credentials missing in .env!");
             return res.status(500).json({ success: false, message: "Server email misconfiguration." });
         }
 
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: senderEmail,
+                user: supportEmail,             // Sender ab strictly zamdekhosupport ban gaya hai
                 pass: process.env.EMAIL_PASS
             }
         });
 
         const mailOptions = {
-            from: `"ZaminDekho Support" <${senderEmail}>`,
-            replyTo: email, // 🔥 Jisse Admin direct user ko reply kar sake!
-            to: receiverEmail,
+            from: `"ZaminDekho Support" <${supportEmail}>`,
+            replyTo: email, // 🔥 Jisse Support team direct user ko reply kar sake!
+            to: supportEmail, // 🔥 Mail jayega bhi strictly Support ID par
             subject: `🚨 New Support Ticket: ${subject}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background: #f8fafc;">
@@ -86,6 +85,7 @@ const sendMessage = async (req, res) => {
         });
     }
 };
+
 // ==========================================
 // 🛣️ ROUTES
 // ==========================================
