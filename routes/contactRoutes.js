@@ -79,9 +79,11 @@ const sendMessage = async (req, res) => {
 
     } catch (error) {
         console.error("🔥 Email Sending Error:", error);
+
+        // 🔥 MAGIC FIX: Ab frontend par popup me yahi error dikhega
         res.status(500).json({ 
             success: false, 
-            message: "Failed to send message. Please try again later." 
+            message: `Nodemailer Error: ${error.message}` 
         });
     }
 };
