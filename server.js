@@ -213,26 +213,27 @@ app.use("/api/auth/login", authLimiter);
 
 
 // ==========================================
-// 🔐 SESSION (Vercel Serverless & Domain Fix)
+// 🔐 SESSION (Vercel Serverless BULLETPROOF Fix)
 // ==========================================
-app.use(session({
-    secret: process.env.JWT_SECRET, 
-    resave: false,
-    saveUninitialized: false,
-    proxy: true, 
-    store: MongoStore.create({ 
-        mongoUrl: process.env.MONGO_URI,
-        ttl: 24 * 60 * 60
-    }),
-    cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        sameSite: 'lax',
-        // 🔥 THE MASTER FIX: Ye cookie ko www aur bina www, dono par zinda rakhega!
-        domain: process.env.NODE_ENV === 'production' ? '.zamindekho.tech' : undefined, 
-        maxAge: 24 * 60 * 60 * 1000 
-    }
+app.use(cookieSession({
+    name: "zamin_session",
+    keys: [process.env.JWT_SECRET || "supersecretkey"],
+    maxAge: 24 * 60 * 60 * 1000, // 1 Day
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    domain: process.env.NODE_ENV === "production" ? ".zamindekho.tech" : undefined,
 }));
+
+// 🔥 Passport 0.6.0+ Bypass (cookie-session ke liye zaroori hai warna Passport crash karega)
+app.use((req, res, next) => {
+    if (req.session && !req.session.regenerate) {
+        req.session.regenerate = (cb) => { cb(); };
+    }
+    if (req.session && !req.session.save) {
+        req.session.save = (cb) => { cb(); };
+    }
+    next();
+});
 
 
 // ==========================================
