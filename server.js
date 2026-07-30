@@ -3,11 +3,9 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
-const session = require("express-session");
 const passport = require("passport");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const MongoStore = require("connect-mongo");
 
 if (process.env.NODE_ENV !== 'production') {
     require("dotenv").config();
