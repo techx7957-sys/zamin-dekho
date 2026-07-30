@@ -90,6 +90,7 @@ app.use(helmet({
                 "https://accounts.google.com",    // Google Identity Services (GSI)
                 "https://checkout.razorpay.com",  // Razorpay payment gateway
                 "https://www.clarity.ms",         // Microsoft Clarity session recording
+                "https://va.vercel-scripts.com",  // Vercel Web Analytics
             ],
 
             // Styles: own + CDN stylesheets + Google Fonts declarations
@@ -125,7 +126,7 @@ app.use(helmet({
             // Fetch/XHR/WebSocket: own API + Clarity telemetry + deal-room WebSocket
             // In dev keep broad (Replit subdomains vary); in prod lock to self + known endpoints
             connectSrc: isProd
-                ? ["'self'", "https://www.clarity.ms", "wss:"]
+                ? ["'self'", "https://www.clarity.ms", "https://va.vercel-scripts.com", "wss:"]
                 : ["'self'", "https:", "wss:"],
 
             // Web fonts: Google Fonts files + FontAwesome webfonts
