@@ -215,7 +215,7 @@ app.use("/api/auth/login", authLimiter);
 
 
 // ==========================================
-// 🔐 SESSION (Vercel Serverless Fix)
+// 🔐 SESSION (Vercel Serverless & Domain Fix)
 // ==========================================
 app.use(session({
     secret: process.env.JWT_SECRET, 
@@ -223,13 +223,15 @@ app.use(session({
     saveUninitialized: false,
     proxy: true, 
     store: MongoStore.create({ 
-        mongoUrl: process.env.MONGO_URI, // 🔥 Ye Vercel ko memory wipe karne se rokega
-        ttl: 24 * 60 * 60 // 1 day
+        mongoUrl: process.env.MONGO_URI,
+        ttl: 24 * 60 * 60
     }),
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
         sameSite: 'lax',
+        // 🔥 THE MASTER FIX: Ye cookie ko www aur bina www, dono par zinda rakhega!
+        domain: process.env.NODE_ENV === 'production' ? '.zamindekho.tech' : undefined, 
         maxAge: 24 * 60 * 60 * 1000 
     }
 }));
