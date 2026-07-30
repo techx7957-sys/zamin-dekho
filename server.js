@@ -217,17 +217,17 @@ app.use("/api/auth/login", authLimiter);
 // 🔐 SESSION
 // ==========================================
 app.use(session({
-    secret: process.env.JWT_SECRET,
+    secret: process.env.JWT_SECRET, // (Ya fir process.env.SESSION_SECRET)
     resave: false,
     saveUninitialized: false,
+    proxy: true, // 🔥 VERCEL FIX: Proxy ko yahan bhi true karna zaroori hai
     cookie: {
         secure: process.env.NODE_ENV === 'production',
-        httpOnly: true
+        httpOnly: true,
+        sameSite: 'lax', // 🔥 OAUTH FIX: Twitter redirect ke baad cookie drop na ho isliye 'lax'
+        maxAge: 24 * 60 * 60 * 1000 // 1 day
     }
 }));
-
-app.use(passport.initialize());
-app.use(passport.session());
 
 
 // ==========================================
