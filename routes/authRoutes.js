@@ -88,7 +88,8 @@ router.get(
         const safeDomain = process.env.BASE_URL || "http://localhost:5000";
         req.session.twitterClientUrl = req.query.clientUrl || safeDomain;
         passport.authenticate("twitter", {
-            scope: ["tweet.read", "users.read", "offline.access"],
+            // 🔥 MASTER FIX: Sirf users.read rakho. Faltu permissions hata di!
+            scope: ["users.read"],
         })(req, res, next);
     }
 );
