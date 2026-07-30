@@ -7,6 +7,7 @@ const session = require("express-session");
 const passport = require("passport");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const MongoStore = require("connect-mongo");
 
 if (process.env.NODE_ENV !== 'production') {
     require("dotenv").config();
@@ -214,18 +215,22 @@ app.use("/api/auth/login", authLimiter);
 
 
 // ==========================================
-// 🔐 SESSION
+// 🔐 SESSION (Vercel Serverless Fix)
 // ==========================================
 app.use(session({
-    secret: process.env.JWT_SECRET, // (Ya fir process.env.SESSION_SECRET)
+    secret: process.env.JWT_SECRET, 
     resave: false,
     saveUninitialized: false,
-    proxy: true, // 🔥 VERCEL FIX: Proxy ko yahan bhi true karna zaroori hai
+    proxy: true, 
+    store: MongoStore.create({ 
+        mongoUrl: process.env.MONGO_URI, // 🔥 Ye Vercel ko memory wipe karne se rokega
+        ttl: 24 * 60 * 60 // 1 day
+    }),
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        sameSite: 'lax', // 🔥 OAUTH FIX: Twitter redirect ke baad cookie drop na ho isliye 'lax'
-        maxAge: 24 * 60 * 60 * 1000 // 1 day
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000 
     }
 }));
 
