@@ -313,11 +313,18 @@ app.get("*", (req, res) => {
 
 
 // ==========================================
-// 🛡️ ERROR HANDLER
+// 🛡️ ERROR HANDLER (TEMPORARY DEBUG MODE)
 // ==========================================
 app.use((err, req, res, next) => {
     console.error("🔥 Error:", err.message);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+
+    // Ye line code ko force karegi ki exact error screen par dikhaye
+    res.status(500).json({ 
+        success: false, 
+        error_name: err.name,
+        message: err.message,
+        stack: err.stack // Ye exact line number bhi bata dega
+    });
 });
 
 
