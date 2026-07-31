@@ -219,13 +219,21 @@ app.use("/api/auth/login", authLimiter);
 app.use(cookieSession({
     name: "zamin_session",
     keys: [process.env.JWT_SECRET || "supersecretkey"],
-    maxAge: 24 * 60 * 60 * 1000, // 1 Day
+    maxAge: 24 * 60 * 60 * 1000, 
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     domain: process.env.NODE_ENV === "production" ? ".zamindekho.tech" : undefined,
 }));
 
-// 🔥 Passport 0.6.0+ Bypass (cookie-session ke liye zaroori hai warna Passport crash karega)
+// 🔥 THE PKCE HACK: Ye line cookie-session ko hamesha save karne par majboor karegi
+app.use((req, res, next) => {
+    if (req.session) {
+        req.session.lastAccess = Date.now(); 
+    }
+    next();
+});
+
+// 🔥 Passport 0.6.0+ Bypass (Jo pehle se likha tha usko aise hi rehne do)
 app.use((req, res, next) => {
     if (req.session && !req.session.regenerate) {
         req.session.regenerate = (cb) => { cb(); };

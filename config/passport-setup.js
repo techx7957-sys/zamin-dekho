@@ -1,7 +1,7 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const TwitterStrategy = require("passport-twitter-oauth2").Strategy;
-const FacebookStrategy = require("passport-facebook").Strategy; // 🚀 NEW: Facebook Strategy Imported
+const FacebookStrategy = require("passport-facebook").Strategy; 
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 
@@ -32,7 +32,6 @@ passport.use(
         {
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            // 🚀 FIX: Used dynamic BASE_URL to prevent Vercel callback mismatch errors
             callbackURL: `${process.env.BASE_URL || 'http://localhost:5000'}/api/auth/google/callback`,
             proxy: true,
         },
@@ -85,8 +84,8 @@ passport.use(
         {
             clientID: process.env.TWITTER_CLIENT_ID,
             clientSecret: process.env.TWITTER_CLIENT_SECRET,
-            // 🚀 FIX: Used dynamic BASE_URL to prevent Vercel callback mismatch errors
-            callbackURL: `${process.env.BASE_URL || 'http://localhost:5000'}/api/auth/twitter/callback`,
+            // 🔥 THE FIX: Direct Vercel Callback URL with fallback
+            callbackURL: process.env.TWITTER_CALLBACK_URL || "https://www.zamindekho.tech/api/auth/twitter/callback",
             clientType: "confidential",
             pkce: true,
             state: true,
@@ -147,7 +146,6 @@ passport.use(
         {
             clientID: process.env.FACEBOOK_APP_ID,
             clientSecret: process.env.FACEBOOK_APP_SECRET,
-            // 🚀 FIX: Used dynamic BASE_URL similar to Google and Twitter
             callbackURL: `${process.env.BASE_URL || 'http://localhost:5000'}/api/auth/facebook/callback`,
             profileFields: ['id', 'displayName', 'emails', 'picture.type(large)'],
             proxy: true,
