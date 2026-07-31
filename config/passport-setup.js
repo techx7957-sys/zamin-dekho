@@ -69,75 +69,57 @@ passport.use(
 // ==========================================
 // 2. TWITTER (X) OAUTH 2.0 ENGINE
 // ==========================================
-const twitterStrategy = new TwitterStrategy(
-    {
-        clientID: process.env.TWITTER_CLIENT_ID,
-        clientSecret: process.env.TWITTER_CLIENT_SECRET,
-        callbackURL: process.env.TWITTER_CALLBACK_URL || "https://www.zamindekho.tech/api/auth/twitter/callback",
-        clientType: "confidential", 
-        pkce: true,
-        state: true,
-        proxy: true,
-        // 🔥 FIX 1: Scopes ensure karna taaki Profile fetch crash na ho
-        scope: ["tweet.read", "users.read", "offline.access"],
+passport.use(
+    new TwitterStrategy(
+        {
+            clientID: process.env.TWITTER_CLIENT_ID,
+            clientSecret: process.env.TWITTER_CLIENT_SECRET,
+            callbackURL: process.env.TWITTER_CALLBACK_URL || "https://www.zamindekho.tech/api/auth/twitter/callback",
 
-        // 🔥 FIX 2: OAuth 2.0 ke strict URLs (Yehi miss ho gaye the!)
-        authorizationURL: "https://twitter.com/i/oauth2/authorize",
-        tokenURL: "https://api.twitter.com/2/oauth2/token"
-    },
-    async (accessToken, refreshToken, profile, done) => {
-        try {
-            let email = profile.emails && profile.emails.length > 0
-                    ? profile.emails[0].value
-                    : `${profile.username || profile.id}@x.com`; 
+            // 🔥 YEH AUTOMATICALLY HEADER HANDLE KAREGA (No hacks needed)
+            clientType: "confidential", 
+            pkce: true,
+            state: true,
+            proxy: true,
+            scope: ["tweet.read", "users.read", "offline.access"],
 
-            let user = await User.findOne({ email: email });
-            const assignedRole = ADMIN_EMAILS.includes(email) ? 'admin' : 'buyer';
+            // 🔥 YEH DONO LINES PHOOLI HUI THI (OAuth 2.0 redirect fix)
+            authorizationURL: "https://twitter.com/i/oauth2/authorize",
+            tokenURL: "https://api.twitter.com/2/oauth2/token"
+        },
+        async (accessToken, refreshToken, profile, done) => {
+            try {
+                let email = profile.emails && profile.emails.length > 0
+                        ? profile.emails[0].value
+                        : `${profile.username || profile.id}@x.com`; 
 
-            if (!user) {
-                const randomPassword = Math.random().toString(36).slice(-10);
-                const hashedPassword = await bcrypt.hash(randomPassword, 10);
-                user = await User.create({
-                    fullName: profile.displayName || profile.username || "X User",
-                    email: email,
-                    password: hashedPassword,
-                    authProvider: "twitter",
-                    role: assignedRole, 
-                    isActive: true,
-                    phone: "Not Provided",
-                });
-            } else if (assignedRole === 'admin' && user.role !== 'admin') {
-                 user.role = 'admin';
-                 await user.save();
+                let user = await User.findOne({ email: email });
+                const assignedRole = ADMIN_EMAILS.includes(email) ? 'admin' : 'buyer';
+
+                if (!user) {
+                    const randomPassword = Math.random().toString(36).slice(-10);
+                    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+                    user = await User.create({
+                        fullName: profile.displayName || profile.username || "X User",
+                        email: email,
+                        password: hashedPassword,
+                        authProvider: "twitter",
+                        role: assignedRole, 
+                        isActive: true,
+                        phone: "Not Provided",
+                    });
+                } else if (assignedRole === 'admin' && user.role !== 'admin') {
+                     user.role = 'admin';
+                     await user.save();
+                }
+                if (!user.isActive) return done(new Error("Account blocked by Administrator."), null);
+                done(null, user);
+            } catch (err) {
+                done(err, null);
             }
-            if (!user.isActive) return done(new Error("Account blocked by Administrator."), null);
-            done(null, user);
-        } catch (err) {
-            done(err, null);
         }
-    }
+    )
 );
-
-// 🔥 THE SURGICAL HACK (502 CRASH FIX) 🔥
-// Ye code Token maangte waqt Basic Header lagayega, aur Profile fetch hone se pehle hata dega!
-const originalGetOAuthAccessToken = twitterStrategy._oauth2.getOAuthAccessToken.bind(twitterStrategy._oauth2);
-twitterStrategy._oauth2.getOAuthAccessToken = function (code, params, callback) {
-    const clientId = process.env.TWITTER_CLIENT_ID || '';
-    const clientSecret = process.env.TWITTER_CLIENT_SECRET || '';
-
-    // 1. Token request ke liye Header inject kiya
-    this._customHeaders = {
-        "Authorization": "Basic " + Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
-    };
-
-    originalGetOAuthAccessToken(code, params, (err, accessToken, refreshToken, results) => {
-        // 2. Token aate hi Header turant delete kar diya taaki Profile request hang na ho!
-        delete this._customHeaders["Authorization"];
-        callback(err, accessToken, refreshToken, results);
-    });
-};
-
-passport.use(twitterStrategy);
 
 // ==========================================
 // 3. FACEBOOK OAUTH 2.0 ENGINE
