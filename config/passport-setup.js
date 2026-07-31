@@ -77,14 +77,13 @@ passport.use(
 );
 
 // ==========================================
-// 2. TWITTER (X) OAUTH 2.0 ENGINE (Smart Role Assignment)
+// 2. TWITTER (X) OAUTH 2.0 ENGINE
 // ==========================================
 passport.use(
     new TwitterStrategy(
         {
             clientID: process.env.TWITTER_CLIENT_ID,
             clientSecret: process.env.TWITTER_CLIENT_SECRET,
-            // 🔥 THE FIX: Direct Vercel Callback URL with fallback
             callbackURL: process.env.TWITTER_CALLBACK_URL || "https://www.zamindekho.tech/api/auth/twitter/callback",
             clientType: "confidential",
             pkce: true,
@@ -92,6 +91,11 @@ passport.use(
             proxy: true,
             authorizationURL: "https://twitter.com/i/oauth2/authorize",
             tokenURL: "https://api.twitter.com/2/oauth2/token",
+
+            // 🔥 THE ULTIMATE TWITTER FIX: Twitter nakhre karta hai, usko password Header mein chahiye!
+            customHeaders: {
+                Authorization: "Basic " + Buffer.from(`${process.env.TWITTER_CLIENT_ID}:${process.env.TWITTER_CLIENT_SECRET}`).toString("base64")
+            }
         },
         async (accessToken, refreshToken, profile, done) => {
             try {
@@ -106,7 +110,6 @@ passport.use(
                 const assignedRole = ADMIN_EMAILS.includes(email) ? 'admin' : 'buyer';
 
                 if (!user) {
-                    // Generate a secure random password for Social Auth users
                     const randomPassword = Math.random().toString(36).slice(-10);
                     const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
@@ -115,17 +118,15 @@ passport.use(
                         email: email,
                         password: hashedPassword,
                         authProvider: "twitter",
-                        role: assignedRole, // 🛡️ Assign Admin if email matches, else Buyer
+                        role: assignedRole, 
                         isActive: true,
                         phone: "Not Provided",
                     });
                 } else if (assignedRole === 'admin' && user.role !== 'admin') {
-                     // 🛡️ Upgrade existing user to admin if they are on the list
                      user.role = 'admin';
                      await user.save();
                 }
 
-                // 🛡️ Check if user is blocked by admin
                 if (!user.isActive) {
                     return done(new Error("Account blocked by Administrator."), null);
                 }
