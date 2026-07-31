@@ -90,12 +90,7 @@ passport.use(
             state: true,
             proxy: true,
             authorizationURL: "https://twitter.com/i/oauth2/authorize",
-            tokenURL: "https://api.twitter.com/2/oauth2/token",
-
-            // 🔥 THE ULTIMATE TWITTER FIX: Twitter nakhre karta hai, usko password Header mein chahiye!
-            customHeaders: {
-                Authorization: "Basic " + Buffer.from(`${process.env.TWITTER_CLIENT_ID}:${process.env.TWITTER_CLIENT_SECRET}`).toString("base64")
-            }
+            tokenURL: "https://api.twitter.com/2/oauth2/token"
         },
         async (accessToken, refreshToken, profile, done) => {
             try {
