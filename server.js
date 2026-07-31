@@ -321,17 +321,26 @@ app.get("*", (req, res) => {
 
 
 // ==========================================
-// 🛡️ ERROR HANDLER (TEMPORARY DEBUG MODE)
+// 🛡️ ERROR HANDLER (TWITTER X-RAY MODE)
 // ==========================================
 app.use((err, req, res, next) => {
     console.error("🔥 Error:", err.message);
 
-    // Ye line code ko force karegi ki exact error screen par dikhaye
+    // 🔥 MAGIC CODE: Extract Twitter's hidden exact error message
+    let twitterRawError = "No exact details provided by Twitter";
+    if (err.oauthError && err.oauthError.data) {
+        try {
+            twitterRawError = JSON.parse(err.oauthError.data);
+        } catch (e) {
+            twitterRawError = err.oauthError.data;
+        }
+    }
+
     res.status(500).json({ 
         success: false, 
-        error_name: err.name,
-        message: err.message,
-        stack: err.stack // Ye exact line number bhi bata dega
+        message: "Twitter ne Token reject kar diya",
+        twitter_exact_reason: twitterRawError, // 🚀 Asli chor yahan chupa hai!
+        stack_line: err.message
     });
 });
 
