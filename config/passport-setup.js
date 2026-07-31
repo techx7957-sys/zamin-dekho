@@ -78,8 +78,12 @@ const twitterStrategy = new TwitterStrategy(
         pkce: true,
         state: true,
         proxy: true,
-        // 🔥 FIX: Scopes ensure karna taaki Profile fetch crash na ho
-        scope: ["tweet.read", "users.read", "offline.access"]
+        // 🔥 FIX 1: Scopes ensure karna taaki Profile fetch crash na ho
+        scope: ["tweet.read", "users.read", "offline.access"],
+
+        // 🔥 FIX 2: OAuth 2.0 ke strict URLs (Yehi miss ho gaye the!)
+        authorizationURL: "https://twitter.com/i/oauth2/authorize",
+        tokenURL: "https://api.twitter.com/2/oauth2/token"
     },
     async (accessToken, refreshToken, profile, done) => {
         try {
