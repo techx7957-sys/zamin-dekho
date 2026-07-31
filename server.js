@@ -6,6 +6,7 @@ const fs = require("fs");
 const passport = require("passport");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const cookieSession = require("cookie-session");
 
 if (process.env.NODE_ENV !== 'production') {
     require("dotenv").config();
