@@ -79,29 +79,41 @@ passport.use(
 // ==========================================
 // 2. TWITTER (X) OAUTH 2.0 ENGINE
 // ==========================================
+
+// 🔥 SAFE HEADER INJECTOR: Ye line 502 crash ko rokegi aur Twitter ko pasand aayegi
+const getTwitterAuthHeader = () => {
+    const clientId = process.env.TWITTER_CLIENT_ID || '';
+    const clientSecret = process.env.TWITTER_CLIENT_SECRET || '';
+    return "Basic " + Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+};
+
 passport.use(
     new TwitterStrategy(
         {
             clientID: process.env.TWITTER_CLIENT_ID,
             clientSecret: process.env.TWITTER_CLIENT_SECRET,
             callbackURL: process.env.TWITTER_CALLBACK_URL || "https://www.zamindekho.tech/api/auth/twitter/callback",
-            clientType: "confidential",
+            clientType: "confidential", // 👈 Isko dhyaan rakhna
             pkce: true,
             state: true,
             proxy: true,
             authorizationURL: "https://twitter.com/i/oauth2/authorize",
-            tokenURL: "https://api.twitter.com/2/oauth2/token"
+            tokenURL: "https://api.twitter.com/2/oauth2/token",
+
+            // 🔥 Yahan hum safe header function call kar rahe hain
+            customHeaders: {
+                Authorization: getTwitterAuthHeader()
+            }
         },
         async (accessToken, refreshToken, profile, done) => {
             try {
                 let email =
                     profile.emails && profile.emails.length > 0
                         ? profile.emails[0].value
-                        : `${profile.username || profile.id}@x.com`; // Fallback email logic
+                        : `${profile.username || profile.id}@x.com`; 
 
                 let user = await User.findOne({ email: email });
 
-                // 👑 Check if the incoming email is the admin
                 const assignedRole = ADMIN_EMAILS.includes(email) ? 'admin' : 'buyer';
 
                 if (!user) {
