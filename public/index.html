@@ -1,6 +1,14 @@
 <!doctype html>
 <html lang="en">
     <head>
+        <!-- 🚨 STRICT NO-FLICKER AUTH SHIELD 🚨 -->
+        <script>
+            // DOM paint hone se pehle turant check karega!
+            if (!localStorage.getItem('zamin_token')) {
+                window.location.replace('register.html');
+            }
+        </script>
+
         <!-- Facebook Domain Verification Meta Tag -->
         <meta name="facebook-domain-verification" content="qufh8vlxmupfyody5b2birp9owl23h" />
 
