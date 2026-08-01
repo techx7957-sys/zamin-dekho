@@ -4,7 +4,6 @@ const TwitterStrategy = require("passport-twitter-oauth2").Strategy;
 const FacebookStrategy = require("passport-facebook").Strategy; 
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
-const querystring = require("querystring"); // 🔥 ADDED: Network request ko clean karne ke liye
 
 // 👑 ADMIN ACCESS SHIELD
 const ADMIN_EMAILS = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',') : [];
@@ -70,79 +69,57 @@ passport.use(
 // ==========================================
 // 2. TWITTER (X) OAUTH 2.0 ENGINE
 // ==========================================
-const twitterStrategy = new TwitterStrategy(
-    {
-        clientID: process.env.TWITTER_CLIENT_ID,
-        clientSecret: process.env.TWITTER_CLIENT_SECRET,
-        callbackURL: process.env.TWITTER_CALLBACK_URL || "https://www.zamindekho.tech/api/auth/twitter/callback",
-        clientType: "confidential", 
-        pkce: true,
-        state: true,
-        proxy: true,
-        scope: ["tweet.read", "users.read", "offline.access"],
-        authorizationURL: "https://twitter.com/i/oauth2/authorize",
-        tokenURL: "https://api.twitter.com/2/oauth2/token"
-    },
-    async (accessToken, refreshToken, profile, done) => {
-        try {
-            let email = profile.emails && profile.emails.length > 0
-                    ? profile.emails[0].value
-                    : `${profile.username || profile.id}@x.com`; 
+passport.use(
+    new TwitterStrategy(
+        {
+            clientID: process.env.TWITTER_CLIENT_ID,
+            clientSecret: process.env.TWITTER_CLIENT_SECRET,
+            callbackURL: process.env.TWITTER_CALLBACK_URL || "https://www.zamindekho.tech/api/auth/twitter/callback",
 
-            let user = await User.findOne({ email: email });
-            const assignedRole = ADMIN_EMAILS.includes(email) ? 'admin' : 'buyer';
+            // 🔥 YEH AUTOMATICALLY HEADER HANDLE KAREGA (No hacks needed)
+            clientType: "confidential", 
+            pkce: true,
+            state: true,
+            proxy: true,
+            scope: ["tweet.read", "users.read", "offline.access"],
 
-            if (!user) {
-                const randomPassword = Math.random().toString(36).slice(-10);
-                const hashedPassword = await bcrypt.hash(randomPassword, 10);
-                user = await User.create({
-                    fullName: profile.displayName || profile.username || "X User",
-                    email: email,
-                    password: hashedPassword,
-                    authProvider: "twitter",
-                    role: assignedRole, 
-                    isActive: true,
-                    phone: "Not Provided",
-                });
-            } else if (assignedRole === 'admin' && user.role !== 'admin') {
-                 user.role = 'admin';
-                 await user.save();
+            // 🔥 YEH DONO LINES PHOOLI HUI THI (OAuth 2.0 redirect fix)
+            authorizationURL: "https://twitter.com/i/oauth2/authorize",
+            tokenURL: "https://api.twitter.com/2/oauth2/token"
+        },
+        async (accessToken, refreshToken, profile, done) => {
+            try {
+                let email = profile.emails && profile.emails.length > 0
+                        ? profile.emails[0].value
+                        : `${profile.username || profile.id}@x.com`; 
+
+                let user = await User.findOne({ email: email });
+                const assignedRole = ADMIN_EMAILS.includes(email) ? 'admin' : 'buyer';
+
+                if (!user) {
+                    const randomPassword = Math.random().toString(36).slice(-10);
+                    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+                    user = await User.create({
+                        fullName: profile.displayName || profile.username || "X User",
+                        email: email,
+                        password: hashedPassword,
+                        authProvider: "twitter",
+                        role: assignedRole, 
+                        isActive: true,
+                        phone: "Not Provided",
+                    });
+                } else if (assignedRole === 'admin' && user.role !== 'admin') {
+                     user.role = 'admin';
+                     await user.save();
+                }
+                if (!user.isActive) return done(new Error("Account blocked by Administrator."), null);
+                done(null, user);
+            } catch (err) {
+                done(err, null);
             }
-            if (!user.isActive) return done(new Error("Account blocked by Administrator."), null);
-            done(null, user);
-        } catch (err) {
-            done(err, null);
         }
-    }
+    )
 );
-
-// 🔥 THE ULTIMATE INTERCEPTOR HACK 🔥
-// Hum package ko force karenge ki secret ko Body se nikaal kar Header mein daale
-const originalRequest = twitterStrategy._oauth2._request.bind(twitterStrategy._oauth2);
-twitterStrategy._oauth2._request = function(method, url, headers, post_body, access_token, callback) {
-    if (method === 'POST' && url === this._getAccessTokenUrl()) {
-
-        // 1. Secret aur ID ko valid Authorization Header (Basic Auth) mein convert karo
-        headers = headers || {};
-        const clientId = process.env.TWITTER_CLIENT_ID || '';
-        const clientSecret = process.env.TWITTER_CLIENT_SECRET || '';
-        const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-        headers['Authorization'] = `Basic ${authString}`;
-
-        // 2. Package jo body mein galti se secret bhej raha tha, usko kaat do
-        if (typeof post_body === 'string') {
-            const parsed = querystring.parse(post_body);
-            delete parsed.client_id;
-            delete parsed.client_secret;
-            post_body = querystring.stringify(parsed);
-        }
-    }
-
-    // Ab request Twitter ke paas safely jayegi
-    originalRequest(method, url, headers, post_body, access_token, callback);
-};
-
-passport.use(twitterStrategy);
 
 // ==========================================
 // 3. FACEBOOK OAUTH 2.0 ENGINE

@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const passport = require("passport");
+const axios = require("axios"); // 🔥 TRUECALLER KE LIYE ADD KIYA
+const User = require("../models/User"); // 🔥 TRUECALLER KE LIYE ADD KIYA (Apna path verify kar lena)
 
 // Controllers & Middleware
 const authController = require("../controllers/authController");
@@ -163,5 +165,69 @@ router.get(
     },
     authController.socialLoginCallback
 );
+
+// ==========================================
+// 📞 7. TRUECALLER OAUTH ROUTE (AJAX CALL)
+// ==========================================
+router.post("/truecaller/callback", async (req, res) => {
+    try {
+        const { accessToken } = req.body;
+
+        if (!accessToken) {
+            return res.status(400).json({ success: false, message: "Token missing" });
+        }
+
+        // 1. Truecaller ke server se User ki profile fetch karo
+        const response = await axios.get('https://profile4.truecaller.com/v1/default', {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const profile = response.data;
+
+        if (!profile || !profile.phoneNumbers) {
+            return res.status(400).json({ success: false, message: "Profile data nahi mila" });
+        }
+
+        // 2. Data extract karna
+        const phone = profile.phoneNumbers[0];
+        const firstName = profile.name.first || '';
+        const lastName = profile.name.last || '';
+        const fullName = `${firstName} ${lastName}`.trim() || 'Truecaller User';
+
+        // Truecaller email hamesha nahi deta, toh fallback email laga rahe hain
+        const email = (profile.onlineIdentities && profile.onlineIdentities.email) 
+                      ? profile.onlineIdentities.email 
+                      : `${phone}@zamindekho.tech`; 
+
+        // 3. Find or Create User
+        let user = await User.findOne({ phone: phone });
+
+        if (!user) {
+            user = await User.create({
+                fullName: fullName,
+                email: email,
+                phone: phone, // Verified Phone number!
+                password: "NO_PASSWORD", 
+                authProvider: "truecaller",
+                role: "buyer",
+                isActive: true,
+            });
+        }
+
+        // 4. Session/Login handle karna 
+        req.login(user, (err) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: "Session create nahi hua" });
+            }
+            return res.json({ success: true, message: "Login Successful", user });
+        });
+
+    } catch (error) {
+        console.error("Truecaller Backend Error:", error.message);
+        res.status(500).json({ success: false, message: "Server timeout ya error" });
+    }
+});
 
 module.exports = router;
