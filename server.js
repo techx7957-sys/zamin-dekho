@@ -233,7 +233,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// 🔥 Passport 0.6.0+ Bypass (Jo pehle se likha tha usko aise hi rehne do)
+// 🔥 Passport 0.6.0+ Bypass
 app.use((req, res, next) => {
     if (req.session && !req.session.regenerate) {
         req.session.regenerate = (cb) => { cb(); };
@@ -244,6 +244,13 @@ app.use((req, res, next) => {
     next();
 });
 
+// ==========================================
+// 🚦 ROOT REDIRECT (New Users -> Register)
+// ==========================================
+// Ye redirect static files ke upar hona zaroori hai
+app.get('/', (req, res) => {
+    res.redirect('/register.html');
+});
 
 // ==========================================
 // 📁 STATIC FILES
@@ -268,7 +275,7 @@ mongoose.connect(process.env.MONGO_URI, {
 // 🚀 ROUTES
 // ==========================================
 
-// 🟢 KEEP-ALIVE ROUTE (Prevent Replit from Sleeping - Connects to UptimeRobot)
+// 🟢 KEEP-ALIVE ROUTE
 app.all('/api/ping', (req, res) => {
     res.status(200).send("OK");
 });
@@ -301,11 +308,12 @@ app.get("*", (req, res) => {
         return res.status(403).send("🚨 Access Denied");
     }
 
-    let filePath = path.join(__dirname, "public", req.path);
-
+    // 🔥 BACKUP REDIRECT (Security layer 2)
     if (req.path === "/") {
-        filePath = path.join(__dirname, "public", "index.html");
+        return res.redirect("/register.html");
     }
+
+    let filePath = path.join(__dirname, "public", req.path);
 
     const blockedFiles = [".env", "server.js", "package.json", "vercel.json"];
     if (blockedFiles.some(file => filePath.endsWith(file))) {
@@ -315,6 +323,7 @@ app.get("*", (req, res) => {
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
         res.sendFile(filePath);
     } else {
+        // Fallback for SPA routing to index html (logged in users flow)
         res.sendFile(path.join(__dirname, "public", "index.html"));
     }
 });
@@ -326,7 +335,6 @@ app.get("*", (req, res) => {
 app.use((err, req, res, next) => {
     console.error("🔥 Error:", err.message);
 
-    // 🔥 MAGIC CODE: Extract Twitter's hidden exact error message
     let twitterRawError = "No exact details provided by Twitter";
     if (err.oauthError && err.oauthError.data) {
         try {
@@ -338,8 +346,8 @@ app.use((err, req, res, next) => {
 
     res.status(500).json({ 
         success: false, 
-        message: "Twitter ne Token reject kar diya",
-        twitter_exact_reason: twitterRawError, // 🚀 Asli chor yahan chupa hai!
+        message: "Server Error Ya Token Reject Hua",
+        twitter_exact_reason: twitterRawError,
         stack_line: err.message
     });
 });

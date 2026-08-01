@@ -358,8 +358,18 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    if (typeof showToast === "function") showToast("Account created! Redirecting to login...", "success");
-                    setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+                    // 🔥 Save Token & User Data (Auto-login after register)
+                    if (data.token) {
+                        localStorage.setItem('zamin_token', data.token);
+                    }
+                    if (data.user) {
+                        localStorage.setItem('zamin_user', encodeURIComponent(JSON.stringify(data.user)));
+                    }
+
+                    if (typeof showToast === "function") showToast("Account created successfully! Redirecting...", "success");
+
+                    // ⚡ INSTANT REDIRECT TO INDEX
+                    setTimeout(() => { window.location.replace('index.html'); }, 500);
                 } else {
                     if (typeof showToast === "function") showToast(data.message || "Registration failed.", "error");
                     else alert(data.message || "Registration failed.");

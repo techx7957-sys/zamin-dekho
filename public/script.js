@@ -14,9 +14,27 @@ window.userLat = null;
 window.userLng = null;
 
 // ==========================================
-// 🚀 INIT
+// 🚀 INIT & SMART AUTH FLOW
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('zamin_token');
+    const currentPath = window.location.pathname.toLowerCase();
+
+    // Check if user is on Auth pages (Login or Register)
+    const isAuthPage = currentPath.includes('login.html') || currentPath.includes('register.html');
+
+    // RULE 1: Agar token NAHI hai aur user Auth page par NAHI hai (jaise index.html pe hai), toh seedha Register par bhejo
+    if (!token && !isAuthPage) {
+        window.location.replace('register.html');
+        return; // Execution yahin rok do
+    }
+
+    // RULE 2: Agar user LOGGED IN hai aur phir se Login/Register kholne ki koshish kare, toh Index par bhej do
+    if (token && isAuthPage) {
+        window.location.replace('index.html');
+        return;
+    }
+
     handleSocialLogin();
     updateNavbar();
 });
@@ -146,13 +164,14 @@ window.getUser = function() {
 window.logout = function() {
     localStorage.clear();
     sessionStorage.clear();
-    // Use replace to prevent back-button weirdness
-    window.location.replace('login.html');
+    // Logout hone ke baad ab seedha Register par bhejo
+    window.location.replace('register.html');
 }
 
 window.requireAuth = function() {
     if (!getToken()) {
-        window.location.replace('login.html');
+        // Bina permission ke access try kiya toh bhi Register par phek do
+        window.location.replace('register.html');
     }
 }
 
@@ -242,7 +261,7 @@ window.updateNavbar = function() {
     const user = getUser();
 
     // 🔥 Sirf unhi links ko target karega jo button ki tarah dikhne chahiye (navbar ke andar)
-    const links = document.querySelectorAll('#authArea a[href="login.html"]');
+    const links = document.querySelectorAll('#authArea a[href="login.html"], #authArea a[href="register.html"]');
 
     if (token) {
         links.forEach(link => {
