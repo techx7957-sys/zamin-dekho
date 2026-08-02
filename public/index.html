@@ -927,7 +927,7 @@
                         const user = typeof getUser === 'function' ? getUser() : null;
 
                         if(user && user.role === 'admin') {
-                            biddingArea.innerHTML = `<a class="nav-link nav-pill-blue" href="bidding.html"><i class="fas fa-gavel me-1"></i> Live Bidding</a>`;
+                            biddingArea.innerHTML = `<a class="nav-link nav-pill-blue" href="bidding.html"><i class="fas fa-gavel me-1"></i> Bidding</a>`;
                             adminArea.innerHTML = `<a class="nav-link nav-pill-red" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
                         } else {
                             if (biddingArea) biddingArea.innerHTML = '';
