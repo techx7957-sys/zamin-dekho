@@ -8,6 +8,10 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const cookieSession = require("cookie-session");
 
+// 🔥 NEW: Socket.io imports
+const http = require("http");
+const { Server } = require("socket.io");
+
 if (process.env.NODE_ENV !== 'production') {
     require("dotenv").config();
 }
@@ -25,6 +29,8 @@ const adminRoutes = require("./routes/adminRoutes");
 const brokerRoutes = require("./routes/brokerRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const contactRoutes = require("./routes/contactRoutes");
+// 🔥 NEW: Bidding routes
+const biddingRoutes = require("./routes/biddingRoutes");
 
 const leadController = require("./controllers/leadController");
 const { verifyToken } = require("./middleware/authMiddleware");
@@ -32,6 +38,47 @@ const { verifyToken } = require("./middleware/authMiddleware");
 const app = express();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
+
+// 🔥 NEW: Create HTTP server and wrap Express app
+const server = http.createServer(app);
+
+// 🔥 NEW: Initialize Socket.io with CORS settings
+const io = new Server(server, {
+    cors: {
+        origin: [
+            'http://localhost:3000',
+            'http://localhost:5000',
+            'http://127.0.0.1:5500',
+            'https://zamindekho.tech',      
+            'https://www.zamindekho.tech',   
+            'https://zamin-dekho-m5iq.vercel.app'
+        ],
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
+
+// 🔥 NEW: Socket.io connection handling
+io.on("connection", (socket) => {
+    console.log("🟢 A user connected to bidding socket:", socket.id);
+
+    // Join main bidding room
+    socket.on("join_bidding_room", () => {
+        socket.join("live_bidding");
+        console.log(`User ${socket.id} joined live_bidding room`);
+    });
+
+    // Handle new incoming bid message
+    socket.on("send_bid", (data) => {
+        // Broadcast to everyone in the room (including sender to verify)
+        // You can add validation here later to check if user is whitelisted
+        io.to("live_bidding").emit("receive_bid", data);
+    });
+
+    socket.on("disconnect", () => {
+        console.log("🔴 User disconnected:", socket.id);
+    });
+});
 
 
 // ==========================================
@@ -126,7 +173,7 @@ app.use(helmet({
             // In dev keep broad (Replit subdomains vary); in prod lock to self + known endpoints
             connectSrc: isProd
                 ? ["'self'", "https://www.clarity.ms", "wss:"]
-                : ["'self'", "https:", "wss:"],
+                : ["'self'", "https:", "wss:", "http://localhost:*"], // Updated to allow localhost ws in dev
 
             // Web fonts: Google Fonts files + FontAwesome webfonts
             fontSrc: [
@@ -289,6 +336,9 @@ app.use("/api/broker", brokerRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/contact", contactRoutes);
 
+// 🔥 NEW: Mount Bidding Routes
+app.use("/api/bidding", biddingRoutes);
+
 app.get('/api/leads/my-visits', verifyToken, leadController.getMyVisits);
 app.post('/api/leads/verify-gps/:id', verifyToken, leadController.verifyGPS);
 
@@ -362,9 +412,10 @@ app.use((err, req, res, next) => {
 // ==========================================
 if (!process.env.VERCEL) {
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, '0.0.0.0', () => {
+    // 🔥 CHANGED: Listen using the HTTP server we created (not just the express app)
+    server.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server running on ${PORT}`);
     });
 }
 
-module.exports = app;
+module.exports = server; // 🔥 Export server for Vercel/Testing if needed

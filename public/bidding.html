@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <!-- 🚨 STRICT NO-FLICKER AUTH SHIELD 🚨 -->
+        <script>
+            const urlParams = new URLSearchParams(window.location.search);
+            if (!localStorage.getItem('zamin_token') && !urlParams.has('token')) {
+                window.location.replace('register.html');
+            }
+        </script>
+
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Live Bidding Room | Zamin Dekho</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js"></script>
+
+        <!-- 🔥 FIX: Socket.io Client Script -->
+        <script src="/socket.io/socket.io.js"></script>
+
+        <style>
+            body { background: #f1f5f9; font-family: "Inter", sans-serif; color: #1e293b; display: flex; flex-direction: column; height: 100vh; margin: 0; }
+
+            .navbar { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); background: #ffffff !important; padding: 12px 0; z-index: 10; }
+            .navbar-brand { font-weight: 800; color: #10b981 !important; letter-spacing: -0.5px; }
+
+            .main-container { flex: 1; display: flex; overflow: hidden; max-width: 1400px; margin: 0 auto; width: 100%; padding: 20px; gap: 20px; }
+
+            /* 🛠️ Admin Whitelist Sidebar */
+            .admin-sidebar { width: 350px; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; overflow: hidden; display: none; /* Hidden by default */ }
+            .sidebar-header { background: #0f172a; color: white; padding: 20px; font-weight: 700; }
+            .whitelist-form { padding: 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+            .whitelist-list { flex: 1; overflow-y: auto; padding: 10px; }
+            .participant-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; }
+            .participant-id { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #0f172a; }
+
+            /* 💬 Chat Box (WhatsApp Style) */
+            .chat-container { flex: 1; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+            .chat-header { background: #10b981; color: white; padding: 15px 25px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 2; }
+            .chat-header-icon { width: 45px; height: 45px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+            .chat-messages { flex: 1; padding: 20px; overflow-y: auto; background: #efeae2; display: flex; flex-direction: column; gap: 15px; }
+
+            /* Message Bubbles */
+            .msg-wrapper { display: flex; flex-direction: column; max-width: 75%; }
+            .msg-wrapper.received { align-self: flex-start; }
+            .msg-wrapper.sent { align-self: flex-end; align-items: flex-end; }
+
+            .msg-sender-id { font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 4px; font-family: 'JetBrains Mono', monospace; }
+
+            .msg-bubble { padding: 10px 16px; border-radius: 12px; font-size: 15px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); word-wrap: break-word; }
+            .msg-wrapper.received .msg-bubble { background: #ffffff; border-top-left-radius: 0; }
+            .msg-wrapper.sent .msg-bubble { background: #dcf8c6; border-top-right-radius: 0; } /* WhatsApp Green */
+
+            .msg-time { font-size: 10px; color: #94a3b8; text-align: right; margin-top: 4px; display: block; }
+
+            /* System message */
+            .sys-msg { align-self: center; background: rgba(0,0,0,0.05); color: #475569; padding: 5px 15px; border-radius: 50px; font-size: 12px; font-weight: 600; margin: 10px 0; }
+
+            /* Chat Input */
+            .chat-input-area { padding: 15px 20px; background: #f0f2f5; display: flex; align-items: center; gap: 15px; border-top: 1px solid #e2e8f0; }
+            .chat-input { flex: 1; border: none; padding: 15px 20px; border-radius: 50px; font-size: 15px; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+            .send-btn { width: 50px; height: 50px; border-radius: 50%; background: #10b981; color: white; border: none; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3); }
+            .send-btn:hover { background: #059669; transform: scale(1.05); }
+            .send-btn:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+
+            @media (max-width: 992px) {
+                .main-container { flex-direction: column; padding: 10px; }
+                .admin-sidebar { width: 100%; height: auto; max-height: 300px; }
+                .chat-container { height: 60vh; }
+            }
+        </style>
+    </head>
+    <body>
+
+        <nav class="navbar navbar-expand-lg">
+            <div class="container-fluid px-lg-5">
+                <a class="navbar-brand" href="index.html"><i class="fas fa-leaf me-2"></i>ZAMIN DEKHO</a>
+                <div class="d-flex gap-3 align-items-center">
+                    <span class="badge bg-light text-dark border px-3 py-2 fs-6 rounded-pill" id="myAccountIdLabel">Loading ID...</span>
+                    <a href="index.html" class="btn btn-outline-dark rounded-pill px-4 fw-bold border-2"><i class="fas fa-arrow-left me-1"></i> Back</a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="main-container">
+            <!-- 🛡️ ADMIN PANEL (Hidden for normal users) -->
+            <div class="admin-sidebar" id="adminSidebar">
+                <div class="sidebar-header">
+                    <i class="fas fa-users-cog me-2"></i> Whitelist Manager
+                </div>
+                <div class="whitelist-form">
+                    <label class="form-label fw-bold text-muted small mb-1">Add Account ID</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">#</span>
+                        <input type="text" id="newParticipantId" class="form-control" placeholder="e.g. 4af3dd">
+                        <button class="btn btn-success fw-bold" onclick="addParticipant()"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="whitelist-list" id="participantList">
+                    <div class="text-center py-4 text-muted small fw-bold">Loading participants...</div>
+                </div>
+            </div>
+
+            <!-- 💬 CHAT BOX -->
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="chat-header-icon"><i class="fas fa-gavel"></i></div>
+                    <div>
+                        <h4 class="m-0 fw-bold fs-5">Live Bidding Room</h4>
+                        <span class="small opacity-75" id="chatStatus">Connecting to secure server...</span>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="chatBox">
+                    <div class="sys-msg"><i class="fas fa-lock me-1"></i> Messages are end-to-end encrypted</div>
+                    <!-- Messages will appear here -->
+                </div>
+
+                <div class="chat-input-area">
+                    <input type="text" id="bidInput" class="chat-input" placeholder="Type a message or bid amount..." autocomplete="off">
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="script.js"></script>
+
+        <script>
+            let socket;
+            let currentUser = null;
+            let myShortId = "";
+
+            window.onload = function() {
+                currentUser = typeof getUser === 'function' ? getUser() : null;
+                const token = typeof getToken === 'function' ? getToken() : null;
+
+                if (!token || !currentUser) {
+                    window.location.href = "login.html";
+                    return;
+                }
+
+                myShortId = currentUser._id.substring(currentUser._id.length - 6);
+                document.getElementById('myAccountIdLabel').innerHTML = `<i class="fas fa-id-badge text-success me-1"></i> #${myShortId}`;
+
+                // Show Admin sidebar if Admin
+                if (currentUser.role === 'admin') {
+                    document.getElementById('adminSidebar').style.display = 'flex';
+                    fetchParticipants(); // API to be created
+                }
+
+                initChat();
+            };
+
+            function initChat() {
+                // Initialize Socket.io
+                socket = io(window.location.origin);
+
+                socket.on("connect", () => {
+                    document.getElementById('chatStatus').innerHTML = `<i class="fas fa-circle text-white me-1" style="font-size:8px;"></i> Connected securely`;
+                    document.getElementById('sendBtn').disabled = false;
+
+                    // Join Room
+                    socket.emit("join_bidding_room");
+                });
+
+                // Listen for incoming messages
+                socket.on("receive_bid", (data) => {
+                    appendMessage(data);
+                });
+
+                socket.on("disconnect", () => {
+                    document.getElementById('chatStatus').innerText = "Disconnected. Reconnecting...";
+                    document.getElementById('sendBtn').disabled = true;
+                });
+
+                // Send message on Enter key
+                document.getElementById('bidInput').addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') sendMessage();
+                });
+            }
+
+            function sendMessage() {
+                const input = document.getElementById('bidInput');
+                const text = input.value.trim();
+
+                if (!text) return;
+
+                const msgData = {
+                    senderId: currentUser._id,
+                    shortId: myShortId,
+                    text: text,
+                    timestamp: new Date().toISOString()
+                };
+
+                // Emit to server
+                socket.emit("send_bid", msgData);
+                input.value = "";
+
+                // TODO: Here we will also make an API call to save message to MongoDB
+            }
+
+            function appendMessage(data) {
+                const chatBox = document.getElementById('chatBox');
+                const isMine = data.senderId === currentUser._id;
+
+                const timeStr = new Date(data.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+                const msgHtml = `
+                    <div class="msg-wrapper ${isMine ? 'sent' : 'received'}">
+                        ${!isMine ? `<div class="msg-sender-id">#${data.shortId}</div>` : ''}
+                        <div class="msg-bubble">
+                            ${window.escapeHTML ? escapeHTML(data.text) : data.text}
+                            <span class="msg-time">${timeStr}</span>
+                        </div>
+                    </div>
+                `;
+
+                chatBox.insertAdjacentHTML('beforeend', msgHtml);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            // ==========================================
+            // 🛡️ ADMIN FUNCTIONS (Placeholders for Backend)
+            // ==========================================
+            async function fetchParticipants() {
+                // TODO: API fetch logic from backend
+                document.getElementById('participantList').innerHTML = `
+                    <div class="text-center py-4 text-muted small fw-bold">Waiting for backend routes...</div>
+                `;
+            }
+
+            async function addParticipant() {
+                const idInput = document.getElementById('newParticipantId').value.trim();
+                if(!idInput) return;
+
+                // TODO: API post logic to add to whitelist
+                Swal.fire('Coming Soon', 'Backend connection pending for Whitelist', 'info');
+            }
+        </script>
+    </body>
+</html>
