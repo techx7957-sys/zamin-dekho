@@ -138,7 +138,7 @@
             let currentUser = null;
             let myShortId = "";
 
-            window.onload = function() {
+            window.onload = async function() {
                 currentUser = typeof getUser === 'function' ? getUser() : null;
                 const token = typeof getToken === 'function' ? getToken() : null;
 
@@ -150,18 +150,42 @@
                 myShortId = currentUser._id.substring(currentUser._id.length - 6);
                 document.getElementById('myAccountIdLabel').innerHTML = `<i class="fas fa-id-badge text-success me-1"></i> #${myShortId}`;
 
-                // Show Admin sidebar if Admin
+                // Agar Admin hai toh Sidebar dikhao aur whitelist fetch karo
                 if (currentUser.role === 'admin') {
                     document.getElementById('adminSidebar').style.display = 'flex';
-                    fetchParticipants(); // API to be created
+                    fetchParticipants();
                 }
 
-                initChat();
+                // 🛡️ Backend se check karo ki kya is user ko andar aane ki permission hai?
+                try {
+                    const accessRes = await apiFetch("/bidding/check-access");
+                    if (accessRes.success && accessRes.hasAccess) {
+                        initChat();
+                        fetchOldMessages();
+                    } else {
+                        Swal.fire('Access Denied', 'Aapko is exclusive bidding room mein aane ki permission nahi hai.', 'error')
+                        .then(() => window.location.replace('index.html'));
+                    }
+                } catch (e) {
+                    Swal.fire('Error', 'Server connection failed', 'error');
+                }
             };
 
+            async function fetchOldMessages() {
+                try {
+                    const res = await apiFetch("/bidding/messages");
+                    if (res.success && res.messages) {
+                        res.messages.forEach(msg => appendMessage(msg));
+                    }
+                } catch (e) { console.log("Failed to fetch messages:", e); }
+            }
+
             function initChat() {
-                // Initialize Socket.io
-                socket = io(window.location.origin);
+                // 🔥 FIX: Vercel ko bypass karne ke liye direct BACKEND_URL ka use
+                const serverUrl = typeof BACKEND_URL !== 'undefined' ? BACKEND_URL : window.location.origin;
+                socket = io(serverUrl, {
+                    transports: ["websocket", "polling"]
+                });
 
                 socket.on("connect", () => {
                     document.getElementById('chatStatus').innerHTML = `<i class="fas fa-circle text-white me-1" style="font-size:8px;"></i> Connected securely`;
@@ -187,7 +211,7 @@
                 });
             }
 
-            function sendMessage() {
+            async function sendMessage() {
                 const input = document.getElementById('bidInput');
                 const text = input.value.trim();
 
@@ -200,11 +224,19 @@
                     timestamp: new Date().toISOString()
                 };
 
-                // Emit to server
+                // 🚀 Emit to server (Instant UI Update for everyone)
                 socket.emit("send_bid", msgData);
                 input.value = "";
 
-                // TODO: Here we will also make an API call to save message to MongoDB
+                // 💾 Save to MongoDB silently
+                try {
+                    await apiFetch("/bidding/messages", {
+                        method: "POST",
+                        body: JSON.stringify({ text: text })
+                    });
+                } catch (e) {
+                    console.error("Message save failed");
+                }
             }
 
             function appendMessage(data) {
@@ -228,21 +260,76 @@
             }
 
             // ==========================================
-            // 🛡️ ADMIN FUNCTIONS (Placeholders for Backend)
+            // 🛡️ ADMIN FUNCTIONS (API Connected)
             // ==========================================
             async function fetchParticipants() {
-                // TODO: API fetch logic from backend
-                document.getElementById('participantList').innerHTML = `
-                    <div class="text-center py-4 text-muted small fw-bold">Waiting for backend routes...</div>
-                `;
+                const listObj = document.getElementById('participantList');
+                listObj.innerHTML = `<div class="text-center py-4"><div class="spinner-border text-success spinner-border-sm"></div></div>`;
+
+                try {
+                    const res = await apiFetch("/bidding/participants");
+                    if (res.success && res.participants.length > 0) {
+                        listObj.innerHTML = res.participants.map(p => `
+                            <div class="participant-item">
+                                <div>
+                                    <div class="participant-id">#${p.user._id.toString().substring(p.user._id.toString().length - 6)}</div>
+                                    <div class="small text-muted">${escapeHTML(p.user.fullName)}</div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger" onclick="removeParticipant('${p._id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        `).join('');
+                    } else {
+                        listObj.innerHTML = `<div class="text-center py-4 text-muted small fw-bold">No accounts whitelisted yet.</div>`;
+                    }
+                } catch (e) {
+                    listObj.innerHTML = `<div class="text-center py-4 text-danger small fw-bold">Failed to load list.</div>`;
+                }
             }
 
             async function addParticipant() {
-                const idInput = document.getElementById('newParticipantId').value.trim();
-                if(!idInput) return;
+                const idInput = document.getElementById('newParticipantId');
+                const accountId = idInput.value.trim();
+                if(!accountId) return;
 
-                // TODO: API post logic to add to whitelist
-                Swal.fire('Coming Soon', 'Backend connection pending for Whitelist', 'info');
+                const btn = event.currentTarget;
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+                btn.disabled = true;
+
+                try {
+                    const res = await apiFetch("/bidding/participants", {
+                        method: "POST",
+                        body: JSON.stringify({ accountId })
+                    });
+                    if (res.success) {
+                        Swal.fire('Added!', 'User can now enter the bidding room.', 'success');
+                        idInput.value = "";
+                        fetchParticipants();
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                } catch (e) {
+                    Swal.fire('Error', 'Failed to add user.', 'error');
+                } finally {
+                    btn.innerHTML = `<i class="fas fa-plus"></i>`;
+                    btn.disabled = false;
+                }
+            }
+
+            async function removeParticipant(participantId) {
+                const confirm = await Swal.fire({ title: 'Remove user?', text: 'They will be kicked out of the bidding room.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Yes, remove' });
+                if (!confirm.isConfirmed) return;
+
+                try {
+                    const res = await apiFetch("/bidding/participants/" + participantId, { method: "DELETE" });
+                    if (res.success) {
+                        Swal.fire('Removed!', 'User has been removed.', 'success');
+                        fetchParticipants();
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                } catch (e) {
+                    Swal.fire('Error', 'Failed to remove user.', 'error');
+                }
             }
         </script>
     </body>
