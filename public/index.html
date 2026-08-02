@@ -305,6 +305,10 @@
                                 <li class="nav-item auth-required-link d-none">
                                     <a class="nav-link" href="dashboard.html#bookingsTab"><i class="fas fa-ticket-alt me-1"></i> Bookings</a>
                                 </li>
+
+                                <!-- Admin Bidding Pill (Only for Admin) -->
+                                <li id="biddingLinkArea" class="nav-item ms-lg-2"></li>
+
                                 <!-- Admin Area Pill -->
                                 <li id="adminLinkArea" class="nav-item ms-lg-2"></li>
                             </ul>
@@ -915,6 +919,7 @@
                 const token = typeof getToken === 'function' ? getToken() : null;
                 const authArea = document.getElementById('authArea');
                 const adminArea = document.getElementById('adminLinkArea');
+                const biddingArea = document.getElementById('biddingLinkArea');
 
                 if (token) {
                     document.querySelectorAll('.auth-required-link').forEach(el => el.classList.remove('d-none'));
@@ -922,9 +927,10 @@
                         const user = typeof getUser === 'function' ? getUser() : null;
 
                         if(user && user.role === 'admin') {
-                            // Added colored pill class nav-pill-red
+                            biddingArea.innerHTML = `<a class="nav-link nav-pill-blue" href="bidding.html"><i class="fas fa-gavel me-1"></i> Live Bidding</a>`;
                             adminArea.innerHTML = `<a class="nav-link nav-pill-red" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
                         } else {
+                            if (biddingArea) biddingArea.innerHTML = '';
                             adminArea.innerHTML = ''; 
                         }
 
@@ -999,4 +1005,4 @@
             });
         </script>
     </body>
-</html>
+</html> 
