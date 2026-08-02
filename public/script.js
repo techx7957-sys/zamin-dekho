@@ -17,25 +17,27 @@ window.userLng = null;
 // 🚀 INIT & SMART AUTH FLOW
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
+    // 🔥 STEP 1: Sabse pehle URL check karo ki kahin Google/Facebook ka token toh nahi aaya!
+    handleSocialLogin();
+
+    // 🔥 STEP 2: Ab token verify karo
     const token = localStorage.getItem('zamin_token');
     const currentPath = window.location.pathname.toLowerCase();
 
-    // Check if user is on Auth pages (Login or Register)
     const isAuthPage = currentPath.includes('login.html') || currentPath.includes('register.html');
 
-    // RULE 1: Agar token NAHI hai aur user Auth page par NAHI hai (jaise index.html pe hai), toh seedha Register par bhejo
+    // RULE 1: Bina token ke aaye toh Register bhejo
     if (!token && !isAuthPage) {
         window.location.replace('register.html');
-        return; // Execution yahin rok do
+        return;
     }
 
-    // RULE 2: Agar user LOGGED IN hai aur phir se Login/Register kholne ki koshish kare, toh Index par bhej do
+    // RULE 2: Token hai par galti se Login/Register khola toh Index pe bhejo
     if (token && isAuthPage) {
         window.location.replace('index.html');
         return;
     }
 
-    handleSocialLogin();
     updateNavbar();
 });
 
@@ -55,25 +57,26 @@ function handleSocialLogin() {
                 localStorage.setItem('zamin_user', decodeURIComponent(user));
             }
 
-            // 🔥 REMOVE TOKEN FROM URL (SECURITY AGAINST URL LEAKS)
-            // No page reload! Just silently clean the URL.
+            // 🔥 Clean URL silently
             window.history.replaceState({}, document.title, window.location.pathname);
 
             if (typeof window.showToast === "function") {
                 window.showToast("Login Successful 🚀", "success");
             }
 
-            // ⚡ UPDATE UI DIRECTLY (NO REDIRECT LOOP!)
-            updateNavbar();
+            // ⚡ AGAR GOOGLE LOGIN AUTH PAGE PAR HUA HAI, TOH SEEDHA INDEX PAR BHEJO
+            const currentPath = window.location.pathname.toLowerCase();
+            if (currentPath.includes('login.html') || currentPath.includes('register.html')) {
+                window.location.replace('index.html');
+                return; // Execution yahin rok do
+            }
 
-            // If this function exists in index.html, run it to show user profile
+            updateNavbar();
             if (typeof window.updateCustomNavbarUI === "function") {
                 window.updateCustomNavbarUI();
             }
 
-        } catch (e) {
-            // console.error("Login Error:", e);
-        }
+        } catch (e) { }
     }
 }
 

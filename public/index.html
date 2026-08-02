@@ -1,10 +1,12 @@
 <!doctype html>
 <html lang="en">
     <head>
-        <!-- 🚨 STRICT NO-FLICKER AUTH SHIELD 🚨 -->
+        <!-- 🚨 STRICT NO-FLICKER AUTH SHIELD (UPDATED FOR GOOGLE LOGIN) 🚨 -->
         <script>
-            // DOM paint hone se pehle turant check karega!
-            if (!localStorage.getItem('zamin_token')) {
+            // DOM paint hone se pehle check karega
+            // Par agar URL mein Google se token aa raha hai, toh VIP pass dega aur register pe nahi fekega!
+            const urlParams = new URLSearchParams(window.location.search);
+            if (!localStorage.getItem('zamin_token') && !urlParams.has('token')) {
                 window.location.replace('register.html');
             }
         </script>
@@ -259,7 +261,7 @@
                         padding: 15px;
                     }
                 }
-            </style>            </style>
+            </style>            
 
     </head>
     <body>

@@ -249,7 +249,9 @@ app.use((req, res, next) => {
 // ==========================================
 // Ye redirect static files ke upar hona zaroori hai
 app.get('/', (req, res) => {
-    res.redirect('/register.html');
+    // 🔥 FIX: Google ke ?token= ko zinda rakhne ke liye query string pass karna zaroori hai
+    const queryString = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+    res.redirect('/register.html' + queryString);
 });
 
 // ==========================================
@@ -310,7 +312,9 @@ app.get("*", (req, res) => {
 
     // 🔥 BACKUP REDIRECT (Security layer 2)
     if (req.path === "/") {
-        return res.redirect("/register.html");
+        // 🔥 FIX: Backup redirect mein bhi query string (token) zinda rakhni hai
+        const queryString = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+        return res.redirect("/register.html" + queryString);
     }
 
     let filePath = path.join(__dirname, "public", req.path);
