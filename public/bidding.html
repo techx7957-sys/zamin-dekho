@@ -136,7 +136,9 @@
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="script.js"></script>
+
+        <!-- 🔥 FIX 1: Cache buster added so mobile loads fresh file -->
+        <script src="script.js?v=live_bid_fixed"></script>
 
         <script>
             let socket;
@@ -163,9 +165,21 @@
                     document.getElementById('mainLayoutContainer').classList.add('centered-mode');
                 }
 
-                // 🛡️ Backend se check karo ki kya is user ko andar aane ki permission hai?
+                // 🔥 FIX 2: Mobile/AdBlock bypass using Native Fetch
                 try {
-                    const accessRes = await apiFetch("/bidding/check-access");
+                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                    const res = await fetch(`${backendPath}/bidding/check-access`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                    const accessRes = await res.json();
+
                     if (accessRes.success && accessRes.hasAccess) {
                         initChat();
                         fetchOldMessages();
@@ -174,24 +188,30 @@
                         .then(() => window.location.replace('index.html'));
                     }
                 } catch (e) {
-                    Swal.fire('Error', 'Server connection failed', 'error');
+                    console.error(e);
+                    Swal.fire('Connection Blocked', 'Kripya Ad-blocker band karein ya page refresh karein. (' + e.message + ')', 'error');
                 }
             };
 
             async function fetchOldMessages() {
                 try {
-                    const res = await apiFetch("/bidding/messages");
-                    if (res.success && res.messages) {
-                        res.messages.forEach(msg => appendMessage(msg));
+                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                    const token = typeof getToken === 'function' ? getToken() : null;
+                    const res = await fetch(`${backendPath}/bidding/messages`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+
+                    if (data.success && data.messages) {
+                        data.messages.forEach(msg => appendMessage(msg));
                     }
                 } catch (e) { console.log("Failed to fetch messages:", e); }
             }
 
             function initChat() {
-                // 🔥 FIX: Vercel ko bypass karke seedha Replit ke server par connect karo
+                // 🔥 Replit direct connection URL
                 const replitURL = "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev";
 
-                // Transports mein 'polling' pehle lagana zaroori hai Replit servers ke liye
                 socket = io(replitURL, {
                     transports: ["polling", "websocket"]
                 });
@@ -200,11 +220,9 @@
                     document.getElementById('chatStatus').innerHTML = `<i class="fas fa-circle text-white me-1" style="font-size:8px;"></i> Connected securely`;
                     document.getElementById('sendBtn').disabled = false;
 
-                    // Join Room
                     socket.emit("join_bidding_room");
                 });
 
-                // Listen for incoming messages
                 socket.on("receive_bid", (data) => {
                     appendMessage(data);
                 });
@@ -214,7 +232,6 @@
                     document.getElementById('sendBtn').disabled = true;
                 });
 
-                // Send message on Enter key
                 document.getElementById('bidInput').addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') sendMessage();
                 });
@@ -233,14 +250,19 @@
                     timestamp: new Date().toISOString()
                 };
 
-                // 🚀 Emit to server (Instant UI Update for everyone)
                 socket.emit("send_bid", msgData);
                 input.value = "";
 
-                // 💾 Save to MongoDB silently
+                // Native fetch to save message
                 try {
-                    await apiFetch("/bidding/messages", {
+                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                    const token = typeof getToken === 'function' ? getToken() : null;
+                    await fetch(`${backendPath}/bidding/messages`, {
                         method: "POST",
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify({ text: text })
                     });
                 } catch (e) {
@@ -269,16 +291,22 @@
             }
 
             // ==========================================
-            // 🛡️ ADMIN FUNCTIONS (API Connected)
+            // 🛡️ ADMIN FUNCTIONS 
             // ==========================================
             async function fetchParticipants() {
                 const listObj = document.getElementById('participantList');
                 listObj.innerHTML = `<div class="text-center py-4"><div class="spinner-border text-success spinner-border-sm"></div></div>`;
 
                 try {
-                    const res = await apiFetch("/bidding/participants");
-                    if (res.success && res.participants.length > 0) {
-                        listObj.innerHTML = res.participants.map(p => `
+                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                    const token = typeof getToken === 'function' ? getToken() : null;
+                    const res = await fetch(`${backendPath}/bidding/participants`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+
+                    if (data.success && data.participants.length > 0) {
+                        listObj.innerHTML = data.participants.map(p => `
                             <div class="participant-item">
                                 <div>
                                     <div class="participant-id">#${p.user._id.toString().substring(p.user._id.toString().length - 6)}</div>
@@ -305,16 +333,24 @@
                 btn.disabled = true;
 
                 try {
-                    const res = await apiFetch("/bidding/participants", {
+                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                    const token = typeof getToken === 'function' ? getToken() : null;
+                    const res = await fetch(`${backendPath}/bidding/participants`, {
                         method: "POST",
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify({ accountId })
                     });
-                    if (res.success) {
+                    const data = await res.json();
+
+                    if (data.success) {
                         Swal.fire('Added!', 'User can now enter the bidding room.', 'success');
                         idInput.value = "";
                         fetchParticipants();
                     } else {
-                        Swal.fire('Error', res.message, 'error');
+                        Swal.fire('Error', data.message, 'error');
                     }
                 } catch (e) {
                     Swal.fire('Error', 'Failed to add user.', 'error');
@@ -329,12 +365,19 @@
                 if (!confirm.isConfirmed) return;
 
                 try {
-                    const res = await apiFetch("/bidding/participants/" + participantId, { method: "DELETE" });
-                    if (res.success) {
+                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                    const token = typeof getToken === 'function' ? getToken() : null;
+                    const res = await fetch(`${backendPath}/bidding/participants/${participantId}`, { 
+                        method: "DELETE",
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+
+                    if (data.success) {
                         Swal.fire('Removed!', 'User has been removed.', 'success');
                         fetchParticipants();
                     } else {
-                        Swal.fire('Error', res.message, 'error');
+                        Swal.fire('Error', data.message, 'error');
                     }
                 } catch (e) {
                     Swal.fire('Error', 'Failed to remove user.', 'error');
