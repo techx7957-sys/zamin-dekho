@@ -926,12 +926,22 @@
                     try {
                         const user = typeof getUser === 'function' ? getUser() : null;
 
+                        // Clear initially
+                        if (biddingArea) biddingArea.innerHTML = '';
+                        if (adminArea) adminArea.innerHTML = ''; 
+
                         if(user && user.role === 'admin') {
                             biddingArea.innerHTML = `<a class="nav-link nav-pill-blue" href="bidding.html"><i class="fas fa-gavel me-1"></i> Bidding</a>`;
                             adminArea.innerHTML = `<a class="nav-link nav-pill-red" href="admin.html"><i class="fas fa-shield-alt me-1"></i> CRM Panel</a>`;
-                        } else {
-                            if (biddingArea) biddingArea.innerHTML = '';
-                            adminArea.innerHTML = ''; 
+                        } 
+
+                        // 🔥 DYNAMIC CHECK FOR WHITELISTED USERS (NON-ADMINS)
+                        if (user && user.role !== 'admin') {
+                            apiFetch("/bidding/check-access").then(accessRes => {
+                                if (accessRes && accessRes.hasAccess && biddingArea) {
+                                    biddingArea.innerHTML = `<a class="nav-link nav-pill-blue" href="bidding.html"><i class="fas fa-gavel me-1"></i> Bidding</a>`;
+                                }
+                            }).catch(() => { /* Ignore errors quietly */ });
                         }
 
                         const firstName = (user && user.fullName) ? user.fullName.split(' ')[0] : 'User';
@@ -1005,4 +1015,4 @@
             });
         </script>
     </body>
-</html> 
+</html>
