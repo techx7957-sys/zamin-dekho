@@ -167,3 +167,25 @@ exports.removeParticipant = async (req, res) => {
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
+
+// ==========================================
+// 🔥 RESET ROOM (ADMIN ONLY)
+// ==========================================
+
+// 4. Reset Entire Bidding Room
+exports.resetRoom = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: "Only admin can reset room." });
+        }
+
+        // Dono collection se poora data uda do
+        await BidMessage.deleteMany({});
+        await BiddingParticipant.deleteMany({});
+
+        res.json({ success: true, message: "Room reset successfully" });
+    } catch (error) {
+        console.error("Reset Room Error:", error);
+        res.status(500).json({ success: false, message: "Server error during reset" });
+    }
+};

@@ -30,4 +30,10 @@ router.post("/participants", verifyToken, biddingController.addParticipant);
 // Admin dwara kisi user ko Group se bahar nikalne (remove) ke liye
 router.delete("/participants/:id", verifyToken, biddingController.removeParticipant);
 
+// ==========================================
+// 🔥 RESET ROOM (ADMIN ONLY)
+// ==========================================
+// Admin dwara poora Bidding Room (chat + users) Reset karne ke liye
+router.delete("/reset", verifyToken, biddingController.resetRoom);
+
 module.exports = router;
