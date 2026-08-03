@@ -10,7 +10,7 @@
         </script>
 
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
         <title>Live Bidding Room | Zamin Dekho</title>
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,17 +22,12 @@
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js"></script>
 
         <!-- 🔥 BULLETPROOF SOCKET.IO LOADER (3-LAYER FALLBACK) 🔥 -->
-        <!-- Step 1: Try Cloudflare (Fastest) -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.min.js"></script>
-
-        <!-- Step 2: If Step 1 is blocked by mobile/ad-blocker, try jsDelivr -->
         <script>
             if (typeof io === 'undefined') {
                 document.write('<script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js"><\/script>');
             }
         </script>
-
-        <!-- Step 3: If ALL external CDNs are blocked, fetch DIRECTLY from your Replit Backend! -->
         <script>
             if (typeof io === 'undefined') {
                 document.write('<script src="https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev/socket.io/socket.io.js"><\/script>');
@@ -40,28 +35,55 @@
         </script>
 
         <style>
-            body { background: #f1f5f9; font-family: "Inter", sans-serif; color: #1e293b; display: flex; flex-direction: column; height: 100vh; margin: 0; }
+            /* 🔥 FIX: 'position: fixed' locks the app exactly to the screen limits. '100dvh' automatically handles dynamic screen sizes like split-screens or mobile keyboards. */
+            body { 
+                background: #f1f5f9; 
+                font-family: "Inter", sans-serif; 
+                color: #1e293b; 
+                display: flex; 
+                flex-direction: column; 
+                margin: 0; 
+                position: fixed; /* Prevent scroll overflow completely */
+                top: 0; 
+                left: 0; 
+                right: 0; 
+                bottom: 0;
+                width: 100%; 
+                height: 100dvh; /* Dynamic height detection */
+                overflow: hidden; 
+            }
 
-            .navbar { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); background: #ffffff !important; padding: 12px 0; z-index: 10; }
+            .navbar { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); background: #ffffff !important; padding: 12px 0; z-index: 10; flex-shrink: 0; }
             .navbar-brand { font-weight: 800; color: #10b981 !important; letter-spacing: -0.5px; }
 
-            /* Default main container - Flex for side-by-side */
-            .main-container { flex: 1; display: flex; overflow: hidden; max-width: 1400px; margin: 0 auto; width: 100%; padding: 20px; gap: 20px; transition: 0.3s; }
+            /* Default main container - Flex for side-by-side with exact 0.2cm (approx 12px) bottom gap */
+            .main-container { 
+                flex: 1; 
+                display: flex; 
+                overflow: hidden; 
+                max-width: 1400px; 
+                margin: 0 auto; 
+                width: 100%; 
+                padding: 20px; 
+                padding-bottom: calc(12px + env(safe-area-inset-bottom)); /* Exact bottom gap */
+                gap: 20px; 
+                transition: 0.3s; 
+            }
 
             /* Center mode for normal users (Non-Admins) */
             .main-container.centered-mode { max-width: 900px; justify-content: center; }
 
             /* 🛠️ Admin Whitelist Sidebar */
             .admin-sidebar { width: 350px; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; overflow: hidden; display: none; /* Hidden by default */ }
-            .sidebar-header { background: #0f172a; color: white; padding: 20px; font-weight: 700; }
-            .whitelist-form { padding: 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+            .sidebar-header { background: #0f172a; color: white; padding: 20px; font-weight: 700; flex-shrink: 0; }
+            .whitelist-form { padding: 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; }
             .whitelist-list { flex: 1; overflow-y: auto; padding: 10px; }
             .participant-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; }
             .participant-id { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #0f172a; }
 
             /* 💬 Chat Box (WhatsApp Style) */
-            .chat-container { flex: 1; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; overflow: hidden; position: relative; width: 100%; }
-            .chat-header { background: #10b981; color: white; padding: 15px 25px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 2; }
+            .chat-container { flex: 1; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; overflow: hidden; position: relative; width: 100%; min-height: 0; }
+            .chat-header { background: #10b981; color: white; padding: 15px 25px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 2; flex-shrink: 0; }
             .chat-header-icon { width: 45px; height: 45px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
 
             .chat-messages { flex: 1; padding: 20px; overflow-y: auto; background: #efeae2; display: flex; flex-direction: column; gap: 15px; }
@@ -83,16 +105,21 @@
             .sys-msg { align-self: center; background: rgba(0,0,0,0.05); color: #475569; padding: 5px 15px; border-radius: 50px; font-size: 12px; font-weight: 600; margin: 10px 0; }
 
             /* Chat Input */
-            .chat-input-area { padding: 15px 20px; background: #f0f2f5; display: flex; align-items: center; gap: 15px; border-top: 1px solid #e2e8f0; }
+            .chat-input-area { padding: 15px 20px; background: #f0f2f5; display: flex; align-items: center; gap: 15px; border-top: 1px solid #e2e8f0; flex-shrink: 0; }
             .chat-input { flex: 1; border: none; padding: 15px 20px; border-radius: 50px; font-size: 15px; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-            .send-btn { width: 50px; height: 50px; border-radius: 50%; background: #10b981; color: white; border: none; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3); }
+            .send-btn { width: 50px; height: 50px; border-radius: 50%; background: #10b981; color: white; border: none; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3); flex-shrink: 0; }
             .send-btn:hover { background: #059669; transform: scale(1.05); }
             .send-btn:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
 
+            /* 🔥 Mobile View Adjustments */
             @media (max-width: 992px) {
-                .main-container { flex-direction: column; padding: 10px; }
-                .admin-sidebar { width: 100%; height: auto; max-height: 300px; }
-                .chat-container { height: 60vh; }
+                .main-container { 
+                    flex-direction: column; 
+                    padding: 10px; 
+                    padding-bottom: calc(12px + env(safe-area-inset-bottom)); /* Strict 0.2cm gap from bottom */
+                }
+                .admin-sidebar { width: 100%; height: auto; max-height: 25%; flex-shrink: 0; }
+                .chat-container { flex: 1; height: auto; min-height: 0; }
                 .main-container.centered-mode { max-width: 100%; }
             }
         </style>
@@ -152,8 +179,8 @@
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-        <!-- 🔥 FIX: Cache buster updated so mobile loads fresh script.js -->
-        <script src="script.js?v=live_bid_pro_max"></script>
+        <!-- 🔥 FIX: Cache buster updated -->
+        <script src="script.js?v=live_bid_ui_perfect"></script>
 
         <script>
             let socket;
@@ -180,7 +207,7 @@
                     document.getElementById('mainLayoutContainer').classList.add('centered-mode');
                 }
 
-                // 🛡️ Mobile/AdBlock bypass using Native Fetch
+                // 🛡️ Bidding Authorization
                 try {
                     const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
                     const res = await fetch(`${backendPath}/bidding/check-access`, {
@@ -191,7 +218,7 @@
                         }
                     });
 
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
 
                     const accessRes = await res.json();
 
@@ -203,12 +230,11 @@
                         .then(() => window.location.replace('index.html'));
                     }
                 } catch (e) {
-                    console.error(e);
-                    // Updated Error message mapping
+                    console.error("Initialization Failed:", e);
                     if (typeof io === 'undefined') {
-                        Swal.fire('Connection Blocked', 'Aapke browser ya network ne chat modules block kar diye hain. Kripya page refresh karein.', 'error');
+                        Swal.fire('Network Issue', 'Aapka internet ya mobile browser Live Chat components ko load nahi kar pa raha hai. Kripya page reload karein ya doosra browser try karein.', 'warning');
                     } else {
-                        Swal.fire('Connection Blocked', 'Kripya Ad-blocker band karein ya page refresh karein. (' + e.message + ')', 'error');
+                        Swal.fire('Server Error', 'Server se connection toot gaya: ' + e.message, 'error');
                     }
                 }
             };
@@ -229,7 +255,6 @@
             }
 
             function initChat() {
-                // 🔥 Replit direct connection URL
                 const replitURL = "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev";
 
                 socket = io(replitURL, {
@@ -273,7 +298,6 @@
                 socket.emit("send_bid", msgData);
                 input.value = "";
 
-                // Native fetch to save message
                 try {
                     const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
                     const token = typeof getToken === 'function' ? getToken() : null;
