@@ -21,8 +21,23 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js"></script>
 
-        <!-- 🔥 FIX: Socket.io Client Script (Loaded from CDN for Vercel) -->
-        <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+        <!-- 🔥 BULLETPROOF SOCKET.IO LOADER (3-LAYER FALLBACK) 🔥 -->
+        <!-- Step 1: Try Cloudflare (Fastest) -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.min.js"></script>
+
+        <!-- Step 2: If Step 1 is blocked by mobile/ad-blocker, try jsDelivr -->
+        <script>
+            if (typeof io === 'undefined') {
+                document.write('<script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js"><\/script>');
+            }
+        </script>
+
+        <!-- Step 3: If ALL external CDNs are blocked, fetch DIRECTLY from your Replit Backend! -->
+        <script>
+            if (typeof io === 'undefined') {
+                document.write('<script src="https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev/socket.io/socket.io.js"><\/script>');
+            }
+        </script>
 
         <style>
             body { background: #f1f5f9; font-family: "Inter", sans-serif; color: #1e293b; display: flex; flex-direction: column; height: 100vh; margin: 0; }
@@ -137,8 +152,8 @@
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-        <!-- 🔥 FIX 1: Cache buster added so mobile loads fresh file -->
-        <script src="script.js?v=live_bid_fixed"></script>
+        <!-- 🔥 FIX: Cache buster updated so mobile loads fresh script.js -->
+        <script src="script.js?v=live_bid_pro_max"></script>
 
         <script>
             let socket;
@@ -165,7 +180,7 @@
                     document.getElementById('mainLayoutContainer').classList.add('centered-mode');
                 }
 
-                // 🔥 FIX 2: Mobile/AdBlock bypass using Native Fetch
+                // 🛡️ Mobile/AdBlock bypass using Native Fetch
                 try {
                     const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
                     const res = await fetch(`${backendPath}/bidding/check-access`, {
@@ -189,7 +204,12 @@
                     }
                 } catch (e) {
                     console.error(e);
-                    Swal.fire('Connection Blocked', 'Kripya Ad-blocker band karein ya page refresh karein. (' + e.message + ')', 'error');
+                    // Updated Error message mapping
+                    if (typeof io === 'undefined') {
+                        Swal.fire('Connection Blocked', 'Aapke browser ya network ne chat modules block kar diye hain. Kripya page refresh karein.', 'error');
+                    } else {
+                        Swal.fire('Connection Blocked', 'Kripya Ad-blocker band karein ya page refresh karein. (' + e.message + ')', 'error');
+                    }
                 }
             };
 
