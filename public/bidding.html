@@ -22,12 +22,17 @@
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js"></script>
 
         <!-- 🔥 BULLETPROOF SOCKET.IO LOADER (3-LAYER FALLBACK) 🔥 -->
+        <!-- Step 1: Try Cloudflare (Fastest) -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.min.js"></script>
+
+        <!-- Step 2: If Step 1 is blocked by mobile/ad-blocker, try jsDelivr -->
         <script>
             if (typeof io === 'undefined') {
                 document.write('<script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js"><\/script>');
             }
         </script>
+
+        <!-- Step 3: If ALL external CDNs are blocked, fetch DIRECTLY from your Replit Backend! -->
         <script>
             if (typeof io === 'undefined') {
                 document.write('<script src="https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev/socket.io/socket.io.js"><\/script>');
@@ -93,7 +98,16 @@
             .msg-wrapper.received { align-self: flex-start; }
             .msg-wrapper.sent { align-self: flex-end; align-items: flex-end; }
 
-            .msg-sender-id { font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 4px; font-family: 'JetBrains Mono', monospace; }
+            /* 🔥 FIX: Enhanced Account ID display */
+            .msg-sender-id { 
+                font-size: 12.5px; 
+                font-weight: 800; 
+                color: #475569; 
+                margin-bottom: 5px; 
+                margin-left: 2px;
+                font-family: 'JetBrains Mono', monospace; 
+                letter-spacing: 0.5px;
+            }
 
             .msg-bubble { padding: 10px 16px; border-radius: 12px; font-size: 15px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); word-wrap: break-word; }
             .msg-wrapper.received .msg-bubble { background: #ffffff; border-top-left-radius: 0; }
@@ -207,7 +221,7 @@
                     document.getElementById('mainLayoutContainer').classList.add('centered-mode');
                 }
 
-                // 🛡️ Bidding Authorization
+                // 🛡️ Mobile/AdBlock bypass using Native Fetch
                 try {
                     const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
                     const res = await fetch(`${backendPath}/bidding/check-access`, {
@@ -218,7 +232,7 @@
                         }
                     });
 
-                    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
                     const accessRes = await res.json();
 
@@ -230,11 +244,12 @@
                         .then(() => window.location.replace('index.html'));
                     }
                 } catch (e) {
-                    console.error("Initialization Failed:", e);
+                    console.error(e);
+                    // Updated Error message mapping
                     if (typeof io === 'undefined') {
-                        Swal.fire('Network Issue', 'Aapka internet ya mobile browser Live Chat components ko load nahi kar pa raha hai. Kripya page reload karein ya doosra browser try karein.', 'warning');
+                        Swal.fire('Connection Blocked', 'Aapke browser ya network ne chat modules block kar diye hain. Kripya page refresh karein.', 'error');
                     } else {
-                        Swal.fire('Server Error', 'Server se connection toot gaya: ' + e.message, 'error');
+                        Swal.fire('Connection Blocked', 'Kripya Ad-blocker band karein ya page refresh karein. (' + e.message + ')', 'error');
                     }
                 }
             };
@@ -255,6 +270,7 @@
             }
 
             function initChat() {
+                // 🔥 Replit direct connection URL
                 const replitURL = "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev";
 
                 socket = io(replitURL, {
@@ -298,6 +314,7 @@
                 socket.emit("send_bid", msgData);
                 input.value = "";
 
+                // Native fetch to save message
                 try {
                     const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
                     const token = typeof getToken === 'function' ? getToken() : null;
