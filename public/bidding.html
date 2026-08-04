@@ -70,74 +70,64 @@
 
             .main-container.centered-mode { max-width: 900px; justify-content: center; }
 
-            /* Fixed Admin Sidebar to hold both Panels */
-            .admin-sidebar { width: 350px; display: flex; flex-direction: column; gap: 20px; overflow: hidden; display: none; }
-
-            /* Admin Panels Style */
-            .admin-panel-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; overflow: hidden; }
+            /* 🛠️ Main UI Panels */
+            .admin-sidebar { width: 350px; display: flex; flex-direction: column; overflow: hidden; display: none; }
+            .admin-panel-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; overflow: hidden; flex: 1; min-height: 0; }
 
             .sidebar-header { background: #0f172a; color: white; padding: 20px; font-weight: 700; flex-shrink: 0; }
             .whitelist-form { padding: 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; }
-            .whitelist-list { flex: 1; overflow-y: auto; padding: 10px; max-height: 40vh; }
+            .whitelist-list { flex: 1; overflow-y: auto; padding: 10px; }
             .participant-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; }
             .participant-id { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #0f172a; }
 
-            /* Chat Container */
-            .chat-container { flex: 1; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; overflow: hidden; position: relative; width: 100%; min-height: 0; }
+            /* 💬 Main Content Areas (Chat vs Video) */
+            .content-area { flex: 1; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; overflow: hidden; position: relative; width: 100%; min-height: 0; }
+
+            /* Chat Specific */
+            .chat-container { background: white; }
             .chat-header { background: #10b981; color: white; padding: 15px 25px; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 2; flex-shrink: 0; }
             .chat-header-icon { width: 45px; height: 45px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-
             .chat-messages { flex: 1; padding: 20px; overflow-y: auto; background: #efeae2; display: flex; flex-direction: column; gap: 15px; }
-
             .msg-wrapper { display: flex; flex-direction: column; max-width: 75%; }
             .msg-wrapper.received { align-self: flex-start; }
             .msg-wrapper.sent { align-self: flex-end; align-items: flex-end; }
-
-            .msg-sender-id { 
-                font-size: 12.5px; 
-                font-weight: 800; 
-                color: #475569; 
-                margin-bottom: 5px; 
-                margin-left: 2px;
-                font-family: 'JetBrains Mono', monospace; 
-                letter-spacing: 0.5px;
-            }
-
+            .msg-sender-id { font-size: 12.5px; font-weight: 800; color: #475569; margin-bottom: 5px; margin-left: 2px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px; }
             .msg-bubble { padding: 10px 16px; border-radius: 12px; font-size: 15px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.1); word-wrap: break-word; }
             .msg-wrapper.received .msg-bubble { background: #ffffff; border-top-left-radius: 0; }
             .msg-wrapper.sent .msg-bubble { background: #dcf8c6; border-top-right-radius: 0; }
-
             .msg-time { font-size: 10px; color: #94a3b8; text-align: right; margin-top: 4px; display: block; }
-
             .sys-msg { align-self: center; background: rgba(0,0,0,0.05); color: #475569; padding: 5px 15px; border-radius: 50px; font-size: 12px; font-weight: 600; margin: 10px 0; }
-
             .chat-input-area { padding: 15px 20px; background: #f0f2f5; display: flex; align-items: center; gap: 15px; border-top: 1px solid #e2e8f0; flex-shrink: 0; }
             .chat-input { flex: 1; border: none; padding: 15px 20px; border-radius: 50px; font-size: 15px; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
             .send-btn { width: 50px; height: 50px; border-radius: 50%; background: #10b981; color: white; border: none; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3); flex-shrink: 0; }
             .send-btn:hover { background: #059669; transform: scale(1.05); }
             .send-btn:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
 
-            .custom-left-drawer {
-                width: 3.5in !important;
-                height: 100dvh !important;
-                background-color: #ffffff !important;
-                border-right: none;
-                box-shadow: 5px 0 25px rgba(0,0,0,0.1);
-            }
+            /* Video Call Screen Specific */
+            .video-container { background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; padding: 40px; }
+            .video-container i { font-size: 60px; color: rgba(255,255,255,0.2); margin-bottom: 20px; }
 
+            /* Left Drawer CSS */
+            .custom-left-drawer { width: 3.5in !important; height: 100dvh !important; background-color: #ffffff !important; border-right: none; box-shadow: 5px 0 25px rgba(0,0,0,0.1); }
             .drawer-tabs .nav-link { color: #64748b; font-weight: 700; border: none; border-bottom: 3px solid transparent; border-radius: 0; transition: 0.3s; padding: 12px 10px; }
             .drawer-tabs .nav-link.active { color: #10b981; border-bottom-color: #10b981; background: transparent; }
 
+            /* 🔥 View Switcher Logic (Hide/Show Panels based on active mode) */
+            body[data-mode="chat"] .view-video { display: none !important; }
+            body[data-mode="video"] .view-chat { display: none !important; }
+
             @media (max-width: 992px) {
                 .main-container { flex-direction: column; padding: 10px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); overflow-y: auto; }
-                .admin-sidebar { width: 100%; height: auto; display: flex; flex-shrink: 0; overflow: visible; }
+                .admin-sidebar { width: 100%; height: auto; flex-shrink: 0; }
                 .whitelist-list { max-height: 250px; }
-                .chat-container { flex: none; height: 60vh; min-height: 400px; }
+                .content-area { flex: none; height: 60vh; min-height: 400px; }
                 .main-container.centered-mode { max-width: 100%; }
             }
         </style>
     </head>
-    <body>
+
+    <!-- 🔥 Default Mode is Chat -->
+    <body data-mode="chat">
 
         <nav class="navbar navbar-expand-lg">
             <div class="container-fluid px-lg-5">
@@ -165,58 +155,58 @@
         <!-- Drawer Content -->
         <div class="offcanvas offcanvas-start custom-left-drawer" tabindex="-1" id="leftSideDrawer" aria-labelledby="leftSideDrawerLabel">
             <div class="offcanvas-header border-bottom">
-                <h5 class="offcanvas-title fw-bold text-dark" id="leftSideDrawerLabel">
-                    Lets Bid
-                </h5>
+                <h5 class="offcanvas-title fw-bold text-dark" id="leftSideDrawerLabel">Lets Bid</h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
             <div class="offcanvas-body p-0">
-                <!-- Modes / Tabs -->
+
+                <!-- Drawer Navigation Tabs -->
                 <ul class="nav nav-tabs nav-justified drawer-tabs" id="drawerModeTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="chat-mode-tab" data-bs-toggle="tab" data-bs-target="#chatMode" type="button" role="tab" aria-controls="chatMode" aria-selected="true">
+                        <!-- Switch to Chat Mode -->
+                        <button class="nav-link active" id="chat-mode-tab" data-bs-toggle="tab" data-bs-target="#chatMode" type="button" role="tab" onclick="switchMode('chat')">
                             <i class="fas fa-comments me-2"></i>Chat Box
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="video-mode-tab" data-bs-toggle="tab" data-bs-target="#videoMode" type="button" role="tab" aria-controls="videoMode" aria-selected="false">
+                        <!-- Switch to Video Mode -->
+                        <button class="nav-link" id="video-mode-tab" data-bs-toggle="tab" data-bs-target="#videoMode" type="button" role="tab" onclick="switchMode('video')">
                             <i class="fas fa-video me-2"></i>Video Call
                         </button>
                     </li>
                 </ul>
 
                 <div class="tab-content p-4" id="drawerTabsContent">
-
-                    <!-- Chat Mode Info -->
-                    <div class="tab-pane fade show active text-center" id="chatMode" role="tabpanel" aria-labelledby="chat-mode-tab">
+                    <!-- Drawer: Chat Info -->
+                    <div class="tab-pane fade show active text-center" id="chatMode" role="tabpanel">
                         <div class="py-5 text-muted">
                             <i class="fas fa-comment-dots fs-1 mb-3 text-light border rounded-circle p-4 bg-secondary bg-opacity-10"></i>
                             <h6 class="fw-bold text-dark mt-2">Chat Mode Active</h6>
-                            <p class="small fw-medium">Main screen is currently displaying the live bidding chat. Close this drawer to continue bidding.</p>
+                            <p class="small fw-medium">Main screen is currently displaying the live bidding chat.</p>
                             <button class="btn btn-dark rounded-pill px-4 mt-2 fw-bold" data-bs-dismiss="offcanvas">Go to Chat</button>
                         </div>
                     </div>
 
-                    <!-- 🔥 FIX: Video Call Mode Info (Centered UI identical to Chat Mode) -->
-                    <div class="tab-pane fade text-center" id="videoMode" role="tabpanel" aria-labelledby="video-mode-tab">
+                    <!-- Drawer: Video Info -->
+                    <div class="tab-pane fade text-center" id="videoMode" role="tabpanel">
                         <div class="py-5 text-muted">
                             <i class="fas fa-video fs-1 mb-3 text-light border rounded-circle p-4 bg-secondary bg-opacity-10"></i>
-                            <h6 class="fw-bold text-dark mt-2">Video Call Mode</h6>
-                            <p class="small fw-medium">The video call feature is currently active. Use the Send Invite panel on the main screen to invite users to the call.</p>
-                            <button class="btn btn-dark rounded-pill px-4 mt-2 fw-bold" data-bs-dismiss="offcanvas">Return to Main Screen</button>
+                            <h6 class="fw-bold text-dark mt-2">Video Call Mode Active</h6>
+                            <p class="small fw-medium">The video call interface is now active on the main screen.</p>
+                            <button class="btn btn-dark rounded-pill px-4 mt-2 fw-bold" data-bs-dismiss="offcanvas">Go to Video Screen</button>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
 
         <div class="main-container" id="mainLayoutContainer">
-            <!-- 🔥 FIX: Admin Sidebar wrapping both Whitelist and Video Invite panels -->
+
+            <!-- 🔥 LEFT PANEL (Dynamic) -->
             <div class="admin-sidebar" id="adminSidebar">
 
-                <!-- Panel 1: Whitelist Manager -->
-                <div class="admin-panel-card" style="flex: 1; min-height: 0;">
+                <!-- View 1: Whitelist Manager (Only visible in Chat Mode) -->
+                <div class="admin-panel-card view-chat">
                     <div class="sidebar-header">
                         <i class="fas fa-users-cog me-2"></i> Whitelist Manager
                     </div>
@@ -233,25 +223,32 @@
                     </div>
                 </div>
 
-                <!-- 🔥 FIX: Panel 2: Send Video Invite (Moved outside Drawer) -->
-                <div class="admin-panel-card p-3 bg-light border-0 shadow-sm flex-shrink-0">
-                    <h6 class="fw-bold mb-1 text-dark"><i class="fas fa-envelope-open-text text-primary me-2"></i>Send Video Invite</h6>
-                    <p class="text-muted small fw-medium mb-3">Invite will be sent directly to the user's registered Gmail address.</p>
-
-                    <label class="form-label text-dark small fw-bold mb-1">Participant Account ID</label>
-                    <div class="input-group mb-3 shadow-sm rounded-3 overflow-hidden">
-                        <span class="input-group-text bg-white border-0 text-muted">#</span>
-                        <input type="text" id="videoInviteAccountId" class="form-control border-0 fw-bold" placeholder="e.g. 4af3dd">
+                <!-- View 2: Send Video Invite (Only visible in Video Mode) -->
+                <div class="admin-panel-card view-video">
+                    <div class="sidebar-header" style="background: #2563eb;">
+                        <i class="fas fa-envelope-open-text me-2"></i> Invite to Call
                     </div>
+                    <div class="p-4 bg-white flex-1">
+                        <p class="text-muted small fw-medium mb-4">Enter an Account ID below. A secure video meeting link will be emailed to their registered Gmail address.</p>
 
-                    <button class="btn btn-primary w-100 fw-bold rounded-pill shadow" onclick="sendVideoInvite(this)" style="padding: 10px;">
-                        <i class="fas fa-paper-plane me-2"></i> Send Invite Link
-                    </button>
+                        <label class="form-label text-dark small fw-bold mb-2">Participant Account ID</label>
+                        <div class="input-group mb-4 shadow-sm rounded-3 overflow-hidden">
+                            <span class="input-group-text bg-light border text-muted">#</span>
+                            <input type="text" id="videoInviteAccountId" class="form-control border-start-0 fw-bold" placeholder="e.g. 4af3dd">
+                        </div>
+
+                        <button class="btn btn-primary w-100 fw-bold rounded-pill shadow-sm" onclick="sendVideoInvite(this)" style="padding: 12px; background: #2563eb; border: none;">
+                            <i class="fas fa-paper-plane me-2"></i> Send Invite Link
+                        </button>
+                    </div>
                 </div>
 
             </div>
 
-            <div class="chat-container">
+            <!-- 🔥 RIGHT PANEL (Dynamic) -->
+
+            <!-- View 1: Chat Container (Only visible in Chat Mode) -->
+            <div class="content-area chat-container view-chat">
                 <div class="chat-header">
                     <div class="chat-header-icon"><i class="fas fa-gavel"></i></div>
                     <div>
@@ -269,15 +266,29 @@
                     <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
+
+            <!-- View 2: Video Call Screen (Only visible in Video Mode) -->
+            <div class="content-area video-container view-video">
+                <i class="fas fa-video-slash"></i>
+                <h3 class="fw-bold mb-2">Video Call Screen</h3>
+                <p class="text-white-50 max-w-md mx-auto">This area is reserved for the live video stream. Use the left panel to send invites to participants.</p>
+                <!-- Yahan future mein Video integration (jaise WebRTC iframe ya SDK) aayega -->
+            </div>
+
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="script.js?v=live_bid_ui_final"></script>
+        <script src="script.js?v=live_bid_multi_view"></script>
 
         <script>
             let socket;
             let currentUser = null;
             let myShortId = "";
+
+            // 🔥 Logic to switch views instantly
+            function switchMode(mode) {
+                document.body.setAttribute("data-mode", mode);
+            }
 
             window.onload = async function() {
                 currentUser = typeof getUser === 'function' ? getUser() : null;
@@ -296,6 +307,8 @@
                     fetchParticipants();
                 } else {
                     document.getElementById('mainLayoutContainer').classList.add('centered-mode');
+                    // Normal users ko sirf chat dikhega
+                    document.querySelector('.view-video').remove(); 
                 }
 
                 try {
