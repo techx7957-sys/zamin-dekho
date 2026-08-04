@@ -125,7 +125,6 @@ exports.addParticipant = async (req, res) => {
             user = await User.findById(accountId);
         } else {
             // 6-Digit Short ID passed
-            // MongoDB $where ya aggregation use karna padega kyunki ObjectId pe regex nahi chalta
             const users = await User.find();
             user = users.find(u => u._id.toString().endsWith(accountId));
         }
@@ -164,6 +163,57 @@ exports.removeParticipant = async (req, res) => {
         res.json({ success: true, message: "User removed from group." });
     } catch (error) {
         console.error("Remove Participant Error:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+// ==========================================
+// 📹 VIDEO CALL INVITE ROUTE
+// ==========================================
+exports.sendVideoInvite = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: "Only admin can send invites." });
+        }
+
+        const { accountId } = req.body;
+
+        if (!accountId) {
+            return res.status(400).json({ success: false, message: "Account ID is required." });
+        }
+
+        // Find user by Account ID
+        let user;
+        if (accountId.length === 24) {
+            user = await User.findById(accountId);
+        } else {
+            const users = await User.find();
+            user = users.find(u => u._id.toString().endsWith(accountId));
+        }
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        // Important Logic: Make sure user has an email
+        if (!user.email) {
+             return res.status(400).json({ success: false, message: "This user does not have an email address registered." });
+        }
+
+        const userEmail = user.email;
+        const videoCallLink = "https://meet.google.com/your-default-meeting-link"; // Change this to your actual link
+
+        // TODO: Replace this section with your actual Nodemailer logic later
+        console.log(`[VIDEO INVITE] Attempting to send email to: ${userEmail}`);
+        console.log(`[VIDEO INVITE] Message: Hi ${user.fullName}, Admin has invited you to a video call for live bidding: ${videoCallLink}`);
+
+        // Pretending the email sent successfully
+        setTimeout(() => {
+            res.json({ success: true, message: "Invite sent successfully to " + userEmail });
+        }, 1500);
+
+    } catch (error) {
+        console.error("Send Video Invite Error:", error);
         res.status(500).json({ success: false, message: "Server error" });
     }
 };

@@ -31,6 +31,12 @@ router.post("/participants", verifyToken, biddingController.addParticipant);
 router.delete("/participants/:id", verifyToken, biddingController.removeParticipant);
 
 // ==========================================
+// 📹 VIDEO CALL INVITE ROUTE
+// ==========================================
+// Admin dwara kisi user ko video call invite email bhejne ke liye
+router.post("/send-video-invite", verifyToken, biddingController.sendVideoInvite);
+
+// ==========================================
 // 🔥 RESET ROOM (ADMIN ONLY)
 // ==========================================
 // Admin dwara poora Bidding Room (chat + users) Reset karne ke liye

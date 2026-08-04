@@ -111,7 +111,6 @@
             .send-btn:hover { background: #059669; transform: scale(1.05); }
             .send-btn:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
 
-            /* 🔥 NEW: Custom Left Drawer CSS */
             .custom-left-drawer {
                 width: 3.5in !important;
                 height: 100dvh !important;
@@ -119,6 +118,10 @@
                 border-right: none;
                 box-shadow: 5px 0 25px rgba(0,0,0,0.1);
             }
+
+            /* Custom Nav Tabs for Drawer */
+            .drawer-tabs .nav-link { color: #64748b; font-weight: 700; border: none; border-bottom: 3px solid transparent; border-radius: 0; transition: 0.3s; padding: 12px 10px; }
+            .drawer-tabs .nav-link.active { color: #10b981; border-bottom-color: #10b981; background: transparent; }
 
             @media (max-width: 992px) {
                 .main-container { flex-direction: column; padding: 10px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
@@ -133,7 +136,6 @@
         <nav class="navbar navbar-expand-lg">
             <div class="container-fluid px-lg-5">
 
-                <!-- 🔥 FIX: Moved the Drawer Button to the left corner beside Zamin Dekho logo -->
                 <div class="d-flex align-items-center gap-3">
                     <button class="btn btn-light rounded-circle shadow-sm border d-flex align-items-center justify-content-center p-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#leftSideDrawer" style="width: 40px; height: 40px;" title="Open Menu">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -154,7 +156,7 @@
             </div>
         </nav>
 
-        <!-- 🔥 FIX: Changed to Left Side Drawer (offcanvas-start) -->
+        <!-- 🔥 UPDATED: Drawer with Chat and Video Call Modes -->
         <div class="offcanvas offcanvas-start custom-left-drawer" tabindex="-1" id="leftSideDrawer" aria-labelledby="leftSideDrawerLabel">
             <div class="offcanvas-header border-bottom">
                 <h5 class="offcanvas-title fw-bold text-dark" id="leftSideDrawerLabel">
@@ -162,9 +164,55 @@
                 </h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
-            <div class="offcanvas-body">
-                <!-- Yahan tum future me apna content (jaise details ya options) daal sakte ho -->
-                <p class="text-muted small fw-bold">Drawer content goes here...</p>
+            <div class="offcanvas-body p-0">
+                <!-- Modes / Tabs -->
+                <ul class="nav nav-tabs nav-justified drawer-tabs" id="drawerModeTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="chat-mode-tab" data-bs-toggle="tab" data-bs-target="#chatMode" type="button" role="tab" aria-controls="chatMode" aria-selected="true">
+                            <i class="fas fa-comments me-2"></i>Chat Box
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="video-mode-tab" data-bs-toggle="tab" data-bs-target="#videoMode" type="button" role="tab" aria-controls="videoMode" aria-selected="false">
+                            <i class="fas fa-video me-2"></i>Video Call
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tabs Content -->
+                <div class="tab-content p-4" id="drawerTabsContent">
+
+                    <!-- Chat Mode Info -->
+                    <div class="tab-pane fade show active text-center" id="chatMode" role="tabpanel" aria-labelledby="chat-mode-tab">
+                        <div class="py-5 text-muted">
+                            <i class="fas fa-comment-dots fs-1 mb-3 text-light border rounded-circle p-4 bg-secondary bg-opacity-10"></i>
+                            <h6 class="fw-bold text-dark mt-2">Chat Mode Active</h6>
+                            <p class="small fw-medium">Main screen is currently displaying the live bidding chat. Close this drawer to continue bidding.</p>
+                            <button class="btn btn-dark rounded-pill px-4 mt-2 fw-bold" data-bs-dismiss="offcanvas">Go to Chat</button>
+                        </div>
+                    </div>
+
+                    <!-- Video Call Mode Setup -->
+                    <div class="tab-pane fade" id="videoMode" role="tabpanel" aria-labelledby="video-mode-tab">
+                        <div class="card border-0 bg-light rounded-4 p-3 shadow-sm mb-4">
+                            <div class="card-body p-1 text-start">
+                                <h6 class="fw-bold mb-1 text-dark"><i class="fas fa-envelope-open-text text-primary me-2"></i>Send Video Invite</h6>
+                                <p class="text-muted small fw-medium mb-4">Invite will be sent directly to the user's registered Gmail address.</p>
+
+                                <label class="form-label text-dark small fw-bold mb-2">Participant Account ID</label>
+                                <div class="input-group mb-4 shadow-sm rounded-3 overflow-hidden">
+                                    <span class="input-group-text bg-white border-0 text-muted">#</span>
+                                    <input type="text" id="videoInviteAccountId" class="form-control border-0 fw-bold" placeholder="e.g. 4af3dd">
+                                </div>
+
+                                <button class="btn btn-primary w-100 fw-bold rounded-pill shadow" onclick="sendVideoInvite(this)" style="padding: 12px;">
+                                    <i class="fas fa-paper-plane me-2"></i> Send Invite Link
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
 
@@ -263,6 +311,49 @@
                     }
                 }
             };
+
+            // 🔥 NEW: Send Video Invite API Call
+            async function sendVideoInvite(btnElement) {
+                const idInput = document.getElementById('videoInviteAccountId');
+                const accountId = idInput.value.trim();
+
+                if (!accountId) {
+                    Swal.fire('Required', 'Please enter an Account ID first.', 'warning');
+                    return;
+                }
+
+                const originalHTML = btnElement.innerHTML;
+                btnElement.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Sending...`;
+                btnElement.disabled = true;
+
+                try {
+                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                    const token = typeof getToken === 'function' ? getToken() : null;
+
+                    const res = await fetch(`${backendPath}/bidding/send-video-invite`, {
+                        method: "POST",
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ accountId })
+                    });
+
+                    const data = await res.json();
+
+                    if (data.success) {
+                        Swal.fire('Invite Sent!', 'Video call invite has been successfully sent to their registered Gmail.', 'success');
+                        idInput.value = "";
+                    } else {
+                        Swal.fire('Error', data.message || 'Could not send the invite.', 'error');
+                    }
+                } catch (e) {
+                    Swal.fire('Error', 'Failed to connect to the server.', 'error');
+                } finally {
+                    btnElement.innerHTML = originalHTML;
+                    btnElement.disabled = false;
+                }
+            }
 
             async function handleBackClick() {
                 if (currentUser && currentUser.role === 'admin') {
