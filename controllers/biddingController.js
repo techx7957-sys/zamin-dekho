@@ -1,5 +1,18 @@
 const { BiddingParticipant, BidMessage } = require("../models/Bidding");
 const User = require("../models/User");
+const nodemailer = require("nodemailer"); // 🔥 Nodemailer import kiya
+
+// ==========================================
+// 📧 EMAIL TRANSPORTER SETUP
+// ==========================================
+// Ye tumhare Gmail account se email bhejega
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.SUPPORT_EMAILS, // 🔥 Tumhara custom env variable
+        pass: process.env.EMAIL_PASS      // 16-digit App Password
+    }
+});
 
 // ==========================================
 // 🛡️ HELPER: Check User Access
@@ -201,20 +214,37 @@ exports.sendVideoInvite = async (req, res) => {
         }
 
         const userEmail = user.email;
-        const videoCallLink = "https://meet.google.com/your-default-meeting-link"; // Change this to your actual link
+        // 🔥 Tumhara Video Call Ka Link Yahan Aayega (Google Meet, Zoom, etc.)
+        const videoCallLink = "https://meet.google.com/your-default-meeting-link"; 
 
-        // TODO: Replace this section with your actual Nodemailer logic later
-        console.log(`[VIDEO INVITE] Attempting to send email to: ${userEmail}`);
-        console.log(`[VIDEO INVITE] Message: Hi ${user.fullName}, Admin has invited you to a video call for live bidding: ${videoCallLink}`);
+        // 🔥 Email ka Design aur Content
+        const mailOptions = {
+            from: `"Zamin Dekho Admin" <${process.env.SUPPORT_EMAILS}>`,
+            to: userEmail,
+            subject: "🎥 Private Video Call Invite - Zamin Dekho",
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+                    <h2 style="color: #10b981; text-align: center;">Zamin Dekho Bidding</h2>
+                    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                    <p style="font-size: 16px; color: #333;">Hello <strong>${user.fullName}</strong>,</p>
+                    <p style="font-size: 16px; color: #333;">You have been invited by the Admin to join a private video call for the live property bidding session.</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${videoCallLink}" style="background-color: #2563eb; color: white; padding: 12px 25px; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 50px; display: inline-block;">Join Video Call</a>
+                    </div>
+                    <p style="font-size: 14px; color: #64748b; text-align: center;">If the button doesn't work, copy and paste this link in your browser:<br> <a href="${videoCallLink}" style="color: #2563eb;">${videoCallLink}</a></p>
+                </div>
+            `
+        };
 
-        // Pretending the email sent successfully
-        setTimeout(() => {
-            res.json({ success: true, message: "Invite sent successfully to " + userEmail });
-        }, 1500);
+        // Nodemailer se actual mail bhejna
+        await transporter.sendMail(mailOptions);
+
+        console.log(`[VIDEO INVITE] Success! Email sent to: ${userEmail}`);
+        res.json({ success: true, message: `Invite successfully sent to ${userEmail}` });
 
     } catch (error) {
         console.error("Send Video Invite Error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
+        res.status(500).json({ success: false, message: "Failed to send email. Ensure App Password is correct." });
     }
 };
 
