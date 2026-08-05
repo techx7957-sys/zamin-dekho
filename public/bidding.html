@@ -282,9 +282,12 @@
                     <i class="fas fa-video-slash"></i>
                     <h3 class="fw-bold mb-2">Video Call System</h3>
                     <p class="text-white-50 max-w-md mx-auto mb-4">Click below to start the high-tech multi-grid video conference. Users can join automatically via email links.</p>
-                    <button class="btn btn-primary btn-lg rounded-pill fw-bold shadow px-5 py-3" onclick="startVideoCall()" style="background: #2563eb; border: none;">
-                        <i class="fas fa-play me-2"></i> Start Meeting
+
+                    <!-- 🔥 FIX: Updated Button Size (Width: 1 inch, Height: 0.5 cm) -->
+                    <button class="btn btn-primary rounded-pill fw-bold shadow" onclick="startVideoCall()" style="background: #2563eb; border: none; width: 1in; height: 0.5cm; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; margin: 0 auto;">
+                        <i class="fas fa-play" style="font-size: 8px; margin-right: 4px;"></i> Start
                     </button>
+
                 </div>
 
                 <!-- Actual Video Grid Container (Hidden initially) -->
@@ -375,9 +378,10 @@
                 document.getElementById('preJoinScreen').style.display = 'none';
                 document.getElementById('video-root').style.display = 'block';
 
-                // NOTE: Replace these with your actual AppID and ServerSecret from ZegoCloud console
-                const appID = 0; // REPLACE ME
-                const serverSecret = "REPLACE_ME"; // REPLACE ME
+                // 🚨🚨🚨 YAHAN DHYAN DEIN: MISSING VALUES 🚨🚨🚨
+                // ZegoCloud console se ye dono values copy karke yahan paste karni hain
+                const appID = 0; // REPLACE ME (jaise 123456789)
+                const serverSecret = "REPLACE_ME"; // REPLACE ME (jaise "abcd1234efgh5678")
 
                 const userName = currentUser.fullName || "User_" + myShortId;
 
