@@ -286,7 +286,6 @@
                     <p class="text-white-50 max-w-md mx-auto mb-4">Click below to start the high-tech multi-grid video conference. Users can join automatically via email links.</p>
 
                     <!-- 🔥 PERFECTED START MEETING BUTTON 🔥 -->
-                    <!-- Flexbox used to align icon and text perfectly in the center. Sleek and professional sizing applied. -->
                     <button class="btn btn-primary shadow d-flex align-items-center justify-content-center gap-2" onclick="startVideoCall()" style="background: #2563eb; border: none; padding: 14px 35px; border-radius: 50px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-play" style="font-size: 1rem; margin-top: 1px;"></i> 
                         <span style="font-size: 1rem;">Start Meeting</span>
@@ -302,8 +301,6 @@
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script src="script.js?v=live_bid_multi_view"></script>
-        <!-- Nayi Video file zaroor link karna agar alag se save ki hai -->
-        <!-- <script src="video-manager.js"></script> -->
 
         <script>
             let socket;
@@ -378,44 +375,82 @@
                 }
             };
 
-            // 🔥 ZegoCloud Video Integration (Ensure AppID and ServerSecret are filled!)
-            window.startVideoCall = function() {
+            // 🔥 SECURE ZegoCloud Video Integration (Fetched via API)
+            window.startVideoCall = async function() {
+                // UI update immediately when user clicks
                 document.getElementById('preJoinScreen').style.display = 'none';
                 document.getElementById('video-root').style.display = 'block';
-
-                // NOTE: Apna ZegoCloud AppID aur ServerSecret yahan daalna mat bhoolna
-                const appID = 0; // REPLACE ME
-                const serverSecret = "REPLACE_ME"; // REPLACE ME
+                document.getElementById('video-root').innerHTML = `
+                    <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
+                        <div class='spinner-border text-primary mb-3' style='width: 3rem; height: 3rem;'></div>
+                        <h4 class='fw-bold'>Authenticating secure video room...</h4>
+                    </div>
+                `;
 
                 const userName = currentUser.fullName || "User_" + myShortId;
 
-                if (appID === 0) {
-                    document.getElementById('video-root').innerHTML = "<div class='text-white mt-5 pt-5'><h3>AppID missing!</h3><p>Please setup ZegoCloud AppID in bidding.html first.</p></div>";
-                    return;
+                try {
+                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                    const authToken = typeof getToken === 'function' ? getToken() : null;
+
+                    // 1. Fetch secure token & App ID from backend
+                    const response = await fetch(`${backendPath}/bidding/zego-token`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            room_id: meetingRoomId,
+                            user_id: myShortId,
+                            user_name: userName
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!data.success) {
+                        throw new Error(data.message || "Failed to retrieve secure video token.");
+                    }
+
+                    // Clear loading spinner
+                    document.getElementById('video-root').innerHTML = ""; 
+
+                    // 2. Initialize ZegoCloud with the backend token
+                    // Using ForProduction method since we get token dynamically
+                    const kitToken = ZegoUIKitPrebuilt.generateKitTokenForProduction(
+                        data.appId, 
+                        data.token, 
+                        meetingRoomId, 
+                        myShortId, 
+                        userName
+                    );
+
+                    const zp = ZegoUIKitPrebuilt.create(kitToken);
+                    zp.joinRoom({
+                        container: document.getElementById('video-root'),
+                        sharedLinks: [{
+                            name: 'Invite Link',
+                            url: window.location.origin + window.location.pathname + '?video=true'
+                        }],
+                        scenario: {
+                            mode: ZegoUIKitPrebuilt.VideoConference, // High-tech grid mode
+                        },
+                        showScreenSharingButton: true, // Enable screen sharing
+                        turnOnMicrophoneWhenJoining: false,
+                        turnOnCameraWhenJoining: false,
+                    });
+
+                } catch (error) {
+                    console.error("ZegoCloud Auth Error:", error);
+                    document.getElementById('video-root').innerHTML = `
+                        <div class='text-white mt-5 pt-5'>
+                            <h3 class='text-danger'>Connection Failed!</h3>
+                            <p>${error.message}</p>
+                            <button class='btn btn-light mt-3 px-4 rounded-pill fw-bold' onclick='location.reload()'>Retry</button>
+                        </div>
+                    `;
                 }
-
-                const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-                    appID, 
-                    serverSecret, 
-                    meetingRoomId, 
-                    myShortId, 
-                    userName
-                );
-
-                const zp = ZegoUIKitPrebuilt.create(kitToken);
-                zp.joinRoom({
-                    container: document.getElementById('video-root'),
-                    sharedLinks: [{
-                        name: 'Invite Link',
-                        url: window.location.origin + window.location.pathname + '?video=true'
-                    }],
-                    scenario: {
-                        mode: ZegoUIKitPrebuilt.VideoConference, // High-tech grid mode
-                    },
-                    showScreenSharingButton: true, // Enable screen sharing
-                    turnOnMicrophoneWhenJoining: false,
-                    turnOnCameraWhenJoining: false,
-                });
             };
 
             async function sendVideoInvite(btnElement) {

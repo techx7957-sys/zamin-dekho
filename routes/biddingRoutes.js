@@ -31,10 +31,13 @@ router.post("/participants", verifyToken, biddingController.addParticipant);
 router.delete("/participants/:id", verifyToken, biddingController.removeParticipant);
 
 // ==========================================
-// 📹 VIDEO CALL INVITE & AUTO-ADD ROUTE
+// 📹 VIDEO CALL ROUTES (INVITE & SECURE TOKEN)
 // ==========================================
 // Admin dwara user ko invite email bhejne AUR usko automatically whitelist karne ke liye
 router.post("/send-video-invite", verifyToken, biddingController.sendVideoInvite);
+
+// 🔥 NEW: Frontend ko securely ZegoCloud token dene ke liye (taaki secret safe rahe)
+router.post("/zego-token", verifyToken, biddingController.generateZegoToken);
 
 // ==========================================
 // 🔥 RESET ROOM (ADMIN ONLY)

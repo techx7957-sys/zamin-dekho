@@ -2,6 +2,9 @@ const { BiddingParticipant, BidMessage } = require("../models/Bidding");
 const User = require("../models/User");
 const nodemailer = require("nodemailer");
 
+// 🔥 Apni nayi local ZegoCloud Token Generator file use kar rahe hain
+const { generateToken04 } = require("./zegoToken"); 
+
 // ==========================================
 // 📧 EMAIL TRANSPORTER SETUP
 // ==========================================
@@ -172,13 +175,12 @@ exports.sendVideoInvite = async (req, res) => {
             return res.status(403).json({ success: false, message: "Only admin can send invites." });
         }
 
-        const { accountId, customLink } = req.body; // customLink ab frontend se aa raha hai
+        const { accountId, customLink } = req.body; 
 
         if (!accountId) {
             return res.status(400).json({ success: false, message: "Account ID is required." });
         }
 
-        // 1. Find user by Account ID
         let user;
         if (accountId.length === 24) {
             user = await User.findById(accountId);
@@ -195,7 +197,6 @@ exports.sendVideoInvite = async (req, res) => {
              return res.status(400).json({ success: false, message: "This user does not have an email address registered." });
         }
 
-        // 2. Add to Whitelist automatically if not already added
         const existing = await BiddingParticipant.findOne({ user: user._id });
         if (!existing) {
             const newParticipant = new BiddingParticipant({ user: user._id });
@@ -203,7 +204,6 @@ exports.sendVideoInvite = async (req, res) => {
             console.log(`[VIDEO INVITE] User ${user._id} auto-added to whitelist.`);
         }
 
-        // 3. Send Email Invite
         const userEmail = user.email;
         const videoCallLink = customLink || "https://zamindekho.tech/bidding.html?video=true"; 
 
@@ -233,6 +233,57 @@ exports.sendVideoInvite = async (req, res) => {
     } catch (error) {
         console.error("Send Video Invite Error:", error);
         res.status(500).json({ success: false, message: "Failed to send email. Ensure App Password is correct." });
+    }
+};
+
+// ==========================================
+// 🔥 SECURE TOKEN GENERATOR FOR ZEGOCLOUD
+// ==========================================
+exports.generateZegoToken = async (req, res) => {
+    try {
+        // 1. Double-check security
+        const allowed = await isUserAllowed(req.user.id, req.user.role);
+        if (!allowed) {
+            return res.status(403).json({ success: false, message: "Aap whitelisted nahi hain." });
+        }
+
+        const { room_id, user_id } = req.body;
+
+        if (!room_id || !user_id) {
+            return res.status(400).json({ success: false, message: "Missing required info." });
+        }
+
+        // 2. Fetch secrets from .env securely
+        const appId = parseInt(process.env.ZEGO_APP_ID, 10);
+        const serverSecret = process.env.ZEGO_SERVER_SECRET;
+
+        if (!appId || !serverSecret) {
+            console.error("Zego App ID or Secret is missing in .env!");
+            return res.status(500).json({ success: false, message: "Server config error." });
+        }
+
+        // 3. Generate the highly secure token (Valid for 1 Hour / 3600 seconds)
+        const effectiveTimeInSeconds = 3600;
+
+        // 🔥 ZegoCloud ko room join aur stream publish karne ki permission dena
+        const payload = JSON.stringify({
+            room_id: room_id,
+            privilege: { 1: 1, 2: 1 },
+            stream_id_list: null
+        }); 
+
+        const token = generateToken04(appId, user_id, serverSecret, effectiveTimeInSeconds, payload);
+
+        // 4. Send token to frontend
+        res.json({
+            success: true,
+            appId: appId,
+            token: token
+        });
+
+    } catch (error) {
+        console.error("Token Generation Error:", error);
+        res.status(500).json({ success: false, message: "Failed to create secure token." });
     }
 };
 

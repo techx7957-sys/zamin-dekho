@@ -1,72 +1,107 @@
 // ========================================================
-// 🎥 ZAMIN DEKHO - HITECH VIDEO CONFERENCE MANAGER
+// 🎥 ZAMIN DEKHO - SECURE HITECH VIDEO CONFERENCE MANAGER
 // ========================================================
-
-// ⚠️ IMPORTANT: ZegoCloud Console (zegocloud.com) se apna App ID aur Server Secret nikaal kar yahan daalo
-const ZEGO_APP_ID = 0; // Apni App ID yahan daalo (Number format mein, bina quotes ke)
-const ZEGO_SERVER_SECRET = "REPLACE_WITH_YOUR_SERVER_SECRET"; // Apna Server Secret yahan daalo (String format)
 
 const ROOM_ID = "zamin_live_bidding_room_01"; // Sabhi log is ek hi room mein aayenge
 
-function initializeVideoCall(user, shortId) {
-    if (ZEGO_APP_ID === 0 || ZEGO_SERVER_SECRET === "REPLACE_WITH_YOUR_SERVER_SECRET") {
-        Swal.fire('Setup Required', 'Bhai, pehle video-manager.js mein ZegoCloud AppID aur ServerSecret daalo!', 'warning');
-        return;
-    }
-
+async function initializeVideoCall(user, shortId) {
     const userName = user.fullName || "Bidder_" + shortId;
 
-    // 1. Generate Security Token for the user
-    const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-        ZEGO_APP_ID, 
-        ZEGO_SERVER_SECRET, 
-        ROOM_ID, 
-        shortId, 
-        userName
-    );
-
-    // 2. Hide Pre-Join Screen & Show Video Grid
+    // 1. Show Loading UI while fetching secure token
     document.getElementById('preJoinScreen').style.display = 'none';
     document.getElementById('video-root').style.display = 'block';
+    document.getElementById('video-root').innerHTML = `
+        <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
+            <div class='spinner-border text-primary mb-3' style='width: 3rem; height: 3rem;'></div>
+            <h4 class='fw-bold'>Authenticating secure video room...</h4>
+        </div>
+    `;
 
-    // 3. Create ZegoCloud Instance
-    const zp = ZegoUIKitPrebuilt.create(kitToken);
+    try {
+        // 2. Fetch Secure Token from Backend
+        const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+        const authToken = typeof getToken === 'function' ? getToken() : null;
 
-    // 4. 🔥 Hitech Configuration (Zoom Killer Settings)
-    zp.joinRoom({
-        container: document.getElementById('video-root'),
-        sharedLinks: [{
-            name: 'Direct Video Invite Link',
-            url: window.location.origin + window.location.pathname + '?video=true'
-        }],
-        scenario: {
-            mode: ZegoUIKitPrebuilt.VideoConference, // Proper Multi-user Grid Mode
-        },
-        // Auto-controls
-        turnOnMicrophoneWhenJoining: false,
-        turnOnCameraWhenJoining: false,
-        showMyCameraToggleButton: true,
-        showMyMicrophoneToggleButton: true,
-        showAudioVideoSettingsButton: true,
+        const response = await fetch(`${backendPath}/bidding/zego-token`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                room_id: ROOM_ID,
+                user_id: shortId,
+                user_name: userName
+            })
+        });
 
-        // Hitech Features
-        showScreenSharingButton: true, // Screen Share feature enable
-        showUserList: true, // Side mein participant list dikhegi
-        showTextChat: true, // Video ke andar internal chat
-        showLayoutButton: true, // User Grid ya Spotlight layout change kar sakta hai
-        maxUsers: 50, // Ek sath 50 log aa sakte hain
+        const data = await response.json();
 
-        // Custom Branding (Optional)
-        branding: {
-            logoURL: "" // Zamin Dekho ka logo URL daal sakte ho yahan
-        },
-
-        // Call disconnect hone par wapas UI set karna
-        onLeaveRoom: () => {
-            document.getElementById('video-root').style.display = 'none';
-            document.getElementById('preJoinScreen').style.display = 'flex';
+        if (!data.success) {
+            throw new Error(data.message || "Failed to retrieve secure video token.");
         }
-    });
+
+        // Clear loading spinner
+        document.getElementById('video-root').innerHTML = "";
+
+        // 3. Generate Kit Token for Production (Using backend token, no hardcoded secrets)
+        const kitToken = ZegoUIKitPrebuilt.generateKitTokenForProduction(
+            data.appId, 
+            data.token, 
+            ROOM_ID, 
+            shortId, 
+            userName
+        );
+
+        // 4. Create ZegoCloud Instance
+        const zp = ZegoUIKitPrebuilt.create(kitToken);
+
+        // 5. 🔥 Hitech Configuration (Zoom Killer Settings)
+        zp.joinRoom({
+            container: document.getElementById('video-root'),
+            sharedLinks: [{
+                name: 'Direct Video Invite Link',
+                url: window.location.origin + window.location.pathname + '?video=true'
+            }],
+            scenario: {
+                mode: ZegoUIKitPrebuilt.VideoConference, // Proper Multi-user Grid Mode
+            },
+            // Auto-controls
+            turnOnMicrophoneWhenJoining: false,
+            turnOnCameraWhenJoining: false,
+            showMyCameraToggleButton: true,
+            showMyMicrophoneToggleButton: true,
+            showAudioVideoSettingsButton: true,
+
+            // Hitech Features
+            showScreenSharingButton: true, // Screen Share feature enable
+            showUserList: true, // Side mein participant list dikhegi
+            showTextChat: true, // Video ke andar internal chat
+            showLayoutButton: true, // User Grid ya Spotlight layout change kar sakta hai
+            maxUsers: 50, // Ek sath 50 log aa sakte hain
+
+            // Custom Branding (Optional)
+            branding: {
+                logoURL: "" // Zamin Dekho ka logo URL daal sakte ho yahan
+            },
+
+            // Call disconnect hone par wapas UI set karna
+            onLeaveRoom: () => {
+                document.getElementById('video-root').style.display = 'none';
+                document.getElementById('preJoinScreen').style.display = 'flex';
+            }
+        });
+
+    } catch (error) {
+        console.error("ZegoCloud Auth Error:", error);
+        document.getElementById('video-root').innerHTML = `
+            <div class='text-white mt-5 pt-5 text-center'>
+                <h3 class='text-danger'>Connection Failed!</h3>
+                <p>${error.message}</p>
+                <button class='btn btn-light mt-3 px-4 rounded-pill fw-bold' onclick='location.reload()'>Retry</button>
+            </div>
+        `;
+    }
 }
 
 // Global function jisko hum HTML button se call karenge
