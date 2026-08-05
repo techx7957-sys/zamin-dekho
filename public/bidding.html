@@ -277,17 +277,16 @@
             <!-- 🔥 NEW: View 2: Video Call Screen (Only visible in Video Mode) -->
             <div class="content-area video-container view-video">
 
-                <!-- Pre-Join UI -->
+                <!-- Pre-Join UI with Centered and Resized Button -->
                 <div class="pre-join-screen" id="preJoinScreen">
                     <i class="fas fa-video-slash"></i>
                     <h3 class="fw-bold mb-2">Video Call System</h3>
                     <p class="text-white-50 max-w-md mx-auto mb-4">Click below to start the high-tech multi-grid video conference. Users can join automatically via email links.</p>
 
-                    <!-- 🔥 FIX: Updated Button Size (Width: 1 inch, Height: 0.5 cm) -->
-                    <button class="btn btn-primary rounded-pill fw-bold shadow" onclick="startVideoCall()" style="background: #2563eb; border: none; width: 1in; height: 0.5cm; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; margin: 0 auto;">
-                        <i class="fas fa-play" style="font-size: 8px; margin-right: 4px;"></i> Start
+                    <!-- Dhyan do: Button bilkul properly center aligned hai, aur styling mein exact sizing di hui hai -->
+                    <button class="btn btn-primary shadow d-flex align-items-center justify-content-center" onclick="startVideoCall()" style="background: #2563eb; border: none; height: 0.8in; min-width: 2.5in; padding: 0 1.5rem; border-radius: 50px; font-size: 1.1rem; letter-spacing: 0.5px;">
+                        <i class="fas fa-play me-2"></i> Start Meeting
                     </button>
-
                 </div>
 
                 <!-- Actual Video Grid Container (Hidden initially) -->
@@ -299,6 +298,8 @@
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script src="script.js?v=live_bid_multi_view"></script>
+        <!-- Nayi Video file zaroor link karna agar alag se save ki hai -->
+        <!-- <script src="video-manager.js"></script> -->
 
         <script>
             let socket;
@@ -373,15 +374,14 @@
                 }
             };
 
-            // 🔥 ZegoCloud Video Integration
-            function startVideoCall() {
+            // 🔥 ZegoCloud Video Integration (Ensure AppID and ServerSecret are filled!)
+            window.startVideoCall = function() {
                 document.getElementById('preJoinScreen').style.display = 'none';
                 document.getElementById('video-root').style.display = 'block';
 
-                // 🚨🚨🚨 YAHAN DHYAN DEIN: MISSING VALUES 🚨🚨🚨
-                // ZegoCloud console se ye dono values copy karke yahan paste karni hain
-                const appID = 0; // REPLACE ME (jaise 123456789)
-                const serverSecret = "REPLACE_ME"; // REPLACE ME (jaise "abcd1234efgh5678")
+                // NOTE: Apna ZegoCloud AppID aur ServerSecret yahan daalna mat bhoolna
+                const appID = 0; // REPLACE ME
+                const serverSecret = "REPLACE_ME"; // REPLACE ME
 
                 const userName = currentUser.fullName || "User_" + myShortId;
 
@@ -412,7 +412,7 @@
                     turnOnMicrophoneWhenJoining: false,
                     turnOnCameraWhenJoining: false,
                 });
-            }
+            };
 
             async function sendVideoInvite(btnElement) {
                 const idInput = document.getElementById('videoInviteAccountId');
