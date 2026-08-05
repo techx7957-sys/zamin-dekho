@@ -31,9 +31,9 @@ router.post("/participants", verifyToken, biddingController.addParticipant);
 router.delete("/participants/:id", verifyToken, biddingController.removeParticipant);
 
 // ==========================================
-// 📹 VIDEO CALL INVITE ROUTE
+// 📹 VIDEO CALL INVITE & AUTO-ADD ROUTE
 // ==========================================
-// Admin dwara kisi user ko video call invite email bhejne ke liye
+// Admin dwara user ko invite email bhejne AUR usko automatically whitelist karne ke liye
 router.post("/send-video-invite", verifyToken, biddingController.sendVideoInvite);
 
 // ==========================================

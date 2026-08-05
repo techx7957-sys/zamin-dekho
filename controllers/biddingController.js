@@ -1,16 +1,15 @@
 const { BiddingParticipant, BidMessage } = require("../models/Bidding");
 const User = require("../models/User");
-const nodemailer = require("nodemailer"); // 🔥 Nodemailer import kiya
+const nodemailer = require("nodemailer");
 
 // ==========================================
 // 📧 EMAIL TRANSPORTER SETUP
 // ==========================================
-// Ye tumhare Gmail account se email bhejega
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.SUPPORT_EMAILS, // 🔥 Tumhara custom env variable
-        pass: process.env.EMAIL_PASS      // 16-digit App Password
+        user: process.env.SUPPORT_EMAILS,
+        pass: process.env.EMAIL_PASS
     }
 });
 
@@ -18,10 +17,7 @@ const transporter = nodemailer.createTransport({
 // 🛡️ HELPER: Check User Access
 // ==========================================
 async function isUserAllowed(userId, role) {
-    // Admin ko humesha permission hai
     if (role === 'admin') return true;
-
-    // Check if user is in whitelist
     const participant = await BiddingParticipant.findOne({ user: userId });
     return !!participant;
 }
@@ -30,7 +26,6 @@ async function isUserAllowed(userId, role) {
 // 💬 CHAT MESSAGES LOGIC
 // ==========================================
 
-// 1. Get Chat History
 exports.getMessages = async (req, res) => {
     try {
         const allowed = await isUserAllowed(req.user.id, req.user.role);
@@ -38,19 +33,16 @@ exports.getMessages = async (req, res) => {
             return res.status(403).json({ success: false, message: "Aapko is bidding room mein aane ki permission nahi hai." });
         }
 
-        // Pichle 100 messages fetch karo (oldest to newest for chat UI)
         const messages = await BidMessage.find()
             .sort({ createdAt: -1 })
             .limit(100)
             .populate("sender", "_id fullName");
 
-        // Reverse to show oldest first in UI
         const formattedMessages = messages.reverse().map(msg => ({
             _id: msg._id,
             text: msg.text,
             timestamp: msg.createdAt,
             senderId: msg.sender._id,
-            // Last 6 characters of MongoDB ID as Short ID
             shortId: msg.sender._id.toString().substring(msg.sender._id.toString().length - 6)
         }));
 
@@ -61,7 +53,6 @@ exports.getMessages = async (req, res) => {
     }
 };
 
-// 2. Save New Message
 exports.saveMessage = async (req, res) => {
     try {
         const { text } = req.body;
@@ -89,7 +80,6 @@ exports.saveMessage = async (req, res) => {
     }
 };
 
-// 3. Check Access (Frontend uses this before loading chat UI)
 exports.checkAccess = async (req, res) => {
     try {
         const allowed = await isUserAllowed(req.user.id, req.user.role);
@@ -103,7 +93,6 @@ exports.checkAccess = async (req, res) => {
 // ⚙️ ADMIN WHITELIST MANAGEMENT
 // ==========================================
 
-// 1. Get Whitelist Participants
 exports.getParticipants = async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
@@ -118,26 +107,22 @@ exports.getParticipants = async (req, res) => {
     }
 };
 
-// 2. Add User to Whitelist
 exports.addParticipant = async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: "Only admin can add participants." });
         }
 
-        const { accountId } = req.body; // Expecting the 6-digit short ID or full ID
+        const { accountId } = req.body;
 
         if (!accountId) {
             return res.status(400).json({ success: false, message: "Account ID is required." });
         }
 
-        // Find user by matching the end of their MongoDB ObjectId
         let user;
         if (accountId.length === 24) {
-            // Full Mongo ID passed
             user = await User.findById(accountId);
         } else {
-            // 6-Digit Short ID passed
             const users = await User.find();
             user = users.find(u => u._id.toString().endsWith(accountId));
         }
@@ -146,7 +131,6 @@ exports.addParticipant = async (req, res) => {
             return res.status(404).json({ success: false, message: "User not found with this ID." });
         }
 
-        // Check if already in whitelist
         const existing = await BiddingParticipant.findOne({ user: user._id });
         if (existing) {
             return res.status(400).json({ success: false, message: "User is already in the bidding group." });
@@ -162,14 +146,13 @@ exports.addParticipant = async (req, res) => {
     }
 };
 
-// 3. Remove User from Whitelist
 exports.removeParticipant = async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: "Only admin can remove participants." });
         }
 
-        const { id } = req.params; // This is the BiddingParticipant document ID
+        const { id } = req.params;
 
         await BiddingParticipant.findByIdAndDelete(id);
 
@@ -181,7 +164,7 @@ exports.removeParticipant = async (req, res) => {
 };
 
 // ==========================================
-// 📹 VIDEO CALL INVITE ROUTE
+// 📹 VIDEO CALL INVITE & ADD ROUTE
 // ==========================================
 exports.sendVideoInvite = async (req, res) => {
     try {
@@ -189,13 +172,13 @@ exports.sendVideoInvite = async (req, res) => {
             return res.status(403).json({ success: false, message: "Only admin can send invites." });
         }
 
-        const { accountId } = req.body;
+        const { accountId, customLink } = req.body; // customLink ab frontend se aa raha hai
 
         if (!accountId) {
             return res.status(400).json({ success: false, message: "Account ID is required." });
         }
 
-        // Find user by Account ID
+        // 1. Find user by Account ID
         let user;
         if (accountId.length === 24) {
             user = await User.findById(accountId);
@@ -208,16 +191,22 @@ exports.sendVideoInvite = async (req, res) => {
             return res.status(404).json({ success: false, message: "User not found." });
         }
 
-        // Important Logic: Make sure user has an email
         if (!user.email) {
              return res.status(400).json({ success: false, message: "This user does not have an email address registered." });
         }
 
-        const userEmail = user.email;
-        // 🔥 Tumhara Video Call Ka Link Yahan Aayega (Google Meet, Zoom, etc.)
-        const videoCallLink = "https://meet.google.com/your-default-meeting-link"; 
+        // 2. Add to Whitelist automatically if not already added
+        const existing = await BiddingParticipant.findOne({ user: user._id });
+        if (!existing) {
+            const newParticipant = new BiddingParticipant({ user: user._id });
+            await newParticipant.save();
+            console.log(`[VIDEO INVITE] User ${user._id} auto-added to whitelist.`);
+        }
 
-        // 🔥 Email ka Design aur Content
+        // 3. Send Email Invite
+        const userEmail = user.email;
+        const videoCallLink = customLink || "https://zamindekho.tech/bidding.html?video=true"; 
+
         const mailOptions = {
             from: `"Zamin Dekho Admin" <${process.env.SUPPORT_EMAILS}>`,
             to: userEmail,
@@ -227,7 +216,7 @@ exports.sendVideoInvite = async (req, res) => {
                     <h2 style="color: #10b981; text-align: center;">Zamin Dekho Bidding</h2>
                     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
                     <p style="font-size: 16px; color: #333;">Hello <strong>${user.fullName}</strong>,</p>
-                    <p style="font-size: 16px; color: #333;">You have been invited by the Admin to join a private video call for the live property bidding session.</p>
+                    <p style="font-size: 16px; color: #333;">You have been securely whitelisted and invited by the Admin to join a private video call for the live property bidding session.</p>
                     <div style="text-align: center; margin: 30px 0;">
                         <a href="${videoCallLink}" style="background-color: #2563eb; color: white; padding: 12px 25px; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 50px; display: inline-block;">Join Video Call</a>
                     </div>
@@ -236,11 +225,10 @@ exports.sendVideoInvite = async (req, res) => {
             `
         };
 
-        // Nodemailer se actual mail bhejna
         await transporter.sendMail(mailOptions);
 
         console.log(`[VIDEO INVITE] Success! Email sent to: ${userEmail}`);
-        res.json({ success: true, message: `Invite successfully sent to ${userEmail}` });
+        res.json({ success: true, message: `Invite successfully sent to ${userEmail} and added to whitelist.` });
 
     } catch (error) {
         console.error("Send Video Invite Error:", error);
@@ -252,14 +240,12 @@ exports.sendVideoInvite = async (req, res) => {
 // 🔥 RESET ROOM (ADMIN ONLY)
 // ==========================================
 
-// 4. Reset Entire Bidding Room
 exports.resetRoom = async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: "Only admin can reset room." });
         }
 
-        // Dono collection se poora data uda do
         await BidMessage.deleteMany({});
         await BiddingParticipant.deleteMany({});
 

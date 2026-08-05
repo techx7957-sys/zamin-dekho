@@ -34,6 +34,9 @@
             }
         </script>
 
+        <!-- 🔥 ZEGOCLOUD SDK SCRIPT (For Hitech Video Call) -->
+        <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"></script>
+
         <style>
             body { 
                 background: #f1f5f9; 
@@ -71,12 +74,12 @@
             .main-container.centered-mode { max-width: 900px; justify-content: center; }
 
             /* 🛠️ Main UI Panels */
-            .admin-sidebar { width: 350px; display: flex; flex-direction: column; overflow: hidden; display: none; }
+            .admin-sidebar { width: 350px; display: flex; flex-direction: column; gap: 20px; overflow: hidden; display: none; }
             .admin-panel-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; overflow: hidden; flex: 1; min-height: 0; }
 
             .sidebar-header { background: #0f172a; color: white; padding: 20px; font-weight: 700; flex-shrink: 0; }
             .whitelist-form { padding: 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; }
-            .whitelist-list { flex: 1; overflow-y: auto; padding: 10px; }
+            .whitelist-list { flex: 1; overflow-y: auto; padding: 10px; max-height: 40vh; }
             .participant-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; }
             .participant-id { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #0f172a; }
 
@@ -103,9 +106,13 @@
             .send-btn:hover { background: #059669; transform: scale(1.05); }
             .send-btn:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
 
-            /* Video Call Screen Specific */
-            .video-container { background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; padding: 40px; }
+            /* 🔥 NEW: Video Call Screen Specific */
+            .video-container { background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; overflow: hidden;}
             .video-container i { font-size: 60px; color: rgba(255,255,255,0.2); margin-bottom: 20px; }
+
+            /* ZegoCloud Container */
+            #video-root { width: 100%; height: 100%; display: none; }
+            .pre-join-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; padding: 40px; }
 
             /* Left Drawer CSS */
             .custom-left-drawer { width: 3.5in !important; height: 100dvh !important; background-color: #ffffff !important; border-right: none; box-shadow: 5px 0 25px rgba(0,0,0,0.1); }
@@ -118,9 +125,9 @@
 
             @media (max-width: 992px) {
                 .main-container { flex-direction: column; padding: 10px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); overflow-y: auto; }
-                .admin-sidebar { width: 100%; height: auto; flex-shrink: 0; }
+                .admin-sidebar { width: 100%; height: auto; display: flex; flex-shrink: 0; overflow: visible; }
                 .whitelist-list { max-height: 250px; }
-                .content-area { flex: none; height: 60vh; min-height: 400px; }
+                .chat-container { flex: none; height: 60vh; min-height: 400px; }
                 .main-container.centered-mode { max-width: 100%; }
             }
         </style>
@@ -267,12 +274,22 @@
                 </div>
             </div>
 
-            <!-- View 2: Video Call Screen (Only visible in Video Mode) -->
+            <!-- 🔥 NEW: View 2: Video Call Screen (Only visible in Video Mode) -->
             <div class="content-area video-container view-video">
-                <i class="fas fa-video-slash"></i>
-                <h3 class="fw-bold mb-2">Video Call Screen</h3>
-                <p class="text-white-50 max-w-md mx-auto">This area is reserved for the live video stream. Use the left panel to send invites to participants.</p>
-                <!-- Yahan future mein Video integration (jaise WebRTC iframe ya SDK) aayega -->
+
+                <!-- Pre-Join UI -->
+                <div class="pre-join-screen" id="preJoinScreen">
+                    <i class="fas fa-video-slash"></i>
+                    <h3 class="fw-bold mb-2">Video Call System</h3>
+                    <p class="text-white-50 max-w-md mx-auto mb-4">Click below to start the high-tech multi-grid video conference. Users can join automatically via email links.</p>
+                    <button class="btn btn-primary btn-lg rounded-pill fw-bold shadow px-5 py-3" onclick="startVideoCall()" style="background: #2563eb; border: none;">
+                        <i class="fas fa-play me-2"></i> Start Meeting
+                    </button>
+                </div>
+
+                <!-- Actual Video Grid Container (Hidden initially) -->
+                <div id="video-root"></div>
+
             </div>
 
         </div>
@@ -284,6 +301,7 @@
             let socket;
             let currentUser = null;
             let myShortId = "";
+            let meetingRoomId = "zamin_room_1"; // Default room ID
 
             // 🔥 Logic to switch views instantly
             function switchMode(mode) {
@@ -302,13 +320,23 @@
                 myShortId = currentUser._id.substring(currentUser._id.length - 6);
                 document.getElementById('myAccountIdLabel').innerHTML = `<i class="fas fa-id-badge text-success me-1"></i> #${myShortId}`;
 
+                // Check if user came via a video link
+                const isVideoInvite = new URLSearchParams(window.location.search).has('video');
+
                 if (currentUser.role === 'admin') {
                     document.getElementById('adminSidebar').style.display = 'flex';
                     fetchParticipants();
                 } else {
                     document.getElementById('mainLayoutContainer').classList.add('centered-mode');
-                    // Normal users ko sirf chat dikhega
-                    document.querySelector('.view-video').remove(); 
+                    if (!isVideoInvite) {
+                        // Normal users (not from invite) only see chat
+                        document.querySelector('.view-video').remove(); 
+                        document.getElementById('video-mode-tab').parentElement.remove();
+                    } else {
+                        // If normal user came via video link, force them into Video Mode
+                        switchMode('video');
+                        startVideoCall(); 
+                    }
                 }
 
                 try {
@@ -342,6 +370,46 @@
                 }
             };
 
+            // 🔥 ZegoCloud Video Integration
+            function startVideoCall() {
+                document.getElementById('preJoinScreen').style.display = 'none';
+                document.getElementById('video-root').style.display = 'block';
+
+                // NOTE: Replace these with your actual AppID and ServerSecret from ZegoCloud console
+                const appID = 0; // REPLACE ME
+                const serverSecret = "REPLACE_ME"; // REPLACE ME
+
+                const userName = currentUser.fullName || "User_" + myShortId;
+
+                if (appID === 0) {
+                    document.getElementById('video-root').innerHTML = "<div class='text-white mt-5 pt-5'><h3>AppID missing!</h3><p>Please setup ZegoCloud AppID in bidding.html first.</p></div>";
+                    return;
+                }
+
+                const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
+                    appID, 
+                    serverSecret, 
+                    meetingRoomId, 
+                    myShortId, 
+                    userName
+                );
+
+                const zp = ZegoUIKitPrebuilt.create(kitToken);
+                zp.joinRoom({
+                    container: document.getElementById('video-root'),
+                    sharedLinks: [{
+                        name: 'Invite Link',
+                        url: window.location.origin + window.location.pathname + '?video=true'
+                    }],
+                    scenario: {
+                        mode: ZegoUIKitPrebuilt.VideoConference, // High-tech grid mode
+                    },
+                    showScreenSharingButton: true, // Enable screen sharing
+                    turnOnMicrophoneWhenJoining: false,
+                    turnOnCameraWhenJoining: false,
+                });
+            }
+
             async function sendVideoInvite(btnElement) {
                 const idInput = document.getElementById('videoInviteAccountId');
                 const accountId = idInput.value.trim();
@@ -352,12 +420,15 @@
                 }
 
                 const originalHTML = btnElement.innerHTML;
-                btnElement.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Sending...`;
+                btnElement.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Sending & Adding...`;
                 btnElement.disabled = true;
 
                 try {
                     const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
                     const token = typeof getToken === 'function' ? getToken() : null;
+
+                    // Updated frontend to send current URL base for correct link generation
+                    const currentUrl = window.location.origin + window.location.pathname + "?video=true";
 
                     const res = await fetch(`${backendPath}/bidding/send-video-invite`, {
                         method: "POST",
@@ -365,16 +436,17 @@
                             'Authorization': `Bearer ${token}`,
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ accountId })
+                        body: JSON.stringify({ accountId, customLink: currentUrl })
                     });
 
                     const data = await res.json();
 
                     if (data.success) {
-                        Swal.fire('Invite Sent!', 'Video call invite has been successfully sent to their registered Gmail.', 'success');
+                        Swal.fire('Added & Invited!', 'User whitelisted and video call invite sent successfully.', 'success');
                         idInput.value = "";
+                        fetchParticipants(); // Refresh whitelist so admin sees them added
                     } else {
-                        Swal.fire('Error', data.message || 'Could not send the invite.', 'error');
+                        Swal.fire('Error', data.message || 'Could not process the request.', 'error');
                     }
                 } catch (e) {
                     Swal.fire('Error', 'Failed to connect to the server.', 'error');
