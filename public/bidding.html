@@ -23,27 +23,26 @@
 
         <!-- 🔥 BULLETPROOF SOCKET.IO LOADER 🔥 -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.min.js"></script>
+
+        <!-- Script to load socket.io with fallback -->
         <script>
             if (typeof io === 'undefined') {
-                document.write('<script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js"><\/script>');
-            }
-        </script>
-        <script>
-            if (typeof io === 'undefined') {
-                document.write('<script src="https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev/socket.io/socket.io.js"><\/script>');
+                const script1 = document.createElement('script');
+                script1.src = 'https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js';
+                script1.onload = function() {
+                    if (typeof io === 'undefined') {
+                        const script2 = document.createElement('script');
+                        script2.src = 'https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev/socket.io/socket.io.js';
+                        document.head.appendChild(script2);
+                    }
+                };
+                document.head.appendChild(script1);
             }
         </script>
 
-        <!-- 🔥 BULLETPROOF ZEGOCLOUD LOADER 🔥 -->
+        <!-- 🔥 BULLETPROOF ZEGOCLOUD LOADER (No document.write) 🔥 -->
         <!-- 1. Local Server File (With correct absolute path '/') -->
-        <script src="/js/zego-uikit-prebuilt.js"></script>
-
-        <!-- 2. High-Speed Premium CDN (Bypasses UNPKG network issues) -->
-        <script>
-            if (typeof ZegoUIKitPrebuilt === 'undefined') {
-                document.write('<script src="https://cdn.jsdelivr.net/npm/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"><\/script>');
-            }
-        </script>
+        <script src="/js/zego-uikit-prebuilt.js" onerror="this.src='https://cdn.jsdelivr.net/npm/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js'"></script>
 
         <style>
             body { 
