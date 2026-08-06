@@ -10,16 +10,29 @@ function makeRandomIv() {
 }
 
 function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload) {
-    if (!appId || typeof appId !== 'number') throw new Error('appId invalid');
-    if (!userId || typeof userId !== 'string') throw new Error('userId invalid');
-    if (!secret || typeof secret !== 'string' || secret.length !== 32) throw new Error('secret must be a 32 byte string');
+    // 🔥 FIX 1: Vercel environment variables string hoti hain, isliye isko strictly Number me convert kiya.
+    const numericAppId = Number(appId);
+
+    if (!numericAppId || isNaN(numericAppId)) {
+        throw new Error('appId invalid. It must be a valid number.');
+    }
+
+    if (!userId || typeof userId !== 'string') {
+        throw new Error('userId invalid');
+    }
+
+    // 🔥 FIX 2: Vercel env keys me kabhi-kabhi aage-peeche space aa jata hai, usko hatane ke liye trim() add kiya.
+    const cleanSecret = secret ? secret.trim() : '';
+    if (!cleanSecret || typeof cleanSecret !== 'string' || cleanSecret.length !== 32) {
+        throw new Error('secret must be exactly a 32 byte string');
+    }
 
     const createTime = Math.floor(Date.now() / 1000);
     const expireTime = createTime + effectiveTimeInSeconds;
     const nonce = makeRandomIv();
 
     const tokenInfo = {
-        app_id: appId,
+        app_id: numericAppId,
         user_id: userId,
         nonce: nonce,
         ctime: createTime,
@@ -30,7 +43,7 @@ function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload)
     const plaintText = JSON.stringify(tokenInfo);
     const iv = makeRandomIv();
 
-    const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
+    const cipher = crypto.createCipheriv('aes-256-cbc', cleanSecret, iv);
     let encrypted = cipher.update(plaintText, 'utf8');
     encrypted = Buffer.concat([encrypted, cipher.final()]);
 
