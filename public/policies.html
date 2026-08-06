@@ -394,11 +394,9 @@ body {
             if (token && typeof getUser === 'function') {
                 const user = getUser();
                 if (user) {
-                    const firstName = user.fullName ? user.fullName.split(" ")[0] : "User";
-                    const safeName = typeof escapeHTML === 'function' ? escapeHTML(firstName) : firstName;
+                    // Update: Changed Dashboard link to point to index.html and removed the Logout button.
                     authArea.innerHTML = `
-                        <a href="dashboard.html" class="btn btn-outline-success fw-bold rounded-pill px-4 me-2">Dashboard</a>
-                        <button onclick="typeof logout === 'function' ? logout() : (window.location.href='login.html')" class="btn btn-danger fw-bold rounded-pill px-4">Logout</button>
+                        <a href="index.html" class="btn btn-outline-success fw-bold rounded-pill px-4">Dashboard</a>
                     `;
                 }
             }
