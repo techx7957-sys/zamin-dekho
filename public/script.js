@@ -61,7 +61,7 @@ function handleSocialLogin() {
             window.history.replaceState({}, document.title, window.location.pathname);
 
             if (typeof window.showToast === "function") {
-                window.showToast("Login Successful 🚀", "success");
+                window.showToast("Welcome back! Login successful.", "success");
             }
 
             // ⚡ AGAR GOOGLE LOGIN AUTH PAGE PAR HUA HAI, TOH SEEDHA INDEX PAR BHEJO
@@ -94,7 +94,7 @@ window.escapeHTML = function(str) {
 };
 
 // ==========================================
-// 🌐 API FETCH (SUPER SECURE + CORS SYNCED)
+// 🌐 API FETCH (ANTI-ADBLOCKER + POLITE UI)
 // ==========================================
 window.apiFetch = async function(endpoint, options = {}) {
     const token = getToken();
@@ -118,18 +118,16 @@ window.apiFetch = async function(endpoint, options = {}) {
         const res = await fetch(`${API_BASE}${cleanEndpoint}`, {
             ...options,
             headers,
-            // 🔥 CRITICAL FIX: Ensures sessions/cookies work with secure CORS
             credentials: "include" 
         });
 
-        // 🔥 HANDLE INVALID JSON OR 500 ERRORS
         const contentType = res.headers.get("content-type");
         let data = null;
 
         if (contentType && contentType.includes("application/json")) {
             data = await res.json();
         } else {
-            throw new Error(`Server responded with status: ${res.status}`);
+            throw new Error(`Unexpected server response`);
         }
 
         // 🔐 AUTO LOGOUT ON TOKEN FAIL / SESSION EXPIRE
@@ -141,8 +139,22 @@ window.apiFetch = async function(endpoint, options = {}) {
         return data;
 
     } catch (err) {
-        // console.error("API ERROR:", err.message);
-        if (typeof window.showToast === "function") window.showToast("Network error or Server is offline.", "error");
+        // 🔥 Elegant Ad-Blocker / Network Error Handling
+        if (typeof window.Swal !== "undefined") {
+            Swal.fire({
+                icon: 'info',
+                title: 'Connection Delayed',
+                text: 'We are having trouble connecting to the server. If you are using strict privacy shields or an ad-blocker, please briefly pause them to allow the content (like Reels or Search) to load securely.',
+                confirmButtonColor: '#2563eb',
+                confirmButtonText: 'Understood',
+                customClass: {
+                    popup: 'rounded-4 shadow border-0',
+                    title: 'fw-bold text-dark'
+                }
+            });
+        } else if (typeof window.showToast === "function") {
+            window.showToast("Connection paused. Please check your shield settings.", "warning");
+        }
         throw err;
     }
 };
@@ -167,13 +179,11 @@ window.getUser = function() {
 window.logout = function() {
     localStorage.clear();
     sessionStorage.clear();
-    // Logout hone ke baad ab seedha Register par bhejo
     window.location.replace('register.html');
 }
 
 window.requireAuth = function() {
     if (!getToken()) {
-        // Bina permission ke access try kiya toh bhi Register par phek do
         window.location.replace('register.html');
     }
 }
@@ -186,12 +196,10 @@ window.resolveImageUrl = function(url) {
 
     if (!url) return fallback;
 
-    // Default valid URLs (Cloudinary, AWS, Unsplash, Data URI)
     if (url.startsWith("http") || url.startsWith("data:image")) {
         return url;
     }
 
-    // 🔥 FIX: Fetch user-uploaded images directly from Replit 
     if (url.startsWith("uploads/")) {
         return `${BACKEND_URL}/${url}`;
     }
@@ -215,7 +223,7 @@ window.formatDate = function(date) {
 }
 
 // ==========================================
-// 🔔 TOAST SYSTEM (SAFE UI)
+// 🔔 PREMIUM TOAST SYSTEM (ELEGANT UI)
 // ==========================================
 window.showToast = function(message, type = "success") {
     let toast = document.getElementById("toast");
@@ -224,56 +232,79 @@ window.showToast = function(message, type = "success") {
         toast = document.createElement("div");
         toast.id = "toast";
         document.body.appendChild(toast);
-
-        Object.assign(toast.style, {
-            position: "fixed",
-            top: "20px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            padding: "14px 18px",
-            borderRadius: "10px",
-            zIndex: 9999,
-            fontWeight: "600",
-            display: "none",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
-            transition: "all 0.3s ease-in-out"
-        });
     }
 
+    // Modern Premium UI for Toast
+    Object.assign(toast.style, {
+        position: "fixed",
+        top: "25px",
+        left: "50%",
+        transform: "translateX(-50%) translateY(-20px)",
+        padding: "12px 24px",
+        borderRadius: "50px",
+        zIndex: 9999,
+        fontWeight: "600",
+        fontSize: "14px",
+        display: "block",
+        opacity: "0",
+        boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
+        transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+        color: "#ffffff",
+        display: "flex",
+        alignItems: "center",
+        gap: "10px"
+    });
+
     const colors = {
-        success: "#10b981",
-        error: "#ef4444",
-        warning: "#f59e0b"
+        success: "rgba(16, 185, 129, 0.95)",
+        error: "rgba(225, 29, 72, 0.95)",   // Softer elegant red
+        warning: "rgba(245, 158, 11, 0.95)", // Elegant amber
+        info: "rgba(37, 99, 235, 0.95)"
+    };
+
+    const icons = {
+        success: "✓",
+        error: "ℹ", // Changed X to info symbol for a softer approach
+        warning: "⚠",
+        info: "ℹ"
     };
 
     toast.style.background = colors[type] || colors.success;
-    toast.style.color = "#fff";
-    toast.innerHTML = message; 
-    toast.style.display = "block";
+    toast.innerHTML = `<span style="background: rgba(255,255,255,0.2); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 12px;">${icons[type] || icons.success}</span> ${message}`; 
 
+    // Animate In
+    requestAnimationFrame(() => {
+        toast.style.opacity = "1";
+        toast.style.transform = "translateX(-50%) translateY(0)";
+    });
+
+    // Auto Hide
     setTimeout(() => {
-        toast.style.display = "none";
-    }, 3000);
+        toast.style.opacity = "0";
+        toast.style.transform = "translateX(-50%) translateY(-20px)";
+        setTimeout(() => {
+            toast.style.display = "none";
+        }, 400);
+    }, 3500);
 }
 
 // ==========================================
-// 🧭 NAVBAR UPDATE DYNAMICALLY (STRICT ROLE CHECK)
+// 🧭 NAVBAR UPDATE DYNAMICALLY
 // ==========================================
 window.updateNavbar = function() {
     const token = getToken();
     const user = getUser();
 
-    // 🔥 Sirf unhi links ko target karega jo button ki tarah dikhne chahiye (navbar ke andar)
     const links = document.querySelectorAll('#authArea a[href="login.html"], #authArea a[href="register.html"]');
 
     if (token) {
         links.forEach(link => {
-            // STRICT RULE: Only Admin and Broker get the CRM Button
             if (user && (user.role === "admin" || user.role === "broker")) {
                 link.href = "admin.html";
                 link.innerHTML = '<i class="fas fa-shield-alt me-1"></i> CRM Panel';
             } 
-            // RULE: Buyer, Seller, and anyone else get the Normal Dashboard
             else {
                 link.href = "dashboard.html";
                 link.innerHTML = '<i class="fas fa-laptop-house me-1"></i> Dashboard';
@@ -283,13 +314,13 @@ window.updateNavbar = function() {
             link.style.color = "#fff";
             link.style.padding = "8px 16px";
             link.style.borderRadius = "50px";
-            link.style.border = "none"; // Purana outline hatane ke liye
+            link.style.border = "none"; 
         });
     }
 }
 
 // ==========================================
-// 📍 GLOBAL NATIVE GPS ENGINE (PURE ENGLISH LOCKED)
+// 📍 GLOBAL NATIVE GPS ENGINE (POLITE UI)
 // ==========================================
 window.detectFastGPS = function() {
     const input = document.getElementById('mainSearchInput');
@@ -298,11 +329,19 @@ window.detectFastGPS = function() {
     if (!input || !icon) return;
 
     if (!navigator.geolocation) { 
-        if (typeof Swal !== 'undefined') Swal.fire("Error", "GPS is not supported by your browser!", "error"); 
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'info',
+                title: 'Location Unavailable',
+                text: 'Your current browser does not support location features. You can still search manually.',
+                confirmButtonColor: '#2563eb',
+                customClass: { popup: 'rounded-4 shadow border-0' }
+            });
+        }
         return; 
     }
 
-    input.value = "Scanning 50km radius...";
+    input.value = "Locating properties near you...";
     icon.classList.add('fa-spin');
 
     navigator.geolocation.getCurrentPosition(
@@ -311,7 +350,6 @@ window.detectFastGPS = function() {
             window.userLng = pos.coords.longitude;
 
             try {
-                // 🔥 Master parameters applied: explicitly block regional scripts on all global endpoints
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${window.userLat}&lon=${window.userLng}&addressdetails=1&accept-language=en`);
                 const data = await res.json();
                 const addr = data.address || {};
@@ -342,7 +380,16 @@ window.detectFastGPS = function() {
         (err) => { 
             input.value = ""; 
             icon.classList.remove('fa-spin'); 
-            if (typeof Swal !== 'undefined') Swal.fire("Warning", "Please allow location access to find nearby lands.", "warning"); 
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Location Permission',
+                    text: 'Please grant location access in your browser settings to automatically find nearby properties.',
+                    confirmButtonColor: '#10b981',
+                    confirmButtonText: 'Okay',
+                    customClass: { popup: 'rounded-4 shadow border-0' }
+                });
+            }
         }, 
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
     );
