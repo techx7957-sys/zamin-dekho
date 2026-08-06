@@ -34,8 +34,13 @@
             }
         </script>
 
-        <!-- 🔥 ZEGOCLOUD SDK SCRIPT (For Hitech Video Call) -->
+        <!-- 🔥 ZEGOCLOUD SDK SCRIPT WITH DUAL CDN FALLBACK (Anti Ad-Blocker) 🔥 -->
         <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"></script>
+        <script>
+            if (typeof ZegoUIKitPrebuilt === 'undefined') {
+                document.write('<script src="https://cdn.jsdelivr.net/npm/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"><\/script>');
+            }
+        </script>
 
         <style>
             body { 
@@ -377,6 +382,18 @@
 
             // 🔥 SECURE ZegoCloud Video Integration (Fetched via API)
             window.startVideoCall = async function() {
+                // 🛑 AD-BLOCKER / BRAVE SHIELD CHECK 🛑
+                if (typeof ZegoUIKitPrebuilt === 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Video Call Blocked! 🛑',
+                        text: 'Aapka browser (Brave Shield) ya Ad-Blocker video system ko load nahi hone de raha hai. Kripya usey Disable karein aur page ko refresh karein.',
+                        confirmButtonColor: '#2563eb',
+                        confirmButtonText: 'Refresh Page'
+                    }).then(() => location.reload());
+                    return;
+                }
+
                 // UI update immediately when user clicks
                 document.getElementById('preJoinScreen').style.display = 'none';
                 document.getElementById('video-root').style.display = 'block';
