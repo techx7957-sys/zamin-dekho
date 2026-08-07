@@ -7,7 +7,6 @@ const { generateToken04 } = require("./zegoToken");
 // ==========================================
 // 🛡️ HELPER: Check User Access (DUAL WHITELIST)
 // ==========================================
-// Helper function check karega ki user whitelist mein hai ya nahi, aur uska type kya hai
 async function getUserAccessDetails(userId, role) {
     if (role === 'admin') {
         return { isAllowed: true, defaultView: 'chat', hasChatAccess: true, hasVideoAccess: true };
@@ -29,10 +28,8 @@ async function getUserAccessDetails(userId, role) {
 // 🔥 HELPER: Safe User Finder (Regex Crash Fix)
 async function findUserSafely(accountId) {
     if (accountId.length === 24) {
-        // Direct ObjectId search
         return await User.findById(accountId).lean();
     } else {
-        // Safe string-ending search for Short IDs (Prevents Mongoose Regex Crash)
         const allUsers = await User.find({}, "_id fullName email role").lean();
         return allUsers.find(u => u._id.toString().endsWith(accountId));
     }
@@ -49,7 +46,6 @@ exports.checkAccess = async (req, res) => {
             return res.json({ success: true, hasAccess: false });
         }
 
-        // Frontend ko batayega ki konsi screen pehle dikhani hai
         res.json({ 
             success: true, 
             hasAccess: true, 
@@ -59,7 +55,7 @@ exports.checkAccess = async (req, res) => {
         });
     } catch (error) {
         console.error("Check Access Error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -90,7 +86,7 @@ exports.getMessages = async (req, res) => {
         res.json({ success: true, messages: formattedMessages });
     } catch (error) {
         console.error("Get Messages Error:", error);
-        res.status(500).json({ success: false, message: "Server error in fetching messages" });
+        res.status(500).json({ success: false, message: "Server error in fetching messages", details: error.message });
     }
 };
 
@@ -120,7 +116,7 @@ exports.saveMessage = async (req, res) => {
         res.json({ success: true, message: "Message saved" });
     } catch (error) {
         console.error("Save Message Error:", error);
-        res.status(500).json({ success: false, message: "Server error while saving message" });
+        res.status(500).json({ success: false, message: "Server error while saving message", details: error.message });
     }
 };
 
@@ -139,7 +135,7 @@ exports.getParticipants = async (req, res) => {
         res.json({ success: true, participants: validParticipants });
     } catch (error) {
         console.error("Get Participants Error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -154,7 +150,7 @@ exports.addParticipant = async (req, res) => {
 
         const user = await findUserSafely(accountId);
 
-        if (!user) return res.status(404).json({ success: false, message: "User not found with this ID." });
+        if (!user) return res.status(400).json({ success: false, message: `User not found with ID: ${accountId}` });
 
         const existing = await BiddingParticipant.findOne({ user: user._id });
 
@@ -177,7 +173,7 @@ exports.addParticipant = async (req, res) => {
         res.json({ success: true, message: "User added to Live Chat Bidding!" });
     } catch (error) {
         console.error("Add Participant Error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -190,7 +186,6 @@ exports.removeParticipant = async (req, res) => {
 
         if (participant) {
             participant.hasChatAccess = false;
-            // Agar chat aur video dono se nikal gaya toh record hi uda do
             if (!participant.hasChatAccess && !participant.hasVideoAccess) {
                 await BiddingParticipant.findByIdAndDelete(id);
             } else {
@@ -201,7 +196,7 @@ exports.removeParticipant = async (req, res) => {
         res.json({ success: true, message: "User removed from Chat group." });
     } catch (error) {
         console.error("Remove Participant Error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -218,7 +213,7 @@ exports.getVideoParticipants = async (req, res) => {
         res.json({ success: true, participants: validParticipants });
     } catch (error) {
         console.error("Get Video Participants Error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -231,7 +226,7 @@ exports.addVideoParticipant = async (req, res) => {
 
         const user = await findUserSafely(accountId);
 
-        if (!user) return res.status(404).json({ success: false, message: "User not found." });
+        if (!user) return res.status(400).json({ success: false, message: `User not found with ID: ${accountId}` });
 
         const existing = await BiddingParticipant.findOne({ user: user._id });
 
@@ -254,7 +249,7 @@ exports.addVideoParticipant = async (req, res) => {
         res.json({ success: true, message: "User added to Video Call Access!" });
     } catch (error) {
         console.error("Add Video Participant Error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -267,7 +262,6 @@ exports.removeVideoParticipant = async (req, res) => {
 
         if (participant) {
             participant.hasVideoAccess = false;
-            // Agar chat aur video dono se nikal gaya toh record hi uda do
             if (!participant.hasChatAccess && !participant.hasVideoAccess) {
                 await BiddingParticipant.findByIdAndDelete(id);
             } else {
@@ -278,7 +272,7 @@ exports.removeVideoParticipant = async (req, res) => {
         res.json({ success: true, message: "User removed from Video group." });
     } catch (error) {
         console.error("Remove Video Participant Error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -289,7 +283,6 @@ exports.generateZegoToken = async (req, res) => {
     try {
         const access = await getUserAccessDetails(req.user.id, req.user.role);
 
-        // Sirf unhe token milega jinke paas video ka access hai
         if (!access.isAllowed || !access.hasVideoAccess) {
             return res.status(403).json({ success: false, message: "Aapko video call ka access nahi hai." });
         }
@@ -326,7 +319,7 @@ exports.generateZegoToken = async (req, res) => {
 
     } catch (error) {
         console.error("Token Generation Error:", error);
-        res.status(500).json({ success: false, message: "Failed to create secure token." });
+        res.status(500).json({ success: false, message: "Failed to create secure token.", details: error.message });
     }
 };
 
@@ -345,6 +338,6 @@ exports.resetRoom = async (req, res) => {
         res.json({ success: true, message: "Room reset successfully" });
     } catch (error) {
         console.error("Reset Room Error:", error);
-        res.status(500).json({ success: false, message: "Server error during reset" });
+        res.status(500).json({ success: false, message: "Server error during reset", details: error.message });
     }
 };

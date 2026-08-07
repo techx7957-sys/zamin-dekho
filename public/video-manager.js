@@ -1,17 +1,18 @@
 // ========================================================
-// 🎥 ZAMIN DEKHO - SECURE & ULTRA-HD VIDEO CONFERENCE MANAGER
+// 🎥 ZAMIN DEKHO - SECURE HITECH VIDEO CONFERENCE MANAGER
 // ========================================================
 
 const ROOM_ID = "zamin_live_bidding_room_01"; // Sabhi log is ek hi room mein aayenge
 
 async function initializeVideoCall(user, shortId) {
     // 🛑 PREMIUM AD-BLOCKER / SHIELD FALLBACK UI 🛑
+    // Agar kisi extreme case me local aur CDN dono load na ho payein
     if (typeof ZegoUIKitPrebuilt === 'undefined') {
         if (typeof Swal !== 'undefined') {
             Swal.fire({
                 icon: 'info',
                 title: 'System Initializing',
-                html: '<p class="text-muted" style="font-size: 15px;">We are setting up your secure ultra-HD video experience. It seems to be taking a bit longer than usual.<br><br>If this persists, please briefly disable any strict browser shields or extensions to allow the video module to load.</p>',
+                html: '<p class="text-muted" style="font-size: 15px;">We are setting up your secure video experience. It seems to be taking a bit longer than usual.<br><br>If this persists, please briefly disable any strict browser shields or extensions to allow the video module to load.</p>',
                 confirmButtonColor: '#2563eb',
                 confirmButtonText: 'Refresh & Try Again',
                 allowOutsideClick: false,
@@ -32,7 +33,7 @@ async function initializeVideoCall(user, shortId) {
     document.getElementById('video-root').innerHTML = `
         <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
             <div class='spinner-border text-primary mb-3' style='width: 3rem; height: 3rem;'></div>
-            <h4 class='fw-bold'>Authenticating secure ultra-HD video room...</h4>
+            <h4 class='fw-bold'>Authenticating secure video room...</h4>
         </div>
     `;
 
@@ -63,7 +64,7 @@ async function initializeVideoCall(user, shortId) {
         // Clear loading spinner safely
         document.getElementById('video-root').innerHTML = "";
 
-        // 3. Generate Kit Token for Production
+        // 3. Generate Kit Token for Production (Using backend token, no hardcoded secrets)
         const kitToken = ZegoUIKitPrebuilt.generateKitTokenForProduction(
             data.appId, 
             data.token, 
@@ -75,26 +76,16 @@ async function initializeVideoCall(user, shortId) {
         // 4. Create ZegoCloud Instance
         const zp = ZegoUIKitPrebuilt.create(kitToken);
 
-        // 5. 🔥 ULTRA-HD & HIGH STABILITY CONFIGURATION 🔥
+        // 5. 🔥 Hitech Configuration (Premium Settings)
         zp.joinRoom({
             container: document.getElementById('video-root'),
-
-            // 🛑 CRITICAL UI FIXES: No share link, perfect fit 🛑
-            showRoomDetailsButton: false, // Hides the details tab and the "Share the link" option completely
-            // Remove sharedLinks array completely
-
+            sharedLinks: [{
+                name: 'Direct Video Invite Link',
+                url: window.location.origin + window.location.pathname + '?video=true'
+            }],
             scenario: {
                 mode: ZegoUIKitPrebuilt.VideoConference, // Multi-user Grid Mode
             },
-
-            // 🔥 ADVANCED: Video Quality & Network Stability Rules 🔥
-            // Force maximum resolution and frame rate for crisp "4K-like" feel
-            videoResolutionDefault: ZegoUIKitPrebuilt.VideoResolution_1080P, // Highest allowed in web UIKit
-            videoConfig: {
-                bitrate: 3000,          // High bitrate for less blur
-                frameRate: 30           // Smooth motion
-            },
-
             // Auto-controls
             turnOnMicrophoneWhenJoining: false,
             turnOnCameraWhenJoining: false,
@@ -102,14 +93,19 @@ async function initializeVideoCall(user, shortId) {
             showMyMicrophoneToggleButton: true,
             showAudioVideoSettingsButton: true,
 
-            // Layout & Controls
-            showScreenSharingButton: true, 
-            showUserList: true, 
-            showTextChat: true, 
-            showLayoutButton: true, 
-            maxUsers: 50, 
+            // Hitech Features
+            showScreenSharingButton: true, // Screen Share feature enable
+            showUserList: true, // Side mein participant list dikhegi
+            showTextChat: true, // Video ke andar internal chat
+            showLayoutButton: true, // User Grid ya Spotlight layout change kar sakta hai
+            maxUsers: 50, // Ek sath 50 log aa sakte hain
 
-            // Error Recovery: Return to sleek UI if call disconnects
+            // Custom Branding (Optional)
+            branding: {
+                logoURL: "" // Yahan Zamin Dekho ka logo URL daal sakte ho baad mein
+            },
+
+            // Call disconnect hone par wapas sleek UI set karna
             onLeaveRoom: () => {
                 document.getElementById('video-root').style.display = 'none';
                 document.getElementById('preJoinScreen').style.display = 'flex';
@@ -119,7 +115,7 @@ async function initializeVideoCall(user, shortId) {
     } catch (error) {
         console.error("ZegoCloud Auth Error:", error);
 
-        // 🔥 Beautiful & Polite Error Fallback
+        // 🔥 Beautiful & Polite Error Fallback (No ugly red text)
         document.getElementById('video-root').innerHTML = `
             <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
                 <i class="fas fa-shield-alt text-warning mb-3" style="font-size: 3.5rem; opacity: 0.8;"></i>
@@ -135,6 +131,7 @@ async function initializeVideoCall(user, shortId) {
 
 // Global function jisko hum HTML button se call karenge
 window.startVideoCall = function() {
+    // Current user aur ID global scope me honi chahiye
     if (!window.currentUser || !window.myShortId) {
         console.error("User profile not completely loaded yet.");
         if (typeof Swal !== 'undefined') {
@@ -149,6 +146,6 @@ window.startVideoCall = function() {
         return;
     }
 
-    // Initialize with advanced settings
+    // Setup shuru karo
     initializeVideoCall(window.currentUser, window.myShortId);
 };
