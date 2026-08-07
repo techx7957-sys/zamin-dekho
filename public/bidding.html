@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="en">
     <head>
+        <!-- 🔥 SECURITY FIX: Allowing WebSockets (Chat/Video) to connect without getting blocked 🔥 -->
+        <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'unsafe-inline' 'unsafe-eval' wss: https:;">
+
         <!-- 🚨 STRICT NO-FLICKER AUTH SHIELD 🚨 -->
         <script>
             const urlParams = new URLSearchParams(window.location.search);
@@ -74,7 +77,8 @@
                 transition: 0.3s; 
             }
 
-            .main-container.centered-mode { max-width: 900px; justify-content: center; }
+            /* Non-admin users ke liye layout perfectly fit aur wide hoga */
+            .main-container.centered-mode { max-width: 1200px; justify-content: center; }
 
             /* 🛠️ Main UI Panels */
             .admin-sidebar { width: 350px; display: flex; flex-direction: column; gap: 20px; overflow: hidden; display: none; }
@@ -116,12 +120,29 @@
             .send-btn:hover { background: #059669; transform: scale(1.05); }
             .send-btn:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
 
-            /* 🔥 NEW: Video Call Screen Specific */
-            .video-container { background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; overflow: hidden;}
+            /* 🔥 FIX: Perfect Fit for Video Container */
+            .video-container { 
+                background: #0f172a; 
+                display: flex; 
+                flex-direction: column; 
+                align-items: center; 
+                justify-content: center; 
+                color: white; 
+                text-align: center; 
+                overflow: hidden;
+                padding: 0 !important; /* Hata di sab faltu padding */
+                margin: 0 !important;
+            }
             .video-container i.big-icon { font-size: 60px; color: rgba(255,255,255,0.2); margin-bottom: 20px; }
 
-            /* ZegoCloud Container */
-            #video-root { width: 100%; height: 100%; display: none; }
+            /* ZegoCloud Perfect Container */
+            #video-root { 
+                width: 100%; 
+                height: 100%; 
+                display: none; 
+                flex: 1; /* Makes it fill all available area perfectly */
+                position: relative;
+            }
             .pre-join-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; padding: 40px; }
 
             /* Left Drawer CSS */
@@ -129,7 +150,7 @@
             .drawer-tabs .nav-link { color: #64748b; font-weight: 700; border: none; border-bottom: 3px solid transparent; border-radius: 0; transition: 0.3s; padding: 12px 10px; }
             .drawer-tabs .nav-link.active { color: #10b981; border-bottom-color: #10b981; background: transparent; }
 
-            /* 🔥 View Switcher Logic (Hide/Show Panels based on active mode) */
+            /* 🔥 View Switcher Logic */
             body[data-mode="chat"] .view-video { display: none !important; }
             body[data-mode="video"] .view-chat { display: none !important; }
 
@@ -215,7 +236,7 @@
 
         <div class="main-container" id="mainLayoutContainer">
 
-            <!-- 🔥 LEFT PANEL (Dynamic) -->
+            <!-- 🔥 LEFT PANEL (Admin Only) -->
             <div class="admin-sidebar" id="adminSidebar">
 
                 <!-- View 1: Whitelist Manager -->
@@ -333,6 +354,7 @@
 
                 const isVideoInvite = new URLSearchParams(window.location.search).has('video');
 
+                // 🔥 Fix: Hide admin sidebar for regular users, let video screen take full width
                 if (currentUser.role === 'admin') {
                     document.getElementById('adminSidebar').style.display = 'flex';
                     fetchParticipants();
@@ -357,7 +379,6 @@
                         }
                     });
 
-                    // 🔥 Catch 502 gracefully locally if it happens during network glitch
                     if (!res.ok) {
                         const errorData = await res.json().catch(() => ({}));
                         throw new Error(errorData.message || `HTTP ${res.status}`);
@@ -433,7 +454,6 @@
                         })
                     });
 
-                    // 🔥 Catch backend issues instantly instead of failing parsing
                     if (!response.ok) {
                         throw new Error(`Server returned ${response.status}`);
                     }
@@ -455,18 +475,18 @@
                     );
 
                     const zp = ZegoUIKitPrebuilt.create(kitToken);
+
+                    // 🔥 FIX: Share Link Removed & Perfect Fit settings added
                     zp.joinRoom({
                         container: document.getElementById('video-root'),
-                        sharedLinks: [{
-                            name: 'Invite Link',
-                            url: window.location.origin + window.location.pathname + '?video=true'
-                        }],
                         scenario: {
                             mode: ZegoUIKitPrebuilt.VideoConference,
                         },
                         showScreenSharingButton: true,
                         turnOnMicrophoneWhenJoining: false,
                         turnOnCameraWhenJoining: false,
+                        showRoomDetailsButton: false, // <-- Hides the room details (which hides the share link option)
+                        // sharedLinks array is completely removed so the copy link box won't appear
                     });
 
                 } catch (error) {
@@ -668,7 +688,6 @@
 
                 chatBox.insertAdjacentHTML('beforeend', msgHtml);
 
-                // 🔥 Advanced: Ensure perfect smooth scroll to bottom for new messages
                 setTimeout(() => {
                     chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
                 }, 10);
