@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="en">
     <head>
+        <!-- 🔥 SECURITY FIX: Allowing WebSockets (Chat/Video) to connect without getting blocked 🔥 -->
+        <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'unsafe-inline' 'unsafe-eval' wss: https:;">
+
         <!-- 🚨 STRICT NO-FLICKER AUTH SHIELD 🚨 -->
         <script>
             const urlParams = new URLSearchParams(window.location.search);
@@ -39,9 +42,6 @@
                 document.head.appendChild(script1);
             }
         </script>
-
-        <!-- 🔥 OFFICIAL ZEGOCLOUD GLOBAL CDN (100% Reliable, No Local Files) 🔥 -->
-        <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"></script>
 
         <style>
             body { 
@@ -174,13 +174,11 @@
                 <!-- Drawer Navigation Tabs -->
                 <ul class="nav nav-tabs nav-justified drawer-tabs" id="drawerModeTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <!-- Switch to Chat Mode -->
                         <button class="nav-link active" id="chat-mode-tab" data-bs-toggle="tab" data-bs-target="#chatMode" type="button" role="tab" onclick="switchMode('chat')">
                             <i class="fas fa-comments me-2"></i>Chat Box
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <!-- Switch to Video Mode -->
                         <button class="nav-link" id="video-mode-tab" data-bs-toggle="tab" data-bs-target="#videoMode" type="button" role="tab" onclick="switchMode('video')">
                             <i class="fas fa-video me-2"></i>Video Call
                         </button>
@@ -301,6 +299,10 @@
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+        <!-- 🔥 FIX: Zego Script moved to the BOTTOM of the body to prevent DOM Crash 🔥 -->
+        <script src="https://cdn.jsdelivr.net/npm/@zegocloud/zego-uikit-prebuilt@latest/zego-uikit-prebuilt.js"></script>
+
         <script src="script.js?v=live_bid_multi_view"></script>
 
         <script>
@@ -368,7 +370,6 @@
                     }
                 } catch (e) {
                     console.error(e);
-                    // Beautiful fallback for chat module failure
                     Swal.fire({
                         icon: 'info',
                         title: 'Connecting to Server',
@@ -380,7 +381,6 @@
             };
 
             window.startVideoCall = async function() {
-                // 🛑 PREMIUM AD-BLOCKER / SHIELD FALLBACK UI 🛑
                 if (typeof ZegoUIKitPrebuilt === 'undefined') {
                     Swal.fire({
                         icon: 'info',
