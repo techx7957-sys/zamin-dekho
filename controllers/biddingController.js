@@ -155,6 +155,10 @@ exports.addParticipant = async (req, res) => {
         const existing = await BiddingParticipant.findOne({ user: user._id });
 
         if (existing) {
+            // 🔥 MUTUALLY EXCLUSIVE RULE: Check if already in Video
+            if (existing.hasVideoAccess) {
+                return res.status(400).json({ success: false, message: "User is already in the Video Group. Remove them from Video first." });
+            }
             if (existing.hasChatAccess) {
                 return res.status(400).json({ success: false, message: "User is already in the Chat Group." });
             }
@@ -231,6 +235,10 @@ exports.addVideoParticipant = async (req, res) => {
         const existing = await BiddingParticipant.findOne({ user: user._id });
 
         if (existing) {
+            // 🔥 MUTUALLY EXCLUSIVE RULE: Check if already in Chat
+            if (existing.hasChatAccess) {
+                return res.status(400).json({ success: false, message: "User is already in the Chat Group. Remove them from Chat first." });
+            }
             if (existing.hasVideoAccess) {
                 return res.status(400).json({ success: false, message: "User is already in the Video Group." });
             }
