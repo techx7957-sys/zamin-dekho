@@ -1,40 +1,35 @@
 const crypto = require('crypto');
 
-// 🔥 HIGHLY ADVANCED: Replaced insecure Math.random() with Cryptographically Secure Generator
-// ZegoCloud requires a 16-character string for IV and Nonce.
-function generateSecureIv() {
-    // 8 bytes in hex will give exactly 16 characters
-    return crypto.randomBytes(8).toString('hex');
+function makeRandomIv() {
+    const str = '0123456789abcdefghijklmnopqrstuvwxyz';
+    const result = [];
+    for (let i = 0; i < 16; i++) {
+        result.push(str[Math.floor(Math.random() * str.length)]);
+    }
+    return result.join('');
 }
 
 function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload) {
-    // 🔥 FIX 1: Strict Type Casting
+    // 🔥 FIX 1: Vercel environment variables string hoti hain, isliye isko strictly Number me convert kiya.
     const numericAppId = Number(appId);
 
     if (!numericAppId || isNaN(numericAppId)) {
-        throw new Error('❌ ZegoToken Error: appId is invalid. It must be a valid number.');
+        throw new Error('appId invalid. It must be a valid number.');
     }
 
     if (!userId || typeof userId !== 'string') {
-        throw new Error('❌ ZegoToken Error: userId is invalid. It must be a string.');
+        throw new Error('userId invalid');
     }
 
-    // 🔥 FIX 2: Vercel env keys spacing protection
+    // 🔥 FIX 2: Vercel env keys me kabhi-kabhi aage-peeche space aa jata hai, usko hatane ke liye trim() add kiya.
     const cleanSecret = secret ? secret.trim() : '';
     if (!cleanSecret || typeof cleanSecret !== 'string' || cleanSecret.length !== 32) {
-        throw new Error('❌ ZegoToken Error: Server secret must be exactly 32 bytes/characters long.');
-    }
-
-    // Ensure effectiveTimeInSeconds is safe
-    if (!effectiveTimeInSeconds || typeof effectiveTimeInSeconds !== 'number') {
-        effectiveTimeInSeconds = 3600; // Default fallback to 1 hour
+        throw new Error('secret must be exactly a 32 byte string');
     }
 
     const createTime = Math.floor(Date.now() / 1000);
     const expireTime = createTime + effectiveTimeInSeconds;
-
-    // 🔥 Military-grade secure Nonce
-    const nonce = generateSecureIv();
+    const nonce = makeRandomIv();
 
     const tokenInfo = {
         app_id: numericAppId,
@@ -46,12 +41,9 @@ function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload)
     };
 
     const plaintText = JSON.stringify(tokenInfo);
+    const iv = makeRandomIv();
 
-    // 🔥 Military-grade secure IV
-    const iv = generateSecureIv(); 
-
-    // Advanced Memory Management: Use Buffer properly
-    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(cleanSecret, 'utf8'), Buffer.from(iv, 'utf8'));
+    const cipher = crypto.createCipheriv('aes-256-cbc', cleanSecret, iv);
     let encrypted = cipher.update(plaintText, 'utf8');
     encrypted = Buffer.concat([encrypted, cipher.final()]);
 
@@ -67,7 +59,7 @@ function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload)
     const buf = Buffer.concat([
         b1,
         b2,
-        Buffer.from(iv, 'utf8'),
+        Buffer.from(iv),
         b3,
         encrypted
     ]);
