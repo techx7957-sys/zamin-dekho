@@ -447,9 +447,14 @@
                     Swal.fire({
                         icon: 'info',
                         title: 'System Initializing',
-                        text: 'We are setting up your secure video experience. Please disable ad-blockers if it fails to load.',
+                        html: '<p class="text-muted" style="font-size: 15px;">We are setting up your secure ultra-HD video experience. It seems to be taking a bit longer than usual.<br><br>If this persists, please briefly disable any strict browser shields or extensions to allow the video module to load.</p>',
                         confirmButtonColor: '#2563eb',
-                        confirmButtonText: 'Refresh & Try Again'
+                        confirmButtonText: 'Refresh & Try Again',
+                        allowOutsideClick: false,
+                        customClass: {
+                            popup: 'rounded-4 shadow border-0',
+                            title: 'fw-bold text-dark'
+                        }
                     }).then(() => location.reload());
                     return;
                 }
@@ -464,7 +469,7 @@
                 document.getElementById('video-root').innerHTML = `
                     <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
                         <div class='spinner-border text-primary mb-3' style='width: 3rem; height: 3rem;'></div>
-                        <h4 class='fw-bold'>Authenticating secure video room...</h4>
+                        <h4 class='fw-bold'>Authenticating secure ultra-HD video room...</h4>
                     </div>
                 `;
 
@@ -499,20 +504,40 @@
                     // 🔥 FIX: Perfect Fit & Share Link Disabled completely 🔥
                     zp.joinRoom({
                         container: document.getElementById('video-root'),
+                        showRoomDetailsButton: false, // Disables the entire details tab holding the copy link box
                         scenario: { mode: ZegoUIKitPrebuilt.VideoConference },
-                        showScreenSharingButton: true,
+                        // Force maximum resolution and frame rate for crisp "4K-like" feel
+                        videoResolutionDefault: ZegoUIKitPrebuilt.VideoResolution_1080P,
+                        videoConfig: {
+                            bitrate: 3000,
+                            frameRate: 30
+                        },
                         turnOnMicrophoneWhenJoining: false,
                         turnOnCameraWhenJoining: false,
-                        showRoomDetailsButton: false // Disables the entire details tab holding the copy link box
+                        showMyCameraToggleButton: true,
+                        showMyMicrophoneToggleButton: true,
+                        showAudioVideoSettingsButton: true,
+                        showScreenSharingButton: true,
+                        showUserList: true,
+                        showTextChat: true,
+                        showLayoutButton: true,
+                        maxUsers: 50,
+                        onLeaveRoom: () => {
+                            document.getElementById('video-root').style.display = 'none';
+                            document.getElementById('preJoinScreen').style.display = 'flex';
+                        }
                     });
 
                 } catch (error) {
                     console.error("ZegoCloud Auth Error:", error);
                     document.getElementById('video-root').innerHTML = `
-                        <div class='text-white mt-5 pt-5 text-center'>
-                            <h3 class='text-danger fw-bold'>Connection Interrupted</h3>
-                            <p class='text-white-50 mt-2'>${error.message}</p>
-                            <button class='btn btn-primary mt-3 px-4 rounded-pill fw-bold' onclick='location.reload()'>Retry</button>
+                        <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
+                            <i class="fas fa-shield-alt text-warning mb-3" style="font-size: 3.5rem; opacity: 0.8;"></i>
+                            <h3 class='fw-bold mb-2'>Connection Interrupted</h3>
+                            <p class='text-white-50 max-w-md mx-auto mb-4' style="font-size: 15px;">We couldn't establish a secure connection to the video server. This is usually a temporary network drop.<br><br><small>${error.message}</small></p>
+                            <button class='btn btn-primary px-4 rounded-pill fw-bold shadow-sm' onclick='location.reload()' style="background: #2563eb; border: none; padding: 12px 30px;">
+                                <i class="fas fa-sync-alt me-2"></i> Refresh Connection
+                            </button>
                         </div>
                     `;
                 }

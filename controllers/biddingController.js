@@ -26,6 +26,18 @@ async function getUserAccessDetails(userId, role) {
     };
 }
 
+// 🔥 HELPER: Safe User Finder (Regex Crash Fix)
+async function findUserSafely(accountId) {
+    if (accountId.length === 24) {
+        // Direct ObjectId search
+        return await User.findById(accountId).lean();
+    } else {
+        // Safe string-ending search for Short IDs (Prevents Mongoose Regex Crash)
+        const allUsers = await User.find({}, "_id fullName email role").lean();
+        return allUsers.find(u => u._id.toString().endsWith(accountId));
+    }
+}
+
 // ==========================================
 // 🛡️ SECURITY & ACCESS ROUTE (SMART DEFAULT VIEW)
 // ==========================================
@@ -140,12 +152,7 @@ exports.addParticipant = async (req, res) => {
         const { accountId } = req.body;
         if (!accountId) return res.status(400).json({ success: false, message: "Account ID is required." });
 
-        let user;
-        if (accountId.length === 24) {
-            user = await User.findById(accountId).lean();
-        } else {
-            user = await User.findOne({ _id: { $regex: accountId + "$", $options: 'i' } }).lean();
-        }
+        const user = await findUserSafely(accountId);
 
         if (!user) return res.status(404).json({ success: false, message: "User not found with this ID." });
 
@@ -222,12 +229,7 @@ exports.addVideoParticipant = async (req, res) => {
         const { accountId } = req.body;
         if (!accountId) return res.status(400).json({ success: false, message: "Account ID is required." });
 
-        let user;
-        if (accountId.length === 24) {
-            user = await User.findById(accountId).lean();
-        } else {
-            user = await User.findOne({ _id: { $regex: accountId + "$", $options: 'i' } }).lean();
-        }
+        const user = await findUserSafely(accountId);
 
         if (!user) return res.status(404).json({ success: false, message: "User not found." });
 
@@ -238,8 +240,6 @@ exports.addVideoParticipant = async (req, res) => {
                 return res.status(400).json({ success: false, message: "User is already in the Video Group." });
             }
             existing.hasVideoAccess = true;
-            // Agar user pehle se tha but defaultView chat tha, toh chat hi rahne denge. 
-            // Agar tumhe chahiye ki jo naya access mile wo default ban jaye, toh yaha overwrite kar sakte ho.
             await existing.save();
         } else {
             const newParticipant = new BiddingParticipant({ 
