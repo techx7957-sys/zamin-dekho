@@ -137,6 +137,7 @@ app.use(helmet({
                 "https://accounts.google.com",    // Google Identity Services (GSI)
                 "https://checkout.razorpay.com",  // Razorpay payment gateway
                 "https://www.clarity.ms",         // Microsoft Clarity session recording
+                "https://unpkg.com"               // Allowed Unpkg CDN just in case
             ],
 
             // Styles: own + CDN stylesheets + Google Fonts declarations
@@ -172,7 +173,7 @@ app.use(helmet({
             // Fetch/XHR/WebSocket: own API + Clarity telemetry + deal-room WebSocket
             // In dev keep broad (Replit subdomains vary); in prod lock to self + known endpoints
             connectSrc: isProd
-                ? ["'self'", "https://www.clarity.ms", "wss:"]
+                ? ["'self'", "https://www.clarity.ms", "wss:", "https://*"]
                 : ["'self'", "https:", "wss:", "http://localhost:*"], // Updated to allow localhost ws in dev
 
             // Web fonts: Google Fonts files + FontAwesome webfonts
@@ -347,7 +348,7 @@ app.post('/api/leads/verify-gps/:id', verifyToken, leadController.verifyGPS);
 // ❌ API 404
 // ==========================================
 app.all("/api/*", (req, res) => {
-    res.status(404).json({ success: false, message: "API Not Found" });
+    res.status(404).json({ success: false, message: "API Endpoint Not Found" });
 });
 
 
@@ -384,11 +385,13 @@ app.get("*", (req, res) => {
 
 
 // ==========================================
-// 🛡️ ERROR HANDLER (TWITTER X-RAY MODE)
+// 🛡️ GLOBAL JSON ERROR CATCHER (Vercel fix)
 // ==========================================
+// 🚨 Is block ko use karke Backend crash hone par HTML error (502) ki jagah clean JSON dega
 app.use((err, req, res, next) => {
-    console.error("🔥 Error:", err.message);
+    console.error("🔥 Global Error Caught:", err.message);
 
+    // Default Twitter Logic
     let twitterRawError = "No exact details provided by Twitter";
     if (err.oauthError && err.oauthError.data) {
         try {
@@ -398,10 +401,20 @@ app.use((err, req, res, next) => {
         }
     }
 
+    // Agar API request fail ho rahi hai to HTML bhejna band karo, warna "Unexpected token <" wala error aata hai.
+    if (req.path.startsWith("/api/")) {
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal Server Error Caught",
+            errorDetails: err.message,
+            twitter_exact_reason: twitterRawError
+        });
+    }
+
+    // Baaki sab regular errors ke liye
     res.status(500).json({ 
         success: false, 
-        message: "Server Error Ya Token Reject Hua",
-        twitter_exact_reason: twitterRawError,
+        message: "Server Error",
         stack_line: err.message
     });
 });

@@ -14,7 +14,7 @@
         { "key": "X-XSS-Protection", "value": "1; mode=block" },
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; frame-ancestors 'self' https://zamindekho.tech https://www.zamindekho.tech; form-action 'self';" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self' https: wss: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline' 'unsafe-eval' wss: https:; frame-ancestors 'self' https://zamindekho.tech https://www.zamindekho.tech; form-action 'self';" },
         { "key": "Permissions-Policy", "value": "geolocation=(self), microphone=(self), camera=(self), payment=(self)" }
       ]
     },

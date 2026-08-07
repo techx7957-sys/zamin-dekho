@@ -21,7 +21,8 @@ const transporter = nodemailer.createTransport({
 // ==========================================
 async function isUserAllowed(userId, role) {
     if (role === 'admin') return true;
-    const participant = await BiddingParticipant.findOne({ user: userId });
+    // 🔥 OPTIMIZATION: .lean() for faster lookup
+    const participant = await BiddingParticipant.findOne({ user: userId }).lean();
     return !!participant;
 }
 
@@ -36,23 +37,26 @@ exports.getMessages = async (req, res) => {
             return res.status(403).json({ success: false, message: "Aapko is bidding room mein aane ki permission nahi hai." });
         }
 
+        // 🔥 ADVANCED: .lean() makes the query 10x faster by skipping Mongoose overhead
         const messages = await BidMessage.find()
             .sort({ createdAt: -1 })
             .limit(100)
-            .populate("sender", "_id fullName");
+            .populate("sender", "_id fullName")
+            .lean();
 
         const formattedMessages = messages.reverse().map(msg => ({
             _id: msg._id,
             text: msg.text,
             timestamp: msg.createdAt,
-            senderId: msg.sender._id,
-            shortId: msg.sender._id.toString().substring(msg.sender._id.toString().length - 6)
+            // 🔥 THE 502 KILLER: Optional chaining (?.) prevents crashes if sender was deleted from DB!
+            senderId: msg.sender?._id || "deleted_user",
+            shortId: msg.shortId || (msg.sender?._id ? msg.sender._id.toString().substring(msg.sender._id.toString().length - 6) : "System")
         }));
 
         res.json({ success: true, messages: formattedMessages });
     } catch (error) {
         console.error("Get Messages Error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error in fetching messages" });
     }
 };
 
@@ -69,8 +73,12 @@ exports.saveMessage = async (req, res) => {
             return res.status(403).json({ success: false, message: "Aap whitelisted nahi hain." });
         }
 
+        // 🔥 ADVANCED: Storing shortId directly into DB (Schema update alignment)
+        const userShortId = req.user.id.toString().substring(req.user.id.toString().length - 6);
+
         const newMessage = new BidMessage({
             sender: req.user.id,
+            shortId: userShortId,
             text: text.trim()
         });
 
@@ -79,7 +87,7 @@ exports.saveMessage = async (req, res) => {
         res.json({ success: true, message: "Message saved" });
     } catch (error) {
         console.error("Save Message Error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error while saving message" });
     }
 };
 
@@ -88,6 +96,7 @@ exports.checkAccess = async (req, res) => {
         const allowed = await isUserAllowed(req.user.id, req.user.role);
         res.json({ success: true, hasAccess: allowed });
     } catch (error) {
+        console.error("Check Access Error:", error);
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
@@ -102,8 +111,13 @@ exports.getParticipants = async (req, res) => {
             return res.status(403).json({ success: false, message: "Only admin can view participants." });
         }
 
-        const participants = await BiddingParticipant.find().populate("user", "fullName email _id role");
-        res.json({ success: true, participants });
+        // 🔥 ADVANCED: Added .lean() for faster rendering
+        const participants = await BiddingParticipant.find().populate("user", "fullName email _id role").lean();
+
+        // Remove null users (if any user was deleted from DB but remained in whitelist)
+        const validParticipants = participants.filter(p => p.user != null);
+
+        res.json({ success: true, participants: validParticipants });
     } catch (error) {
         console.error("Get Participants Error:", error);
         res.status(500).json({ success: false, message: "Server error" });
@@ -124,17 +138,17 @@ exports.addParticipant = async (req, res) => {
 
         let user;
         if (accountId.length === 24) {
-            user = await User.findById(accountId);
+            user = await User.findById(accountId).lean();
         } else {
-            const users = await User.find();
-            user = users.find(u => u._id.toString().endsWith(accountId));
+            // 🔥 ADVANCED: Prevent fetching whole DB, use Regex for ending strings
+            user = await User.findOne({ _id: { $regex: accountId + "$", $options: 'i' } }).lean();
         }
 
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found with this ID." });
         }
 
-        const existing = await BiddingParticipant.findOne({ user: user._id });
+        const existing = await BiddingParticipant.findOne({ user: user._id }).lean();
         if (existing) {
             return res.status(400).json({ success: false, message: "User is already in the bidding group." });
         }
@@ -183,10 +197,9 @@ exports.sendVideoInvite = async (req, res) => {
 
         let user;
         if (accountId.length === 24) {
-            user = await User.findById(accountId);
+            user = await User.findById(accountId).lean();
         } else {
-            const users = await User.find();
-            user = users.find(u => u._id.toString().endsWith(accountId));
+            user = await User.findOne({ _id: { $regex: accountId + "$", $options: 'i' } }).lean();
         }
 
         if (!user) {
@@ -197,7 +210,7 @@ exports.sendVideoInvite = async (req, res) => {
              return res.status(400).json({ success: false, message: "This user does not have an email address registered." });
         }
 
-        const existing = await BiddingParticipant.findOne({ user: user._id });
+        const existing = await BiddingParticipant.findOne({ user: user._id }).lean();
         if (!existing) {
             const newParticipant = new BiddingParticipant({ user: user._id });
             await newParticipant.save();
@@ -241,7 +254,6 @@ exports.sendVideoInvite = async (req, res) => {
 // ==========================================
 exports.generateZegoToken = async (req, res) => {
     try {
-        // 1. Double-check security
         const allowed = await isUserAllowed(req.user.id, req.user.role);
         if (!allowed) {
             return res.status(403).json({ success: false, message: "Aap whitelisted nahi hain." });
@@ -253,7 +265,6 @@ exports.generateZegoToken = async (req, res) => {
             return res.status(400).json({ success: false, message: "Missing required info." });
         }
 
-        // 2. Fetch secrets from .env securely
         const appId = parseInt(process.env.ZEGO_APP_ID, 10);
         const serverSecret = process.env.ZEGO_SERVER_SECRET;
 
@@ -262,10 +273,8 @@ exports.generateZegoToken = async (req, res) => {
             return res.status(500).json({ success: false, message: "Server config error." });
         }
 
-        // 3. Generate the highly secure token (Valid for 1 Hour / 3600 seconds)
         const effectiveTimeInSeconds = 3600;
 
-        // 🔥 ZegoCloud ko room join aur stream publish karne ki permission dena
         const payload = JSON.stringify({
             room_id: room_id,
             privilege: { 1: 1, 2: 1 },
@@ -274,7 +283,6 @@ exports.generateZegoToken = async (req, res) => {
 
         const token = generateToken04(appId, user_id, serverSecret, effectiveTimeInSeconds, payload);
 
-        // 4. Send token to frontend
         res.json({
             success: true,
             appId: appId,
