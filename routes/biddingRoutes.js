@@ -21,26 +21,32 @@ router.post("/messages", verifyToken, catchAsync(biddingController.saveMessage))
 // ==========================================
 // 🛡️ SECURITY & ACCESS ROUTE
 // ==========================================
-// Check karne ke liye ki current user whitelisted hai ya nahi
+// Check karne ke liye ki current user whitelisted hai ya nahi (Chat ya Video kiske liye)
 router.get("/check-access", verifyToken, catchAsync(biddingController.checkAccess));
 
 // ==========================================
-// ⚙️ ADMIN WHITELIST MANAGEMENT ROUTES
+// ⚙️ ADMIN CHAT WHITELIST MANAGEMENT
 // ==========================================
-// Admin ko saare whitelisted users ki list dikhane ke liye
+// Admin ko saare Chat whitelisted users ki list dikhane ke liye
 router.get("/participants", verifyToken, catchAsync(biddingController.getParticipants));
 
-// Admin dwara naye user ko Bidding Group mein add karne ke liye
+// Admin dwara naye user ko Chat Bidding Group mein add karne ke liye
 router.post("/participants", verifyToken, catchAsync(biddingController.addParticipant));
 
-// Admin dwara kisi user ko Group se bahar nikalne (remove) ke liye
+// Admin dwara kisi user ko Chat Group se bahar nikalne (remove) ke liye
 router.delete("/participants/:id", verifyToken, catchAsync(biddingController.removeParticipant));
 
 // ==========================================
-// 📹 VIDEO CALL ROUTES (INVITE & SECURE TOKEN)
+// 📹 ADMIN VIDEO WHITELIST MANAGEMENT (NEW)
 // ==========================================
-// Admin dwara user ko invite email bhejne AUR usko automatically whitelist karne ke liye
-router.post("/send-video-invite", verifyToken, catchAsync(biddingController.sendVideoInvite));
+// Admin ko saare Video whitelisted users ki list dikhane ke liye
+router.get("/video-participants", verifyToken, catchAsync(biddingController.getVideoParticipants));
+
+// Admin dwara naye user ko Video Group mein add karne ke liye (No email, direct access)
+router.post("/video-participants", verifyToken, catchAsync(biddingController.addVideoParticipant));
+
+// Admin dwara kisi user ko Video Group se bahar nikalne ke liye
+router.delete("/video-participants/:id", verifyToken, catchAsync(biddingController.removeVideoParticipant));
 
 // Frontend ko securely ZegoCloud token dene ke liye
 router.post("/zego-token", verifyToken, catchAsync(biddingController.generateZegoToken));

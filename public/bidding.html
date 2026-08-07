@@ -130,7 +130,7 @@
                 color: white; 
                 text-align: center; 
                 overflow: hidden;
-                padding: 0 !important; /* Hata di sab faltu padding */
+                padding: 0 !important;
                 margin: 0 !important;
             }
             .video-container i.big-icon { font-size: 60px; color: rgba(255,255,255,0.2); margin-bottom: 20px; }
@@ -140,7 +140,7 @@
                 width: 100%; 
                 height: 100%; 
                 display: none; 
-                flex: 1; /* Makes it fill all available area perfectly */
+                flex: 1;
                 position: relative;
             }
             .pre-join-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; padding: 40px; }
@@ -164,7 +164,7 @@
         </style>
     </head>
 
-    <!-- 🔥 Default Mode is Chat -->
+    <!-- 🔥 Default Mode set dynamically later, but starts as chat -->
     <body data-mode="chat">
 
         <nav class="navbar navbar-expand-lg">
@@ -195,7 +195,6 @@
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
             <div class="offcanvas-body p-0">
-
                 <!-- Drawer Navigation Tabs -->
                 <ul class="nav nav-tabs nav-justified drawer-tabs" id="drawerModeTabs" role="tablist">
                     <li class="nav-item" role="presentation">
@@ -211,7 +210,6 @@
                 </ul>
 
                 <div class="tab-content p-4" id="drawerTabsContent">
-                    <!-- Drawer: Chat Info -->
                     <div class="tab-pane fade show active text-center" id="chatMode" role="tabpanel">
                         <div class="py-5 text-muted">
                             <i class="fas fa-comment-dots fs-1 mb-3 text-light border rounded-circle p-4 bg-secondary bg-opacity-10"></i>
@@ -221,7 +219,6 @@
                         </div>
                     </div>
 
-                    <!-- Drawer: Video Info -->
                     <div class="tab-pane fade text-center" id="videoMode" role="tabpanel">
                         <div class="py-5 text-muted">
                             <i class="fas fa-video fs-1 mb-3 text-light border rounded-circle p-4 bg-secondary bg-opacity-10"></i>
@@ -239,13 +236,13 @@
             <!-- 🔥 LEFT PANEL (Admin Only) -->
             <div class="admin-sidebar" id="adminSidebar">
 
-                <!-- View 1: Whitelist Manager -->
+                <!-- View 1: Chat Whitelist Manager -->
                 <div class="admin-panel-card view-chat">
                     <div class="sidebar-header">
-                        <i class="fas fa-users-cog me-2"></i> Whitelist Manager
+                        <i class="fas fa-users-cog me-2"></i> Chat Whitelist
                     </div>
                     <div class="whitelist-form">
-                        <label class="form-label fw-bold text-muted small mb-1">Add Account ID</label>
+                        <label class="form-label fw-bold text-muted small mb-1">Add Account ID (Chat)</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white">#</span>
                             <input type="text" id="newParticipantId" class="form-control" placeholder="e.g. 4af3dd">
@@ -257,23 +254,22 @@
                     </div>
                 </div>
 
-                <!-- View 2: Send Video Invite -->
+                <!-- 🔥 NEW DESIGN: View 2: Video Whitelist Manager (Symmetric to Chat Manager) -->
                 <div class="admin-panel-card view-video">
                     <div class="sidebar-header" style="background: #2563eb;">
-                        <i class="fas fa-envelope-open-text me-2"></i> Invite to Call
+                        <i class="fas fa-video me-2"></i> Video Whitelist
                     </div>
-                    <div class="p-4 bg-white flex-1">
-                        <p class="text-muted small fw-medium mb-4">Enter an Account ID below. A secure video meeting link will be emailed to their registered Gmail address.</p>
-
-                        <label class="form-label text-dark small fw-bold mb-2">Participant Account ID</label>
-                        <div class="input-group mb-4 shadow-sm rounded-3 overflow-hidden">
-                            <span class="input-group-text bg-light border text-muted">#</span>
-                            <input type="text" id="videoInviteAccountId" class="form-control border-start-0 fw-bold" placeholder="e.g. 4af3dd">
+                    <div class="whitelist-form">
+                        <label class="form-label fw-bold text-muted small mb-1">Add Account ID (Video)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white">#</span>
+                            <input type="text" id="videoInviteAccountId" class="form-control" placeholder="e.g. 4af3dd">
+                            <!-- 🔥 Symmetric Add Button replaces the big "Send Invite" button -->
+                            <button class="btn btn-primary fw-bold" style="background: #2563eb; border: none;" onclick="addVideoParticipant(this)"><i class="fas fa-plus"></i></button>
                         </div>
-
-                        <button class="btn btn-primary w-100 fw-bold rounded-pill shadow-sm" onclick="sendVideoInvite(this)" style="padding: 12px; background: #2563eb; border: none;">
-                            <i class="fas fa-paper-plane me-2"></i> Send Invite Link
-                        </button>
+                    </div>
+                    <div class="whitelist-list" id="videoParticipantList">
+                        <div class="text-center py-4 text-muted small fw-bold">Loading video participants...</div>
                     </div>
                 </div>
 
@@ -301,14 +297,13 @@
                 </div>
             </div>
 
-            <!-- 🔥 NEW: View 2: Video Call Screen -->
+            <!-- View 2: Video Call Screen -->
             <div class="content-area video-container view-video">
-
                 <!-- Pre-Join UI -->
                 <div class="pre-join-screen" id="preJoinScreen">
                     <i class="fas fa-video-slash big-icon"></i>
                     <h3 class="fw-bold mb-2">Video Call System</h3>
-                    <p class="text-white-50 max-w-md mx-auto mb-4">Click below to start the high-tech multi-grid video conference. Users can join automatically via email links.</p>
+                    <p class="text-white-50 max-w-md mx-auto mb-4">Click below to start the secure multi-grid video conference.</p>
 
                     <button class="btn btn-primary shadow d-flex align-items-center justify-content-center gap-2" onclick="startVideoCall()" style="background: #2563eb; border: none; padding: 14px 35px; border-radius: 50px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-play" style="font-size: 1rem; margin-top: 1px;"></i> 
@@ -318,31 +313,48 @@
 
                 <!-- Actual Video Grid Container (Hidden initially) -->
                 <div id="video-root"></div>
-
             </div>
 
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-        <!-- 🔥 FIX: Zego Script moved to the BOTTOM of the body to prevent DOM Crash 🔥 -->
         <script src="https://cdn.jsdelivr.net/npm/@zegocloud/zego-uikit-prebuilt@latest/zego-uikit-prebuilt.js"></script>
-
-        <script src="script.js?v=live_bid_multi_view"></script>
 
         <script>
             let socket;
             let currentUser = null;
             let myShortId = "";
             let meetingRoomId = "zamin_room_1"; 
+            let hasChatAccess = false;
+            let hasVideoAccess = false;
 
             function switchMode(mode) {
                 document.body.setAttribute("data-mode", mode);
+
+                // Update active tab manually to reflect UI change
+                document.querySelectorAll('.drawer-tabs .nav-link').forEach(t => t.classList.remove('active'));
+                document.getElementById(`${mode}-mode-tab`).classList.add('active');
+
+                // Toggle left sidebar panels (only matters for admin)
+                if (currentUser && currentUser.role === 'admin') {
+                    if (mode === 'chat') {
+                        document.querySelector('.admin-panel-card.view-chat').style.display = 'flex';
+                        document.querySelector('.admin-panel-card.view-video').style.display = 'none';
+                    } else {
+                        document.querySelector('.admin-panel-card.view-chat').style.display = 'none';
+                        document.querySelector('.admin-panel-card.view-video').style.display = 'flex';
+                    }
+                }
             }
 
+            // Local Helper Functions
+            function getToken() { return localStorage.getItem('zamin_token'); }
+            function getUser() { const u = localStorage.getItem('zamin_user'); return u ? JSON.parse(u) : null; }
+            function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag])); }
+
             window.onload = async function() {
-                currentUser = typeof getUser === 'function' ? getUser() : null;
-                const token = typeof getToken === 'function' ? getToken() : null;
+                currentUser = getUser();
+                const token = getToken();
 
                 if (!token || !currentUser) {
                     window.location.href = "login.html";
@@ -351,23 +363,6 @@
 
                 myShortId = currentUser._id.substring(currentUser._id.length - 6);
                 document.getElementById('myAccountIdLabel').innerHTML = `<i class="fas fa-id-badge text-success me-1"></i> #${myShortId}`;
-
-                const isVideoInvite = new URLSearchParams(window.location.search).has('video');
-
-                // 🔥 Fix: Hide admin sidebar for regular users, let video screen take full width
-                if (currentUser.role === 'admin') {
-                    document.getElementById('adminSidebar').style.display = 'flex';
-                    fetchParticipants();
-                } else {
-                    document.getElementById('mainLayoutContainer').classList.add('centered-mode');
-                    if (!isVideoInvite) {
-                        document.querySelector('.view-video').remove(); 
-                        document.getElementById('video-mode-tab').parentElement.remove();
-                    } else {
-                        switchMode('video');
-                        startVideoCall(); 
-                    }
-                }
 
                 try {
                     const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
@@ -387,8 +382,43 @@
                     const accessRes = await res.json();
 
                     if (accessRes.success && accessRes.hasAccess) {
-                        initChat();
-                        fetchOldMessages();
+                        hasChatAccess = accessRes.hasChatAccess;
+                        hasVideoAccess = accessRes.hasVideoAccess;
+
+                        // 🔥 SMART DEFAULT VIEW LOGIC 🔥
+                        // Check backend recommendation first
+                        let initialMode = accessRes.defaultView || 'chat';
+
+                        // If they don't have access to the default, fallback to what they do have
+                        if (initialMode === 'chat' && !hasChatAccess && hasVideoAccess) initialMode = 'video';
+                        if (initialMode === 'video' && !hasVideoAccess && hasChatAccess) initialMode = 'chat';
+
+                        switchMode(initialMode); // Apply the logic
+
+                        if (currentUser.role === 'admin') {
+                            document.getElementById('adminSidebar').style.display = 'flex';
+                            fetchParticipants();
+                            fetchVideoParticipants();
+                        } else {
+                            document.getElementById('mainLayoutContainer').classList.add('centered-mode');
+                        }
+
+                        // Initialize functionalities based on final access rights
+                        if (hasChatAccess || currentUser.role === 'admin') {
+                            initChat();
+                            fetchOldMessages();
+                        } else {
+                            document.getElementById('chatStatus').innerText = "Access Restricted";
+                            document.getElementById('chatStatus').style.color = "#ef4444";
+                            document.getElementById('bidInput').disabled = true;
+                            document.getElementById('bidInput').placeholder = "You do not have chat access.";
+                        }
+
+                        if (initialMode === 'video' && !document.getElementById('video-root').innerHTML.includes('iframe')) {
+                            // Optionally auto-start video if it's the primary intended view (Admin can still click manually)
+                            if (currentUser.role !== 'admin') startVideoCall();
+                        }
+
                     } else {
                         Swal.fire({
                             icon: 'info',
@@ -401,28 +431,31 @@
                     console.error("Access Check Failed:", e);
                     Swal.fire({
                         icon: 'warning',
-                        title: 'Server Timeout',
-                        text: 'Connection to the secure server dropped. Please refresh the page.',
+                        title: 'Server Error',
+                        text: 'Unable to verify your access rights. Please try again.',
                         confirmButtonText: 'Refresh',
                         confirmButtonColor: '#f59e0b'
                     });
                 }
             };
 
+            // ==========================================
+            // 📹 VIDEO SYSTEM (ZegoCloud + Logic)
+            // ==========================================
             window.startVideoCall = async function() {
                 if (typeof ZegoUIKitPrebuilt === 'undefined') {
                     Swal.fire({
                         icon: 'info',
                         title: 'System Initializing',
-                        html: '<p class="text-muted" style="font-size: 15px;">We are setting up your secure video experience. It seems to be taking a bit longer than usual.<br><br>If this persists, please briefly disable any strict browser shields or extensions to allow the video module to load.</p>',
+                        text: 'We are setting up your secure video experience. Please disable ad-blockers if it fails to load.',
                         confirmButtonColor: '#2563eb',
-                        confirmButtonText: 'Refresh & Try Again',
-                        allowOutsideClick: false,
-                        customClass: {
-                            popup: 'rounded-4 shadow border-0',
-                            title: 'fw-bold text-dark'
-                        }
+                        confirmButtonText: 'Refresh & Try Again'
                     }).then(() => location.reload());
+                    return;
+                }
+
+                if (!hasVideoAccess && currentUser.role !== 'admin') {
+                    Swal.fire({ icon: 'error', title: 'Restricted', text: 'You do not have permission to join the video call.' });
                     return;
                 }
 
@@ -447,46 +480,30 @@
                             'Authorization': `Bearer ${authToken}`,
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({
-                            room_id: meetingRoomId,
-                            user_id: myShortId,
-                            user_name: userName
-                        })
+                        body: JSON.stringify({ room_id: meetingRoomId, user_id: myShortId, user_name: userName })
                     });
 
-                    if (!response.ok) {
-                        throw new Error(`Server returned ${response.status}`);
-                    }
+                    if (!response.ok) throw new Error(`Server returned ${response.status}`);
 
                     const data = await response.json();
-
-                    if (!data.success) {
-                        throw new Error(data.message || "Failed to retrieve secure video token.");
-                    }
+                    if (!data.success) throw new Error(data.message || "Failed to retrieve secure video token.");
 
                     document.getElementById('video-root').innerHTML = ""; 
 
                     const kitToken = ZegoUIKitPrebuilt.generateKitTokenForProduction(
-                        data.appId, 
-                        data.token, 
-                        meetingRoomId, 
-                        myShortId, 
-                        userName
+                        data.appId, data.token, meetingRoomId, myShortId, userName
                     );
 
                     const zp = ZegoUIKitPrebuilt.create(kitToken);
 
-                    // 🔥 FIX: Share Link Removed & Perfect Fit settings added
+                    // 🔥 FIX: Perfect Fit & Share Link Disabled completely 🔥
                     zp.joinRoom({
                         container: document.getElementById('video-root'),
-                        scenario: {
-                            mode: ZegoUIKitPrebuilt.VideoConference,
-                        },
+                        scenario: { mode: ZegoUIKitPrebuilt.VideoConference },
                         showScreenSharingButton: true,
                         turnOnMicrophoneWhenJoining: false,
                         turnOnCameraWhenJoining: false,
-                        showRoomDetailsButton: false, // <-- Hides the room details (which hides the share link option)
-                        // sharedLinks array is completely removed so the copy link box won't appear
+                        showRoomDetailsButton: false // Disables the entire details tab holding the copy link box
                     });
 
                 } catch (error) {
@@ -495,213 +512,23 @@
                         <div class='text-white mt-5 pt-5 text-center'>
                             <h3 class='text-danger fw-bold'>Connection Interrupted</h3>
                             <p class='text-white-50 mt-2'>${error.message}</p>
-                            <button class='btn btn-primary mt-3 px-4 rounded-pill fw-bold' onclick='location.reload()'>Retry Connection</button>
+                            <button class='btn btn-primary mt-3 px-4 rounded-pill fw-bold' onclick='location.reload()'>Retry</button>
                         </div>
                     `;
                 }
             };
 
-            async function sendVideoInvite(btnElement) {
-                const idInput = document.getElementById('videoInviteAccountId');
-                const accountId = idInput.value.trim();
-
-                if (!accountId) {
-                    Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter an Account ID first.', confirmButtonColor: '#f59e0b' });
-                    return;
-                }
-
-                const originalHTML = btnElement.innerHTML;
-                btnElement.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Sending...`;
-                btnElement.disabled = true;
-
-                try {
-                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
-                    const token = typeof getToken === 'function' ? getToken() : null;
-                    const currentUrl = window.location.origin + window.location.pathname + "?video=true";
-
-                    const res = await fetch(`${backendPath}/bidding/send-video-invite`, {
-                        method: "POST",
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ accountId, customLink: currentUrl })
-                    });
-
-                    const data = await res.json();
-
-                    if (data.success) {
-                        Swal.fire({ icon: 'success', title: 'Invited!', text: 'User whitelisted and email sent.', confirmButtonColor: '#10b981' });
-                        idInput.value = "";
-                        fetchParticipants();
-                    } else {
-                        Swal.fire({ icon: 'error', title: 'Oops', text: data.message || 'Could not process the request.', confirmButtonColor: '#ef4444' });
-                    }
-                } catch (e) {
-                    Swal.fire({ icon: 'error', title: 'Connection Error', text: 'Failed to connect to the server.', confirmButtonColor: '#ef4444' });
-                } finally {
-                    btnElement.innerHTML = originalHTML;
-                    btnElement.disabled = false;
-                }
-            }
-
-            async function handleBackClick() {
-                if (currentUser && currentUser.role === 'admin') {
-                    const confirm = await Swal.fire({
-                        title: 'End Bidding Session?',
-                        text: 'Are you sure? This will permanently end the session and clear data.',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#ef4444',
-                        cancelButtonColor: '#64748b',
-                        confirmButtonText: 'Yes, End Session',
-                        cancelButtonText: 'Cancel'
-                    });
-
-                    if (confirm.isConfirmed) {
-                        try {
-                            const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
-                            const token = typeof getToken === 'function' ? getToken() : null;
-
-                            Swal.fire({ title: 'Closing Room...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-                            await fetch(`${backendPath}/bidding/reset`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'Authorization': `Bearer ${token}`,
-                                    'Content-Type': 'application/json'
-                                }
-                            });
-                            window.location.href = "index.html";
-                        } catch (e) {
-                            window.location.href = "index.html";
-                        }
-                    } else if (confirm.dismiss === Swal.DismissReason.cancel) {
-                        window.location.href = "index.html";
-                    }
-                } else {
-                    window.location.href = "index.html";
-                }
-            }
-
-            async function fetchOldMessages() {
-                try {
-                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
-                    const token = typeof getToken === 'function' ? getToken() : null;
-                    const res = await fetch(`${backendPath}/bidding/messages`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-
-                    if (!res.ok) {
-                        throw new Error("Failed to load history.");
-                    }
-
-                    const data = await res.json();
-
-                    if (data.success && data.messages) {
-                        data.messages.forEach(msg => appendMessage(msg));
-                    }
-                } catch (e) { 
-                    console.log("Failed to fetch messages:", e); 
-                    document.getElementById('chatBox').innerHTML += `<div class="sys-msg" style="color:#ef4444;"><i class="fas fa-exclamation-triangle me-1"></i> Could not load old messages.</div>`;
-                }
-            }
-
-            function initChat() {
-                const replitURL = "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev";
-
-                socket = io(replitURL, {
-                    transports: ["polling", "websocket"],
-                    reconnectionAttempts: 5
-                });
-
-                socket.on("connect", () => {
-                    document.getElementById('chatStatus').innerHTML = `<i class="fas fa-circle me-1" style="font-size:8px;"></i> Secure connection active`;
-                    document.getElementById('chatStatus').style.color = "#d1fae5";
-                    document.getElementById('sendBtn').disabled = false;
-                    socket.emit("join_bidding_room");
-                });
-
-                socket.on("receive_bid", (data) => {
-                    appendMessage(data);
-                });
-
-                socket.on("disconnect", () => {
-                    document.getElementById('chatStatus').innerHTML = `<i class="fas fa-spinner fa-spin me-1" style="font-size:10px;"></i> Reconnecting...`;
-                    document.getElementById('chatStatus').style.color = "#fef08a";
-                    document.getElementById('sendBtn').disabled = true;
-                });
-
-                document.getElementById('bidInput').addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') sendMessage();
-                });
-            }
-
-            async function sendMessage() {
-                const input = document.getElementById('bidInput');
-                const text = input.value.trim();
-
-                if (!text) return;
-
-                const msgData = {
-                    senderId: currentUser._id,
-                    shortId: myShortId,
-                    text: text,
-                    timestamp: new Date().toISOString()
-                };
-
-                socket.emit("send_bid", msgData);
-                input.value = "";
-
-                try {
-                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
-                    const token = typeof getToken === 'function' ? getToken() : null;
-                    await fetch(`${backendPath}/bidding/messages`, {
-                        method: "POST",
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ text: text })
-                    });
-                } catch (e) {
-                    console.error("Message save failed");
-                }
-            }
-
-            function appendMessage(data) {
-                const chatBox = document.getElementById('chatBox');
-                const isMine = data.senderId === currentUser._id;
-                const timeStr = new Date(data.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-
-                const safeText = window.escapeHTML ? escapeHTML(data.text) : data.text;
-
-                const msgHtml = `
-                    <div class="msg-wrapper ${isMine ? 'sent' : 'received'}">
-                        ${!isMine ? `<div class="msg-sender-id">#${data.shortId}</div>` : ''}
-                        <div class="msg-bubble">
-                            ${safeText}
-                            <span class="msg-time">${timeStr}</span>
-                        </div>
-                    </div>
-                `;
-
-                chatBox.insertAdjacentHTML('beforeend', msgHtml);
-
-                setTimeout(() => {
-                    chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
-                }, 10);
-            }
-
+            // ==========================================
+            // ⚙️ CHAT WHITELIST MANAGEMENT (Admin Only)
+            // ==========================================
             async function fetchParticipants() {
                 const listObj = document.getElementById('participantList');
                 listObj.innerHTML = `<div class="text-center py-4"><div class="spinner-border text-success spinner-border-sm"></div></div>`;
 
                 try {
                     const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
-                    const token = typeof getToken === 'function' ? getToken() : null;
                     const res = await fetch(`${backendPath}/bidding/participants`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
+                        headers: { 'Authorization': `Bearer ${getToken()}` }
                     });
                     const data = await res.json();
 
@@ -710,16 +537,16 @@
                             <div class="participant-item">
                                 <div>
                                     <div class="participant-id">#${p.user._id.toString().substring(p.user._id.toString().length - 6)}</div>
-                                    <div class="small text-muted">${window.escapeHTML ? escapeHTML(p.user.fullName) : p.user.fullName}</div>
+                                    <div class="small text-muted">${escapeHTML(p.user.fullName)}</div>
                                 </div>
                                 <button class="btn btn-sm btn-outline-danger" onclick="removeParticipant('${p._id}')"><i class="fas fa-trash"></i></button>
                             </div>
                         `).join('');
                     } else {
-                        listObj.innerHTML = `<div class="text-center py-4 text-muted small fw-bold">No participants added yet.</div>`;
+                        listObj.innerHTML = `<div class="text-center py-4 text-muted small fw-bold">No chat participants added yet.</div>`;
                     }
                 } catch (e) {
-                    listObj.innerHTML = `<div class="text-center py-4 text-danger small fw-bold">Failed to sync data.</div>`;
+                    listObj.innerHTML = `<div class="text-center py-4 text-danger small fw-bold">Failed to sync chat data.</div>`;
                 }
             }
 
@@ -734,23 +561,19 @@
 
                 try {
                     const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
-                    const token = typeof getToken === 'function' ? getToken() : null;
                     const res = await fetch(`${backendPath}/bidding/participants`, {
                         method: "POST",
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ accountId })
                     });
                     const data = await res.json();
 
                     if (data.success) {
-                        Swal.fire({ icon: 'success', title: 'Added!', text: 'User is now whitelisted.', confirmButtonColor: '#10b981' });
+                        Swal.fire({ icon: 'success', title: 'Added to Chat!', text: 'User whitelisted for Chat Room.', confirmButtonColor: '#10b981' });
                         idInput.value = "";
                         fetchParticipants();
                     } else {
-                        Swal.fire({ icon: 'error', title: 'Action Failed', text: data.message, confirmButtonColor: '#ef4444' });
+                        Swal.fire({ icon: 'error', title: 'Failed', text: data.message, confirmButtonColor: '#ef4444' });
                     }
                 } catch (e) {
                     Swal.fire({ icon: 'error', title: 'Server Error', text: 'Failed to process request.', confirmButtonColor: '#ef4444' });
@@ -761,27 +584,205 @@
             }
 
             async function removeParticipant(participantId) {
-                const confirm = await Swal.fire({ title: 'Remove User?', text: 'They will lose access to the secure room.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Remove', confirmButtonColor: '#ef4444' });
+                const confirm = await Swal.fire({ title: 'Remove from Chat?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Remove', confirmButtonColor: '#ef4444' });
                 if (!confirm.isConfirmed) return;
 
                 try {
                     const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
-                    const token = typeof getToken === 'function' ? getToken() : null;
                     const res = await fetch(`${backendPath}/bidding/participants/${participantId}`, { 
-                        method: "DELETE",
-                        headers: { 'Authorization': `Bearer ${token}` }
+                        method: "DELETE", headers: { 'Authorization': `Bearer ${getToken()}` }
+                    });
+                    const data = await res.json();
+                    if (data.success) { fetchParticipants(); }
+                } catch (e) { console.error(e); }
+            }
+
+            // ==========================================
+            // 📹 VIDEO WHITELIST MANAGEMENT (Admin Only) - NEW
+            // ==========================================
+            async function fetchVideoParticipants() {
+                const listObj = document.getElementById('videoParticipantList');
+                listObj.innerHTML = `<div class="text-center py-4"><div class="spinner-border text-primary spinner-border-sm"></div></div>`;
+
+                try {
+                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                    const res = await fetch(`${backendPath}/bidding/video-participants`, {
+                        headers: { 'Authorization': `Bearer ${getToken()}` }
+                    });
+                    const data = await res.json();
+
+                    if (data.success && data.participants.length > 0) {
+                        listObj.innerHTML = data.participants.map(p => `
+                            <div class="participant-item">
+                                <div>
+                                    <div class="participant-id">#${p.user._id.toString().substring(p.user._id.toString().length - 6)}</div>
+                                    <div class="small text-muted">${escapeHTML(p.user.fullName)}</div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger" onclick="removeVideoParticipant('${p._id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        `).join('');
+                    } else {
+                        listObj.innerHTML = `<div class="text-center py-4 text-muted small fw-bold">No video participants added yet.</div>`;
+                    }
+                } catch (e) {
+                    listObj.innerHTML = `<div class="text-center py-4 text-danger small fw-bold">Failed to sync video data.</div>`;
+                }
+            }
+
+            async function addVideoParticipant(btnElement) {
+                const idInput = document.getElementById('videoInviteAccountId');
+                const accountId = idInput.value.trim();
+                if(!accountId) {
+                    Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter an Account ID.', confirmButtonColor: '#f59e0b' });
+                    return;
+                }
+
+                btnElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+                btnElement.disabled = true;
+
+                try {
+                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                    const res = await fetch(`${backendPath}/bidding/video-participants`, {
+                        method: "POST",
+                        headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ accountId })
                     });
                     const data = await res.json();
 
                     if (data.success) {
-                        Swal.fire({ icon: 'success', title: 'Removed', text: 'User access revoked.', confirmButtonColor: '#10b981' });
-                        fetchParticipants();
+                        Swal.fire({ icon: 'success', title: 'Added to Video!', text: 'User whitelisted for Video Room.', confirmButtonColor: '#2563eb' });
+                        idInput.value = "";
+                        fetchVideoParticipants();
                     } else {
-                        Swal.fire({ icon: 'error', title: 'Action Failed', text: data.message, confirmButtonColor: '#ef4444' });
+                        Swal.fire({ icon: 'error', title: 'Failed', text: data.message, confirmButtonColor: '#ef4444' });
                     }
                 } catch (e) {
-                    Swal.fire({ icon: 'error', title: 'Server Error', text: 'Failed to communicate with the server.', confirmButtonColor: '#ef4444' });
+                    Swal.fire({ icon: 'error', title: 'Server Error', text: 'Failed to process request.', confirmButtonColor: '#ef4444' });
+                } finally {
+                    btnElement.innerHTML = `<i class="fas fa-plus"></i>`;
+                    btnElement.disabled = false;
                 }
+            }
+
+            async function removeVideoParticipant(participantId) {
+                const confirm = await Swal.fire({ title: 'Remove from Video?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Remove', confirmButtonColor: '#ef4444' });
+                if (!confirm.isConfirmed) return;
+
+                try {
+                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                    const res = await fetch(`${backendPath}/bidding/video-participants/${participantId}`, { 
+                        method: "DELETE", headers: { 'Authorization': `Bearer ${getToken()}` }
+                    });
+                    const data = await res.json();
+                    if (data.success) { fetchVideoParticipants(); }
+                } catch (e) { console.error(e); }
+            }
+
+            // ==========================================
+            // 🚪 ADMIN ROOM RESET
+            // ==========================================
+            async function handleBackClick() {
+                if (currentUser && currentUser.role === 'admin') {
+                    const confirm = await Swal.fire({
+                        title: 'End Session?', text: 'Are you sure? This will end the session and clear all chat/participant data.',
+                        icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#64748b', confirmButtonText: 'Yes, End Session'
+                    });
+
+                    if (confirm.isConfirmed) {
+                        try {
+                            const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                            Swal.fire({ title: 'Closing Room...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                            await fetch(`${backendPath}/bidding/reset`, {
+                                method: 'DELETE', headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' }
+                            });
+                            window.location.href = "index.html";
+                        } catch (e) { window.location.href = "index.html"; }
+                    }
+                } else {
+                    window.location.href = "index.html";
+                }
+            }
+
+            // ==========================================
+            // 💬 CHAT SYSTEM FUNCTIONS
+            // ==========================================
+            async function fetchOldMessages() {
+                try {
+                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                    const res = await fetch(`${backendPath}/bidding/messages`, {
+                        headers: { 'Authorization': `Bearer ${getToken()}` }
+                    });
+                    if (!res.ok) throw new Error("Failed to load history.");
+
+                    const data = await res.json();
+                    if (data.success && data.messages) {
+                        data.messages.forEach(msg => appendMessage(msg));
+                    }
+                } catch (e) { 
+                    console.log("Fetch messages failed:", e); 
+                    document.getElementById('chatBox').innerHTML += `<div class="sys-msg" style="color:#ef4444;">Could not load old messages.</div>`;
+                }
+            }
+
+            function initChat() {
+                const replitURL = "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev";
+
+                socket = io(replitURL, { transports: ["polling", "websocket"], reconnectionAttempts: 5 });
+
+                socket.on("connect", () => {
+                    document.getElementById('chatStatus').innerHTML = `<i class="fas fa-circle me-1" style="font-size:8px;"></i> Secure connection active`;
+                    document.getElementById('chatStatus').style.color = "#d1fae5";
+                    document.getElementById('sendBtn').disabled = false;
+                    socket.emit("join_bidding_room");
+                });
+
+                socket.on("receive_bid", (data) => { appendMessage(data); });
+
+                socket.on("disconnect", () => {
+                    document.getElementById('chatStatus').innerHTML = `<i class="fas fa-spinner fa-spin me-1" style="font-size:10px;"></i> Reconnecting...`;
+                    document.getElementById('chatStatus').style.color = "#fef08a";
+                    document.getElementById('sendBtn').disabled = true;
+                });
+
+                document.getElementById('bidInput').addEventListener('keypress', function(e) { if (e.key === 'Enter') sendMessage(); });
+            }
+
+            async function sendMessage() {
+                const input = document.getElementById('bidInput');
+                const text = input.value.trim();
+                if (!text) return;
+
+                const msgData = { senderId: currentUser._id, shortId: myShortId, text: text, timestamp: new Date().toISOString() };
+                socket.emit("send_bid", msgData);
+                input.value = "";
+
+                try {
+                    const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
+                    await fetch(`${backendPath}/bidding/messages`, {
+                        method: "POST",
+                        headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: text })
+                    });
+                } catch (e) { console.error("Message save failed"); }
+            }
+
+            function appendMessage(data) {
+                const chatBox = document.getElementById('chatBox');
+                const isMine = data.senderId === currentUser._id;
+                const timeStr = new Date(data.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                const safeText = window.escapeHTML ? escapeHTML(data.text) : data.text;
+
+                const msgHtml = `
+                    <div class="msg-wrapper ${isMine ? 'sent' : 'received'}">
+                        ${!isMine ? `<div class="msg-sender-id">#${data.shortId}</div>` : ''}
+                        <div class="msg-bubble">
+                            ${safeText}
+                            <span class="msg-time">${timeStr}</span>
+                        </div>
+                    </div>
+                `;
+                chatBox.insertAdjacentHTML('beforeend', msgHtml);
+                setTimeout(() => { chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' }); }, 10);
             }
         </script>
     </body>
