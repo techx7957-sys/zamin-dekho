@@ -156,7 +156,8 @@
 
             @media (max-width: 992px) {
                 .main-container { flex-direction: column; padding: 10px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); overflow-y: auto; }
-                .admin-sidebar { width: 100%; height: auto; display: flex; flex-shrink: 0; overflow: visible; }
+                /* 🔥 CSS BUG FIX: Removed 'display: flex' so it stays hidden on mobile for regular users */
+                .admin-sidebar { width: 100%; height: auto; flex-shrink: 0; overflow: visible; }
                 .whitelist-list { max-height: 250px; }
                 .chat-container { flex: none; height: 60vh; min-height: 400px; }
                 .main-container.centered-mode { max-width: 100%; }
@@ -405,6 +406,8 @@
                             fetchParticipants();
                             fetchVideoParticipants();
                         } else {
+                            // 🔥 BULLETPROOF HIDE FOR NON-ADMINS 🔥
+                            document.getElementById('adminSidebar').style.display = 'none';
                             document.getElementById('mainLayoutContainer').classList.add('centered-mode');
                         }
 
