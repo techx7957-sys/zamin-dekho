@@ -350,7 +350,12 @@
             // Local Helper Functions
             function getToken() { return localStorage.getItem('zamin_token'); }
             function getUser() { const u = localStorage.getItem('zamin_user'); return u ? JSON.parse(u) : null; }
-            function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag])); }
+
+            // 🔥 CRITICAL FIX: Safe escapeHTML logic
+            function escapeHTML(str) { 
+                if (!str) return ""; 
+                return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag])); 
+            }
 
             window.onload = async function() {
                 currentUser = getUser();
@@ -558,15 +563,19 @@
                     const data = await res.json();
 
                     if (data.success && data.participants.length > 0) {
-                        listObj.innerHTML = data.participants.map(p => `
+                        // 🔥 CRITICAL FIX: Loop with safe fallback
+                        listObj.innerHTML = data.participants.map(p => {
+                            const shortId = p.user._id.toString().substring(p.user._id.toString().length - 6);
+                            const displayName = p.user.fullName ? escapeHTML(p.user.fullName) : `Bidder_${shortId}`;
+                            return `
                             <div class="participant-item">
                                 <div>
-                                    <div class="participant-id">#${p.user._id.toString().substring(p.user._id.toString().length - 6)}</div>
-                                    <div class="small text-muted">${escapeHTML(p.user.fullName)}</div>
+                                    <div class="participant-id">#${shortId}</div>
+                                    <div class="small text-muted">${displayName}</div>
                                 </div>
                                 <button class="btn btn-sm btn-outline-danger" onclick="removeParticipant('${p._id}')"><i class="fas fa-trash"></i></button>
                             </div>
-                        `).join('');
+                        `}).join('');
                     } else {
                         listObj.innerHTML = `<div class="text-center py-4 text-muted small fw-bold">No chat participants added yet.</div>`;
                     }
@@ -637,15 +646,19 @@
                     const data = await res.json();
 
                     if (data.success && data.participants.length > 0) {
-                        listObj.innerHTML = data.participants.map(p => `
+                        // 🔥 CRITICAL FIX: Loop with safe fallback
+                        listObj.innerHTML = data.participants.map(p => {
+                            const shortId = p.user._id.toString().substring(p.user._id.toString().length - 6);
+                            const displayName = p.user.fullName ? escapeHTML(p.user.fullName) : `Bidder_${shortId}`;
+                            return `
                             <div class="participant-item">
                                 <div>
-                                    <div class="participant-id">#${p.user._id.toString().substring(p.user._id.toString().length - 6)}</div>
-                                    <div class="small text-muted">${escapeHTML(p.user.fullName)}</div>
+                                    <div class="participant-id">#${shortId}</div>
+                                    <div class="small text-muted">${displayName}</div>
                                 </div>
                                 <button class="btn btn-sm btn-outline-danger" onclick="removeVideoParticipant('${p._id}')"><i class="fas fa-trash"></i></button>
                             </div>
-                        `).join('');
+                        `}).join('');
                     } else {
                         listObj.innerHTML = `<div class="text-center py-4 text-muted small fw-bold">No video participants added yet.</div>`;
                     }
