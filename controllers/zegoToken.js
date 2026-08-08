@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 
+// IV (Initialization Vector) ke liye 16 character ki string zaruri hai (aes-256-cbc ke rules)
 function makeRandomIv() {
     const str = '0123456789abcdefghijklmnopqrstuvwxyz';
     const result = [];
@@ -9,8 +10,13 @@ function makeRandomIv() {
     return result.join('');
 }
 
+// 🔥 FIX 1: Zego ko Nonce hamesha NUMBER format mein chahiye (String nahi).
+function makeNonce() {
+    return Math.floor(Math.random() * 2147483647);
+}
+
 function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload) {
-    // 🔥 FIX 1: Vercel environment variables string hoti hain, isliye isko strictly Number me convert kiya.
+    // Vercel environment variables string hoti hain, isliye isko strictly Number me convert kiya.
     const numericAppId = Number(appId);
 
     if (!numericAppId || isNaN(numericAppId)) {
@@ -21,7 +27,7 @@ function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload)
         throw new Error('userId invalid');
     }
 
-    // 🔥 FIX 2: Vercel env keys me kabhi-kabhi aage-peeche space aa jata hai, usko hatane ke liye trim() add kiya.
+    // Vercel env keys me kabhi-kabhi aage-peeche space aa jata hai, usko hatane ke liye trim() add kiya.
     const cleanSecret = secret ? secret.trim() : '';
     if (!cleanSecret || typeof cleanSecret !== 'string' || cleanSecret.length !== 32) {
         throw new Error('secret must be exactly a 32 byte string');
@@ -29,7 +35,9 @@ function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload)
 
     const createTime = Math.floor(Date.now() / 1000);
     const expireTime = createTime + effectiveTimeInSeconds;
-    const nonce = makeRandomIv();
+
+    // 🔥 FIX 2: Nonce ko IV wale function se hata kar naya Number wala function lagaya.
+    const nonce = makeNonce();
 
     const tokenInfo = {
         app_id: numericAppId,
@@ -37,6 +45,7 @@ function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload)
         nonce: nonce,
         ctime: createTime,
         expire: expireTime,
+        // Payload string ko safely handle kiya
         payload: payload || ''
     };
 
