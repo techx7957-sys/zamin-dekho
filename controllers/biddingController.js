@@ -311,11 +311,8 @@ exports.generateZegoToken = async (req, res) => {
 
         const effectiveTimeInSeconds = 3600;
 
-        const payload = JSON.stringify({
-            room_id: room_id,
-            privilege: { 1: 1, 2: 1 },
-            stream_id_list: null
-        }); 
+        // 🔥 FIX: Use an empty string for the payload. UIKit Prebuilt SDKs often reject complex JSON payloads.
+        const payload = ""; 
 
         const token = generateToken04(appId, user_id, serverSecret, effectiveTimeInSeconds, payload);
 
@@ -334,7 +331,7 @@ exports.generateZegoToken = async (req, res) => {
 // ==========================================
 // 🔥 RESET ROOM (ADMIN ONLY)
 // ==========================================
-exports.resetRoom = async (req, res) => {
+exports.exports.resetRoom = async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: "Only admin can reset room." });
