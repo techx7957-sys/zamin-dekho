@@ -455,7 +455,7 @@
                     Swal.fire({
                         icon: 'info',
                         title: 'System Initializing',
-                        html: '<p class="text-muted" style="font-size: 15px;">We are setting up your secure ultra-HD video experience. It seems to be taking a bit longer than usual.<br><br>If this persists, please briefly disable any strict browser shields or extensions to allow the video module to load.</p>',
+                        html: '<p class="text-muted" style="font-size: 15px;">We are setting up your secure video experience. It seems to be taking a bit longer than usual.<br><br>If this persists, please briefly disable any strict browser shields or extensions to allow the video module to load.</p>',
                         confirmButtonColor: '#2563eb',
                         confirmButtonText: 'Refresh & Try Again',
                         allowOutsideClick: false,
@@ -477,7 +477,7 @@
                 document.getElementById('video-root').innerHTML = `
                     <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
                         <div class='spinner-border text-primary mb-3' style='width: 3rem; height: 3rem;'></div>
-                        <h4 class='fw-bold'>Authenticating secure ultra-HD video room...</h4>
+                        <h4 class='fw-bold'>Authenticating secure video room...</h4>
                     </div>
                 `;
 
@@ -509,16 +509,21 @@
 
                     const zp = ZegoUIKitPrebuilt.create(kitToken);
 
-                    // 🔥 FIX: Perfect Fit & Share Link Disabled completely 🔥
+                    // 🔥 OPTIMIZED AUDIO & 720P CONFIG TO PREVENT ECHO/VIBRATION 🔥
                     zp.joinRoom({
                         container: document.getElementById('video-root'),
-                        showRoomDetailsButton: false, // Disables the entire details tab holding the copy link box
-                        scenario: { mode: ZegoUIKitPrebuilt.VideoConference },
-                        // Force maximum resolution and frame rate for crisp "4K-like" feel
-                        videoResolutionDefault: ZegoUIKitPrebuilt.VideoResolution_1080P,
-                        videoConfig: {
-                            bitrate: 3000,
-                            frameRate: 30
+                        showRoomDetailsButton: false, 
+                        scenario: { 
+                            mode: ZegoUIKitPrebuilt.VideoConference,
+                            config: {
+                                role: ZegoUIKitPrebuilt.Host
+                            }
+                        },
+                        // Set to 720P to reduce mobile CPU load and keep Echo Cancellation active
+                        videoResolutionDefault: ZegoUIKitPrebuilt.VideoResolution_720P,
+                        audioVideoConfig: {
+                            // Standard audio profile forces browser noise suppression and AEC
+                            audioProfile: ZegoUIKitPrebuilt.StandardQualityAudio
                         },
                         turnOnMicrophoneWhenJoining: false,
                         turnOnCameraWhenJoining: false,
