@@ -331,7 +331,7 @@ exports.generateZegoToken = async (req, res) => {
 // ==========================================
 // 🔥 RESET ROOM (ADMIN ONLY)
 // ==========================================
-exports.exports.resetRoom = async (req, res) => {
+  exports.resetRoom = async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: "Only admin can reset room." });
