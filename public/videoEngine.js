@@ -10,29 +10,43 @@ let isCamOn = true;
 let isBeautyOn = false;
 let isBgBlurOn = false;
 
-// 🚀 DYNAMIC ENGINE DOWNLOADER (Bulletproof Cache & Load Fix)
+// 🚀 MULTI-CDN DYNAMIC DOWNLOADER (Anti-Block System)
 function loadZegoSDK() {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         // Agar pehle se loaded hai toh turant aage badho
         if (window.ZegoExpressEngine) {
             return resolve(window.ZegoExpressEngine);
         }
 
         console.log("⏳ Downloading Zego Core Engine from Cloud...");
-        const script = document.createElement('script');
-        // Official, stable aur fast CDN link (No www)
-        script.src = "https://unpkg.com/zego-express-engine-webrtc@3.2.0/zego-express-webrtc.js";
 
-        script.onload = () => {
-            console.log("✅ Core Engine Loaded Successfully!");
-            resolve(window.ZegoExpressEngine);
-        };
+        // 🔥 3 Premium Servers (Agar Adblocker ek ko roke toh doosra chalega)
+        const cdns = [
+            "https://cdn.jsdelivr.net/npm/zego-express-engine-webrtc@3.2.0/zego-express-webrtc.js",
+            "https://fastly.jsdelivr.net/npm/zego-express-engine-webrtc@3.2.0/zego-express-webrtc.js",
+            "https://unpkg.com/zego-express-engine-webrtc@3.2.0/zego-express-webrtc.js"
+        ];
 
-        script.onerror = () => {
-            reject(new Error("Browser ne SDK block kar diya! Internet connection ya CDN link check karo."));
-        };
+        for (let url of cdns) {
+            try {
+                await new Promise((res, rej) => {
+                    const script = document.createElement('script');
+                    script.src = url;
+                    script.onload = () => {
+                        if (window.ZegoExpressEngine) res();
+                        else rej(new Error("Engine object empty"));
+                    };
+                    script.onerror = rej;
+                    document.head.appendChild(script);
+                });
+                console.log("✅ Core Engine Loaded Successfully from:", url);
+                return resolve(window.ZegoExpressEngine);
+            } catch (e) {
+                console.warn("⚠️ Network ya Adblocker ne block kiya, switching server...", url);
+            }
+        }
 
-        document.head.appendChild(script); // Auto-inject into HTML
+        reject(new Error("Aapke Browser (Brave Shield ya Adblocker) ne sabhi video servers block kar diye hain. Kripya Adblocker band karein!"));
     });
 }
 
@@ -44,7 +58,7 @@ window.startCustomZegoEngine = async function(appId, token, roomID, userID, user
         // Loading animation dikhao jab tak engine start ho raha hai
         document.getElementById('remote-video-container').innerHTML = `<span class="text-white small fw-bold"><i class="fas fa-cog fa-spin me-2"></i>Booting Pro Engine...</span>`;
 
-        // 🔥 CRITICAL FIX: Zego SDK ko dynamically aur safely load karna
+        // 🔥 CRITICAL FIX: Zego SDK ko dynamically multi-CDN se load karna
         const ZegoRaw = await loadZegoSDK();
         const ZegoClass = ZegoRaw.ZegoExpressEngine || ZegoRaw;
 
@@ -138,7 +152,7 @@ window.startCustomZegoEngine = async function(appId, token, roomID, userID, user
             <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
                 <i class="fas fa-exclamation-triangle text-danger mb-3" style="font-size: 3.5rem;"></i>
                 <h3 class='fw-bold mb-2'>System Error</h3>
-                <p class='text-white-50 max-w-md mx-auto mb-4 text-center' style="font-size: 15px;">Video engine load nahi ho paya ya permissions nahi mili.<br><br><b>Error:</b> ${error.message}</p>
+                <p class='text-white-50 max-w-md mx-auto mb-4 text-center' style="font-size: 15px;">${error.message}</p>
                 <button class='btn btn-primary px-4 rounded-pill fw-bold shadow' onclick='location.reload()'>Reload Video</button>
             </div>
         `;
