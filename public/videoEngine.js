@@ -1,6 +1,6 @@
-// ================================================
-// 🔥 ZAMIN DEKHO - ULTRA PREMIUM VIDEO ENGINE 🔥
-// ================================================
+// =======================================================
+// 🔥 ZAMIN DEKHO - ULTRA PREMIUM VIDEO ENGINE (BUG-FREE) 🔥
+// =======================================================
 
 let zg; // Zego Engine Instance
 let localStream = null;
@@ -15,25 +15,31 @@ window.startCustomZegoEngine = async function(appId, token, roomID, userID, user
     try {
         console.log("🚀 Starting Ultra Premium Video Engine...");
 
-        document.getElementById('remote-video-container').innerHTML = `<span class="text-white small fw-bold"><i class="fas fa-cog fa-spin me-2"></i>Booting Pro Engine...</span>`;
+        document.getElementById('remote-video-container').innerHTML = `<span class="text-white small fw-bold" id="waiting-text"><i class="fas fa-cog fa-spin me-2"></i>Booting Pro Engine...</span>`;
 
-        // 🔥 Asli Check: Browser ke HTML se engine uthao (Koi auto-downloader nahi)
-        if (typeof ZegoExpressEngine === 'undefined') {
-            throw new Error("HTML file mein Zego Engine load nahi hua. Kripya bidding.html ka link check karein.");
+        // 🔥 Asli Check: Browser ke HTML se engine uthao
+        const ZegoClass = window.ZegoExpressEngine ? (window.ZegoExpressEngine.ZegoExpressEngine || window.ZegoExpressEngine) : null;
+
+        if (!ZegoClass) {
+            throw new Error("HTML file mein Zego Engine load nahi hua. Kripya bidding.html mein script tag check karein.");
         }
 
         // 1. Initialize Zego Express Engine
         const serverUrl = "wss://webliveroom" + appId + "-api.zegocloud.com/ws";
-        zg = new ZegoExpressEngine(appId, serverUrl);
+        zg = new ZegoClass(appId, serverUrl);
 
         // 2. Setup Event Listeners (Jab koi doosra join karega)
         zg.on('roomStreamUpdate', async (roomID, updateType, streamList, extendedData) => {
+            const remoteView = document.getElementById('remote-video-container');
+
             if (updateType === 'ADD') {
                 console.log("🎥 Remote Stream Added:", streamList[0].streamID);
-                const remoteView = document.getElementById('remote-video-container');
-                remoteView.innerHTML = ""; // Waiting text hatao
 
-                // Zoom Style Fade-in Video
+                // Sirf "Waiting" text ko hatao, baaki videos ko nahi (Multi-user fix)
+                const waitingText = document.getElementById('waiting-text');
+                if (waitingText) waitingText.remove();
+
+                // Naye bande ki video play karo (Zoom Style Fade-in ke sath)
                 const remoteVideo = document.createElement('video');
                 remoteVideo.id = "remote-" + streamList[0].streamID;
                 remoteVideo.autoplay = true;
@@ -52,13 +58,20 @@ window.startCustomZegoEngine = async function(appId, token, roomID, userID, user
 
             } else if (updateType === 'DELETE') {
                 console.log("❌ Remote Stream Removed:", streamList[0].streamID);
-                const remoteView = document.getElementById('remote-video-container');
-                remoteView.innerHTML = `
-                    <div class="text-center" style="animation: fadeIn 0.5s ease-out;">
-                        <i class="fas fa-user-slash mb-3" style="font-size: 50px; color: rgba(255,255,255,0.1);"></i>
-                        <p class="text-white-50 small fw-bold">User left the room. Waiting for others...</p>
-                    </div>
-                `;
+
+                // Sirf jaane wale bande ki video hatao
+                const videoToRemove = document.getElementById("remote-" + streamList[0].streamID);
+                if (videoToRemove) videoToRemove.remove();
+
+                // Agar room khali ho gaya hai, wapas waiting text dikhao
+                if (remoteView.childElementCount === 0) {
+                    remoteView.innerHTML = `
+                        <div class="text-center" id="waiting-text" style="animation: fadeIn 0.5s ease-out;">
+                            <i class="fas fa-user-slash mb-3" style="font-size: 50px; color: rgba(255,255,255,0.1);"></i>
+                            <p class="text-white-50 small fw-bold">User left the room. Waiting for others...</p>
+                        </div>
+                    `;
+                }
             }
         });
 
@@ -73,9 +86,9 @@ window.startCustomZegoEngine = async function(appId, token, roomID, userID, user
                 audio: true,
                 videoQuality: 2, // 720P HD Quality
                 audioBitrate: 48,
-                ans: true, // Noise Suppression (Background clear)
-                aec: true, // Echo Cancellation (Goonj khatam)
-                agc: true  // Auto Gain Control (Aawaz phatne se bachana)
+                ans: true, // Noise Suppression
+                aec: true, // Echo Cancellation
+                agc: true  // Auto Gain Control
             }
         });
 
@@ -105,6 +118,12 @@ window.startCustomZegoEngine = async function(appId, token, roomID, userID, user
         // 7. Setup Buttons
         setupControls();
 
+        // Wait text set karo apni video start hone ke baad (Agar koi aur na ho)
+        const remoteView = document.getElementById('remote-video-container');
+        if (remoteView.childElementCount === 0 || remoteView.innerHTML.includes("Booting")) {
+            remoteView.innerHTML = `<span class="text-white small fw-bold" id="waiting-text"><i class="fas fa-spinner fa-spin me-2"></i>Waiting for others...</span>`;
+        }
+
     } catch (error) {
         console.error("❌ Engine Crash:", error);
         document.getElementById('custom-video-wrapper').innerHTML = `
@@ -125,114 +144,128 @@ function setupControls() {
 
     // 🎙️ MIC CONTROL
     document.getElementById('btn-mic').onclick = async function() {
-        if (!localStream || !zg) return;
-        isMicOn = !isMicOn;
+        try {
+            if (!localStream || !zg) return;
+            isMicOn = !isMicOn;
 
-        await zg.mutePublishStreamAudio(localStream, !isMicOn); 
+            await zg.mutePublishStreamAudio(localStream, !isMicOn); 
 
-        this.classList.toggle('btn-off', !isMicOn);
-        this.innerHTML = isMicOn ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
+            this.classList.toggle('btn-off', !isMicOn);
+            this.innerHTML = isMicOn ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
 
-        this.style.transform = "scale(0.85)";
-        setTimeout(() => this.style.transform = "scale(1)", 150);
+            this.style.transform = "scale(0.85)";
+            setTimeout(() => this.style.transform = "scale(1)", 150);
+        } catch(e) { console.error("Mic toggle error:", e); }
     };
 
     // 📷 CAMERA CONTROL
     document.getElementById('btn-cam').onclick = async function() {
-        if (!localStream || !zg) return;
-        isCamOn = !isCamOn;
+        try {
+            if (!localStream || !zg) return;
+            isCamOn = !isCamOn;
 
-        await zg.mutePublishStreamVideo(localStream, !isCamOn); 
+            await zg.mutePublishStreamVideo(localStream, !isCamOn); 
 
-        this.classList.toggle('btn-off', !isCamOn);
-        this.innerHTML = isCamOn ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
+            this.classList.toggle('btn-off', !isCamOn);
+            this.innerHTML = isCamOn ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
 
-        const localVideoElement = document.getElementById('my-local-video');
-        if (localVideoElement) {
-            localVideoElement.style.opacity = isCamOn ? "1" : "0";
-        }
+            const localVideoElement = document.getElementById('my-local-video');
+            if (localVideoElement) {
+                localVideoElement.style.opacity = isCamOn ? "1" : "0";
+            }
 
-        this.style.transform = "scale(0.85)";
-        setTimeout(() => this.style.transform = "scale(1)", 150);
+            this.style.transform = "scale(0.85)";
+            setTimeout(() => this.style.transform = "scale(1)", 150);
+        } catch(e) { console.error("Camera toggle error:", e); }
     };
 
     // ✨ BEAUTY FILTER
     document.getElementById('btn-beauty').onclick = async function() {
-        if (!localStream || !zg) return;
-        isBeautyOn = !isBeautyOn;
+        try {
+            if (!localStream || !zg) return;
+            isBeautyOn = !isBeautyOn;
 
-        if (isBeautyOn) {
-            zg.setEffectsBeauty(localStream, true, { whiten: 60, smooth: 70 });
-            this.style.background = "linear-gradient(135deg, #f59e0b, #fbbf24)";
-            this.style.color = "#000";
-            this.style.boxShadow = "0 0 15px rgba(251, 191, 36, 0.6)"; 
-        } else {
-            zg.setEffectsBeauty(localStream, false);
-            this.style.background = "rgba(255,255,255,0.1)";
-            this.style.color = "white";
-            this.style.boxShadow = "none";
+            if (isBeautyOn) {
+                zg.setEffectsBeauty(localStream, true, { whiten: 60, smooth: 70 });
+                this.style.background = "linear-gradient(135deg, #f59e0b, #fbbf24)";
+                this.style.color = "#000";
+                this.style.boxShadow = "0 0 15px rgba(251, 191, 36, 0.6)"; 
+            } else {
+                zg.setEffectsBeauty(localStream, false);
+                this.style.background = "rgba(255,255,255,0.1)";
+                this.style.color = "white";
+                this.style.boxShadow = "none";
+            }
+
+            this.style.transform = "scale(0.85)";
+            setTimeout(() => this.style.transform = "scale(1)", 150);
+        } catch(e) { 
+            console.warn("Beauty filter not supported on this device/browser.", e);
+            alert("Beauty filter is not supported on your current browser.");
+            isBeautyOn = false; // reset
         }
-
-        this.style.transform = "scale(0.85)";
-        setTimeout(() => this.style.transform = "scale(1)", 150);
     };
 
     // 🖼️ VIRTUAL BG / CINEMATIC ENHANCE
     document.getElementById('btn-bg').onclick = async function() {
-        if (!localStream) return;
-        isBgBlurOn = !isBgBlurOn;
-        const localVideo = document.getElementById('my-local-video');
+        try {
+            if (!localStream) return;
+            isBgBlurOn = !isBgBlurOn;
+            const localVideo = document.getElementById('my-local-video');
 
-        if (isBgBlurOn) {
-            localVideo.style.filter = "contrast(1.15) brightness(1.05) saturate(1.2) drop-shadow(0px 0px 20px rgba(56, 189, 248, 0.4))";
-            this.style.background = "linear-gradient(135deg, #0ea5e9, #38bdf8)";
-            this.style.color = "#fff";
-            this.style.boxShadow = "0 0 15px rgba(56, 189, 248, 0.6)"; 
-        } else {
-            localVideo.style.filter = "none";
-            this.style.background = "rgba(255,255,255,0.1)";
-            this.style.color = "white";
-            this.style.boxShadow = "none";
-        }
+            if (isBgBlurOn) {
+                localVideo.style.filter = "contrast(1.15) brightness(1.05) saturate(1.2) drop-shadow(0px 0px 20px rgba(56, 189, 248, 0.4))";
+                this.style.background = "linear-gradient(135deg, #0ea5e9, #38bdf8)";
+                this.style.color = "#fff";
+                this.style.boxShadow = "0 0 15px rgba(56, 189, 248, 0.6)"; 
+            } else {
+                localVideo.style.filter = "none";
+                this.style.background = "rgba(255,255,255,0.1)";
+                this.style.color = "white";
+                this.style.boxShadow = "none";
+            }
 
-        this.style.transform = "scale(0.85)";
-        setTimeout(() => this.style.transform = "scale(1)", 150);
+            this.style.transform = "scale(0.85)";
+            setTimeout(() => this.style.transform = "scale(1)", 150);
+        } catch(e) { console.error("BG toggle error:", e); }
     };
 
     // ❌ LEAVE ROOM
     document.getElementById('btn-leave').onclick = async function() {
-        if (zg) {
-            if (publishStreamId) zg.stopPublishingStream(publishStreamId);
-            if (localStream) {
-                zg.destroyStream(localStream);
-                localStream = null;
+        try {
+            if (zg) {
+                if (publishStreamId) zg.stopPublishingStream(publishStreamId);
+                if (localStream) {
+                    zg.destroyStream(localStream);
+                    localStream = null;
+                }
+                await zg.logoutRoom(meetingRoomId);
             }
-            await zg.logoutRoom(meetingRoomId);
-        }
 
-        document.getElementById('custom-video-wrapper').style.display = 'none';
-        document.getElementById('preJoinScreen').style.display = 'flex';
-        document.getElementById('local-video-container').innerHTML = "";
-        document.getElementById('remote-video-container').innerHTML = `<span class="text-muted small"><i class="fas fa-spinner fa-spin me-2"></i>Waiting for others...</span>`;
+            document.getElementById('custom-video-wrapper').style.display = 'none';
+            document.getElementById('preJoinScreen').style.display = 'flex';
+            document.getElementById('local-video-container').innerHTML = "";
+            document.getElementById('remote-video-container').innerHTML = `<span class="text-muted small"><i class="fas fa-spinner fa-spin me-2"></i>Waiting for others...</span>`;
 
-        isMicOn = true;
-        isCamOn = true;
-        isBeautyOn = false;
-        isBgBlurOn = false;
+            isMicOn = true;
+            isCamOn = true;
+            isBeautyOn = false;
+            isBgBlurOn = false;
 
-        document.getElementById('btn-mic').className = "control-btn";
-        document.getElementById('btn-mic').innerHTML = '<i class="fas fa-microphone"></i>';
-        document.getElementById('btn-cam').className = "control-btn";
-        document.getElementById('btn-cam').innerHTML = '<i class="fas fa-video"></i>';
+            document.getElementById('btn-mic').className = "control-btn";
+            document.getElementById('btn-mic').innerHTML = '<i class="fas fa-microphone"></i>';
+            document.getElementById('btn-cam').className = "control-btn";
+            document.getElementById('btn-cam').innerHTML = '<i class="fas fa-video"></i>';
 
-        const beautyBtn = document.getElementById('btn-beauty');
-        beautyBtn.style.background = "rgba(255,255,255,0.1)";
-        beautyBtn.style.color = "white";
-        beautyBtn.style.boxShadow = "none";
+            const beautyBtn = document.getElementById('btn-beauty');
+            beautyBtn.style.background = "rgba(255,255,255,0.1)";
+            beautyBtn.style.color = "white";
+            beautyBtn.style.boxShadow = "none";
 
-        const bgBtn = document.getElementById('btn-bg');
-        bgBtn.style.background = "rgba(255,255,255,0.1)";
-        bgBtn.style.color = "white";
-        bgBtn.style.boxShadow = "none";
+            const bgBtn = document.getElementById('btn-bg');
+            bgBtn.style.background = "rgba(255,255,255,0.1)";
+            bgBtn.style.color = "white";
+            bgBtn.style.boxShadow = "none";
+        } catch(e) { console.error("Leave room error:", e); }
     };
 }
