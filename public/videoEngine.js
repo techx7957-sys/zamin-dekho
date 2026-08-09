@@ -21,7 +21,7 @@ function ensureZegoLoaded() {
         console.log("⚙️ HTML mein engine nahi mila, Auto-Injecting official engine...");
         const script = document.createElement('script');
         // 100% Working Official Link
-        script.src = "https://unpkg.com/zego-express-engine-webrtc@3.0.0/zego-express-webrtc.js";
+        script.src = "https://unpkg.com/zego-express-engine-webrtc@3.2.0/zego-express-webrtc.js";
 
         script.onload = () => {
             console.log("✅ Core Engine Auto-Loaded Successfully!");
