@@ -43,6 +43,12 @@
             }
         </script>
 
+        <!-- 🔥 ZegoCloud Core SDK (Bada Engine) 🔥 -->
+        <script src="https://www.unpkg.com/zego-express-engine-webrtc@3.1.0/zego-express-webrtc.js"></script>
+
+        <!-- 🔥 Apna Custom Video Engine 🔥 -->
+        <script src="videoEngine.js" defer></script>
+
         <style>
             body { 
                 background: #f1f5f9; 
@@ -77,7 +83,6 @@
                 transition: 0.3s; 
             }
 
-            /* Non-admin users ke liye layout perfectly fit aur wide hoga */
             .main-container.centered-mode { max-width: 1200px; justify-content: center; }
 
             /* 🛠️ Main UI Panels */
@@ -135,15 +140,70 @@
             }
             .video-container i.big-icon { font-size: 60px; color: rgba(255,255,255,0.2); margin-bottom: 20px; }
 
-            /* ZegoCloud Perfect Container */
-            #video-root { 
+            .pre-join-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; padding: 40px; }
+
+            /* 🔥 Custom Video Controls UI Styles 🔥 */
+            #custom-video-wrapper {
                 width: 100%; 
                 height: 100%; 
                 display: none; 
-                flex: 1;
                 position: relative;
+                background: #000;
             }
-            .pre-join-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; padding: 40px; }
+            #remote-video-container {
+                width: 100%;
+                height: 100%;
+                background: #1e293b; /* Dark Slate Placeholder */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            #local-video-container {
+                width: 140px; 
+                height: 190px; 
+                position: absolute; 
+                bottom: 90px; 
+                right: 20px; 
+                background: #0f172a; 
+                border-radius: 12px; 
+                overflow: hidden; 
+                border: 2px solid #3b82f6; 
+                z-index: 10;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            }
+            .custom-controls-bar {
+                position: absolute; 
+                bottom: 20px; 
+                left: 50%; 
+                transform: translateX(-50%); 
+                display: flex; 
+                gap: 15px; 
+                background: rgba(15, 23, 42, 0.85); 
+                backdrop-filter: blur(10px);
+                padding: 12px 25px; 
+                border-radius: 50px; 
+                z-index: 20;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                border: 1px solid rgba(255,255,255,0.1);
+            }
+            .control-btn {
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                border: none;
+                background: rgba(255,255,255,0.1);
+                color: white;
+                font-size: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: 0.3s;
+            }
+            .control-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.1); }
+            .control-btn.btn-off { background: #ef4444; color: white; }
+            .control-btn.btn-leave { background: #dc2626; }
+            .control-btn.btn-leave:hover { background: #b91c1c; }
 
             /* Left Drawer CSS */
             .custom-left-drawer { width: 3.5in !important; height: 100dvh !important; background-color: #ffffff !important; border-right: none; box-shadow: 5px 0 25px rgba(0,0,0,0.1); }
@@ -156,16 +216,15 @@
 
             @media (max-width: 992px) {
                 .main-container { flex-direction: column; padding: 10px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); overflow-y: auto; }
-                /* 🔥 CSS BUG FIX: Removed 'display: flex' so it stays hidden on mobile for regular users */
                 .admin-sidebar { width: 100%; height: auto; flex-shrink: 0; overflow: visible; }
                 .whitelist-list { max-height: 250px; }
                 .chat-container { flex: none; height: 60vh; min-height: 400px; }
                 .main-container.centered-mode { max-width: 100%; }
+                .custom-controls-bar { width: 90%; justify-content: space-around; padding: 10px 15px; }
             }
         </style>
     </head>
 
-    <!-- 🔥 Default Mode set dynamically later, but starts as chat -->
     <body data-mode="chat">
 
         <nav class="navbar navbar-expand-lg">
@@ -196,7 +255,6 @@
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
             <div class="offcanvas-body p-0">
-                <!-- Drawer Navigation Tabs -->
                 <ul class="nav nav-tabs nav-justified drawer-tabs" id="drawerModeTabs" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="chat-mode-tab" data-bs-toggle="tab" data-bs-target="#chatMode" type="button" role="tab" onclick="switchMode('chat')">
@@ -255,7 +313,7 @@
                     </div>
                 </div>
 
-                <!-- 🔥 NEW DESIGN: View 2: Video Whitelist Manager (Symmetric to Chat Manager) -->
+                <!-- View 2: Video Whitelist Manager -->
                 <div class="admin-panel-card view-video">
                     <div class="sidebar-header" style="background: #2563eb;">
                         <i class="fas fa-video me-2"></i> Video Whitelist
@@ -265,7 +323,6 @@
                         <div class="input-group">
                             <span class="input-group-text bg-white">#</span>
                             <input type="text" id="videoInviteAccountId" class="form-control" placeholder="e.g. 4af3dd">
-                            <!-- 🔥 Symmetric Add Button replaces the big "Send Invite" button -->
                             <button class="btn btn-primary fw-bold" style="background: #2563eb; border: none;" onclick="addVideoParticipant(this)"><i class="fas fa-plus"></i></button>
                         </div>
                     </div>
@@ -298,28 +355,47 @@
                 </div>
             </div>
 
-            <!-- View 2: Video Call Screen -->
+            <!-- View 2: Custom Video Call Screen (REPLACED PREBUILT) -->
             <div class="content-area video-container view-video">
+
                 <!-- Pre-Join UI -->
                 <div class="pre-join-screen" id="preJoinScreen">
                     <i class="fas fa-video-slash big-icon"></i>
-                    <h3 class="fw-bold mb-2">Video Call System</h3>
-                    <p class="text-white-50 max-w-md mx-auto mb-4">Click below to start the secure multi-grid video conference.</p>
+                    <h3 class="fw-bold mb-2">Pro Video Engine</h3>
+                    <p class="text-white-50 max-w-md mx-auto mb-4">Click below to start the ultra-clear custom video conference.</p>
 
-                    <button class="btn btn-primary shadow d-flex align-items-center justify-content-center gap-2" onclick="startVideoCall()" style="background: #2563eb; border: none; padding: 14px 35px; border-radius: 50px; font-weight: 600; cursor: pointer;">
+                    <button class="btn btn-primary shadow d-flex align-items-center justify-content-center gap-2" onclick="initCustomVideoCall()" style="background: #2563eb; border: none; padding: 14px 35px; border-radius: 50px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-play" style="font-size: 1rem; margin-top: 1px;"></i> 
                         <span style="font-size: 1rem;">Start Meeting</span>
                     </button>
                 </div>
 
-                <!-- Actual Video Grid Container (Hidden initially) -->
-                <div id="video-root"></div>
+                <!-- 🔥 NAYA: Custom Video Wrapper 🔥 -->
+                <div id="custom-video-wrapper">
+
+                    <!-- Bada remote video yahan aayega -->
+                    <div id="remote-video-container">
+                        <span class="text-muted small"><i class="fas fa-spinner fa-spin me-2"></i>Waiting for others...</span>
+                    </div>
+
+                    <!-- Tumhara apna chhota camera box -->
+                    <div id="local-video-container"></div>
+
+                    <!-- Zoom-killer Controls Bar -->
+                    <div class="custom-controls-bar">
+                        <button id="btn-mic" class="control-btn" title="Mute/Unmute"><i class="fas fa-microphone"></i></button>
+                        <button id="btn-cam" class="control-btn" title="Camera On/Off"><i class="fas fa-video"></i></button>
+                        <button id="btn-beauty" class="control-btn" style="color: #fbbf24;" title="Beauty Filter"><i class="fas fa-magic"></i></button>
+                        <button id="btn-bg" class="control-btn" style="color: #38bdf8;" title="Virtual Background"><i class="fas fa-image"></i></button>
+                        <button id="btn-leave" class="control-btn btn-leave" title="Leave Room"><i class="fas fa-phone-slash"></i></button>
+                    </div>
+
+                </div>
             </div>
 
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@zegocloud/zego-uikit-prebuilt@latest/zego-uikit-prebuilt.js"></script>
 
         <script>
             let socket;
@@ -331,12 +407,9 @@
 
             function switchMode(mode) {
                 document.body.setAttribute("data-mode", mode);
-
-                // Update active tab manually to reflect UI change
                 document.querySelectorAll('.drawer-tabs .nav-link').forEach(t => t.classList.remove('active'));
                 document.getElementById(`${mode}-mode-tab`).classList.add('active');
 
-                // Toggle left sidebar panels (only matters for admin)
                 if (currentUser && currentUser.role === 'admin') {
                     if (mode === 'chat') {
                         document.querySelector('.admin-panel-card.view-chat').style.display = 'flex';
@@ -348,11 +421,9 @@
                 }
             }
 
-            // Local Helper Functions
             function getToken() { return localStorage.getItem('zamin_token'); }
             function getUser() { const u = localStorage.getItem('zamin_user'); return u ? JSON.parse(u) : null; }
 
-            // 🔥 CRITICAL FIX: Safe escapeHTML logic
             function escapeHTML(str) { 
                 if (!str) return ""; 
                 return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag])); 
@@ -391,27 +462,22 @@
                         hasChatAccess = accessRes.hasChatAccess;
                         hasVideoAccess = accessRes.hasVideoAccess;
 
-                        // 🔥 SMART DEFAULT VIEW LOGIC 🔥
-                        // Check backend recommendation first
                         let initialMode = accessRes.defaultView || 'chat';
 
-                        // If they don't have access to the default, fallback to what they do have
                         if (initialMode === 'chat' && !hasChatAccess && hasVideoAccess) initialMode = 'video';
                         if (initialMode === 'video' && !hasVideoAccess && hasChatAccess) initialMode = 'chat';
 
-                        switchMode(initialMode); // Apply the logic
+                        switchMode(initialMode);
 
                         if (currentUser.role === 'admin') {
                             document.getElementById('adminSidebar').style.display = 'flex';
                             fetchParticipants();
                             fetchVideoParticipants();
                         } else {
-                            // 🔥 BULLETPROOF HIDE FOR NON-ADMINS 🔥
                             document.getElementById('adminSidebar').style.display = 'none';
                             document.getElementById('mainLayoutContainer').classList.add('centered-mode');
                         }
 
-                        // Initialize functionalities based on final access rights
                         if (hasChatAccess || currentUser.role === 'admin') {
                             initChat();
                             fetchOldMessages();
@@ -422,9 +488,9 @@
                             document.getElementById('bidInput').placeholder = "You do not have chat access.";
                         }
 
-                        if (initialMode === 'video' && !document.getElementById('video-root').innerHTML.includes('iframe')) {
-                            // Optionally auto-start video if it's the primary intended view (Admin can still click manually)
-                            if (currentUser.role !== 'admin') startVideoCall();
+                        if (initialMode === 'video') {
+                            // Optionally auto-start
+                            if (currentUser.role !== 'admin') initCustomVideoCall();
                         }
 
                     } else {
@@ -448,38 +514,17 @@
             };
 
             // ==========================================
-            // 📹 VIDEO SYSTEM (ZegoCloud + Logic)
+            // 📹 CORE ENGINE LAUNCHER (Replaces Prebuilt)
             // ==========================================
-            window.startVideoCall = async function() {
-                if (typeof ZegoUIKitPrebuilt === 'undefined') {
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'System Initializing',
-                        html: '<p class="text-muted" style="font-size: 15px;">We are setting up your secure video experience. It seems to be taking a bit longer than usual.<br><br>If this persists, please briefly disable any strict browser shields or extensions to allow the video module to load.</p>',
-                        confirmButtonColor: '#2563eb',
-                        confirmButtonText: 'Refresh & Try Again',
-                        allowOutsideClick: false,
-                        customClass: {
-                            popup: 'rounded-4 shadow border-0',
-                            title: 'fw-bold text-dark'
-                        }
-                    }).then(() => location.reload());
-                    return;
-                }
-
+            window.initCustomVideoCall = async function() {
                 if (!hasVideoAccess && currentUser.role !== 'admin') {
                     Swal.fire({ icon: 'error', title: 'Restricted', text: 'You do not have permission to join the video call.' });
                     return;
                 }
 
+                // Hide pre-join, show custom UI wrapper
                 document.getElementById('preJoinScreen').style.display = 'none';
-                document.getElementById('video-root').style.display = 'block';
-                document.getElementById('video-root').innerHTML = `
-                    <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
-                        <div class='spinner-border text-primary mb-3' style='width: 3rem; height: 3rem;'></div>
-                        <h4 class='fw-bold'>Authenticating secure video room...</h4>
-                    </div>
-                `;
+                document.getElementById('custom-video-wrapper').style.display = 'block';
 
                 const userName = currentUser.fullName || "User_" + myShortId;
 
@@ -487,6 +532,7 @@
                     const backendPath = typeof window.API_BASE !== 'undefined' ? window.API_BASE : '/api';
                     const authToken = typeof getToken === 'function' ? getToken() : null;
 
+                    // 1. Fetch Token from Backend
                     const response = await fetch(`${backendPath}/bidding/zego-token`, {
                         method: 'POST',
                         headers: {
@@ -501,53 +547,21 @@
                     const data = await response.json();
                     if (!data.success) throw new Error(data.message || "Failed to retrieve secure video token.");
 
-                    document.getElementById('video-root').innerHTML = ""; 
-
-                    const kitToken = ZegoUIKitPrebuilt.generateKitTokenForProduction(
-                        data.appId, data.token, meetingRoomId, myShortId, userName
-                    );
-
-                    const zp = ZegoUIKitPrebuilt.create(kitToken);
-
-                    // 🔥 OPTIMIZED AUDIO & 720P CONFIG TO PREVENT ECHO/VIBRATION 🔥
-                    zp.joinRoom({
-                        container: document.getElementById('video-root'),
-                        showRoomDetailsButton: false, 
-                        scenario: { 
-                            mode: ZegoUIKitPrebuilt.VideoConference,
-                            config: {
-                                role: ZegoUIKitPrebuilt.Host
-                            }
-                        },
-                        // Set to 720P to reduce mobile CPU load and keep Echo Cancellation active
-                        videoResolutionDefault: ZegoUIKitPrebuilt.VideoResolution_720P,
-                        audioVideoConfig: {
-                            // Standard audio profile forces browser noise suppression and AEC
-                            audioProfile: ZegoUIKitPrebuilt.StandardQualityAudio
-                        },
-                        turnOnMicrophoneWhenJoining: false,
-                        turnOnCameraWhenJoining: false,
-                        showMyCameraToggleButton: true,
-                        showMyMicrophoneToggleButton: true,
-                        showAudioVideoSettingsButton: true,
-                        showScreenSharingButton: true,
-                        showUserList: true,
-                        showTextChat: true,
-                        showLayoutButton: true,
-                        maxUsers: 50,
-                        onLeaveRoom: () => {
-                            document.getElementById('video-root').style.display = 'none';
-                            document.getElementById('preJoinScreen').style.display = 'flex';
-                        }
-                    });
+                    // 2. Pass control to our new videoEngine.js file
+                    if (typeof startCustomZegoEngine === 'function') {
+                        // This function will be defined in videoEngine.js
+                        await startCustomZegoEngine(data.appId, data.token, meetingRoomId, myShortId, userName);
+                    } else {
+                        throw new Error("videoEngine.js file not loaded properly.");
+                    }
 
                 } catch (error) {
-                    console.error("ZegoCloud Auth Error:", error);
-                    document.getElementById('video-root').innerHTML = `
+                    console.error("Video Engine Launch Error:", error);
+                    document.getElementById('custom-video-wrapper').innerHTML = `
                         <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
                             <i class="fas fa-shield-alt text-warning mb-3" style="font-size: 3.5rem; opacity: 0.8;"></i>
-                            <h3 class='fw-bold mb-2'>Connection Interrupted</h3>
-                            <p class='text-white-50 max-w-md mx-auto mb-4' style="font-size: 15px;">We couldn't establish a secure connection to the video server. This is usually a temporary network drop.<br><br><small>${error.message}</small></p>
+                            <h3 class='fw-bold mb-2'>Engine Error</h3>
+                            <p class='text-white-50 max-w-md mx-auto mb-4' style="font-size: 15px;">Could not start the custom video engine.<br><br><small>${error.message}</small></p>
                             <button class='btn btn-primary px-4 rounded-pill fw-bold shadow-sm' onclick='location.reload()' style="background: #2563eb; border: none; padding: 12px 30px;">
                                 <i class="fas fa-sync-alt me-2"></i> Refresh Connection
                             </button>
@@ -571,7 +585,6 @@
                     const data = await res.json();
 
                     if (data.success && data.participants.length > 0) {
-                        // 🔥 CRITICAL FIX: Loop with safe fallback
                         listObj.innerHTML = data.participants.map(p => {
                             const shortId = p.user._id.toString().substring(p.user._id.toString().length - 6);
                             const displayName = p.user.fullName ? escapeHTML(p.user.fullName) : `Bidder_${shortId}`;
@@ -640,7 +653,7 @@
             }
 
             // ==========================================
-            // 📹 VIDEO WHITELIST MANAGEMENT (Admin Only) - NEW
+            // 📹 VIDEO WHITELIST MANAGEMENT (Admin Only)
             // ==========================================
             async function fetchVideoParticipants() {
                 const listObj = document.getElementById('videoParticipantList');
@@ -654,7 +667,6 @@
                     const data = await res.json();
 
                     if (data.success && data.participants.length > 0) {
-                        // 🔥 CRITICAL FIX: Loop with safe fallback
                         listObj.innerHTML = data.participants.map(p => {
                             const shortId = p.user._id.toString().substring(p.user._id.toString().length - 6);
                             const displayName = p.user.fullName ? escapeHTML(p.user.fullName) : `Bidder_${shortId}`;
