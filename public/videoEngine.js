@@ -1,5 +1,5 @@
 // =======================================================
-// 🔥 ZAMIN DEKHO - ULTRA PREMIUM VIDEO ENGINE (BUG-FREE) 🔥
+// 🔥 ZAMIN DEKHO - ULTRA PREMIUM VIDEO ENGINE (SELF-HEALING) 🔥
 // =======================================================
 
 let zg; // Zego Engine Instance
@@ -10,6 +10,32 @@ let isCamOn = true;
 let isBeautyOn = false;
 let isBgBlurOn = false;
 
+// 🚀 SELF-HEALING ENGINE LOADER (Bina HTML edit kiye chalega)
+function ensureZegoLoaded() {
+    return new Promise((resolve, reject) => {
+        // Agar pehle se load hai toh wahi use karo
+        if (window.ZegoExpressEngine) {
+            return resolve(window.ZegoExpressEngine);
+        }
+
+        console.log("⚙️ HTML mein engine nahi mila, Auto-Injecting official engine...");
+        const script = document.createElement('script');
+        // 100% Working Official Link
+        script.src = "https://unpkg.com/zego-express-engine-webrtc@3.0.0/zego-express-webrtc.js";
+
+        script.onload = () => {
+            console.log("✅ Core Engine Auto-Loaded Successfully!");
+            resolve(window.ZegoExpressEngine);
+        };
+
+        script.onerror = () => {
+            reject(new Error("Engine download fail. Please check your internet connection."));
+        };
+
+        document.head.appendChild(script); // HTML mein khud script lagayega
+    });
+}
+
 // 🚀 ENGINE START FUNCTION (HTML se call hoga)
 window.startCustomZegoEngine = async function(appId, token, roomID, userID, userName) {
     try {
@@ -17,11 +43,12 @@ window.startCustomZegoEngine = async function(appId, token, roomID, userID, user
 
         document.getElementById('remote-video-container').innerHTML = `<span class="text-white small fw-bold" id="waiting-text"><i class="fas fa-cog fa-spin me-2"></i>Booting Pro Engine...</span>`;
 
-        // 🔥 Asli Check: Browser ke HTML se engine uthao
-        const ZegoClass = window.ZegoExpressEngine ? (window.ZegoExpressEngine.ZegoExpressEngine || window.ZegoExpressEngine) : null;
+        // 🔥 SELF-HEALING TRIGGER: Ye function apne aap sab theek kar dega
+        const ZegoRaw = await ensureZegoLoaded();
+        const ZegoClass = ZegoRaw.ZegoExpressEngine || ZegoRaw;
 
         if (!ZegoClass) {
-            throw new Error("HTML file mein Zego Engine load nahi hua. Kripya bidding.html mein script tag check karein.");
+            throw new Error("System Error: Zego Engine initialization failed.");
         }
 
         // 1. Initialize Zego Express Engine
