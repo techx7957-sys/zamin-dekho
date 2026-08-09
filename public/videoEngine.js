@@ -10,16 +10,43 @@ let isCamOn = true;
 let isBeautyOn = false;
 let isBgBlurOn = false;
 
+// 🚀 DYNAMIC ENGINE DOWNLOADER (Bulletproof Cache & Load Fix)
+function loadZegoSDK() {
+    return new Promise((resolve, reject) => {
+        // Agar pehle se loaded hai toh turant aage badho
+        if (window.ZegoExpressEngine) {
+            return resolve(window.ZegoExpressEngine);
+        }
+
+        console.log("⏳ Downloading Zego Core Engine from Cloud...");
+        const script = document.createElement('script');
+        // Official, stable aur fast CDN link (No www)
+        script.src = "https://unpkg.com/zego-express-engine-webrtc@3.2.0/zego-express-webrtc.js";
+
+        script.onload = () => {
+            console.log("✅ Core Engine Loaded Successfully!");
+            resolve(window.ZegoExpressEngine);
+        };
+
+        script.onerror = () => {
+            reject(new Error("Browser ne SDK block kar diya! Internet connection ya CDN link check karo."));
+        };
+
+        document.head.appendChild(script); // Auto-inject into HTML
+    });
+}
+
 // 🚀 ENGINE START FUNCTION (HTML se call hoga)
 window.startCustomZegoEngine = async function(appId, token, roomID, userID, userName) {
     try {
         console.log("🚀 Starting Ultra Premium Video Engine...");
 
-        // 🔥 CRITICAL FIX: Zego SDK ko safely load karna (Taaki crash na ho)
-        if (!window.ZegoExpressEngine) {
-            throw new Error("Zego SDK load nahi hua! Internet connection ya CDN link check karo.");
-        }
-        const ZegoClass = window.ZegoExpressEngine.ZegoExpressEngine || window.ZegoExpressEngine;
+        // Loading animation dikhao jab tak engine start ho raha hai
+        document.getElementById('remote-video-container').innerHTML = `<span class="text-white small fw-bold"><i class="fas fa-cog fa-spin me-2"></i>Booting Pro Engine...</span>`;
+
+        // 🔥 CRITICAL FIX: Zego SDK ko dynamically aur safely load karna
+        const ZegoRaw = await loadZegoSDK();
+        const ZegoClass = ZegoRaw.ZegoExpressEngine || ZegoRaw;
 
         // 1. Initialize Zego Express Engine
         const serverUrl = "wss://webliveroom" + appId + "-api.zegocloud.com/ws";
@@ -110,8 +137,8 @@ window.startCustomZegoEngine = async function(appId, token, roomID, userID, user
         document.getElementById('custom-video-wrapper').innerHTML = `
             <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
                 <i class="fas fa-exclamation-triangle text-danger mb-3" style="font-size: 3.5rem;"></i>
-                <h3 class='fw-bold mb-2'>Camera/Mic Blocked</h3>
-                <p class='text-white-50 max-w-md mx-auto mb-4 text-center' style="font-size: 15px;">System ko camera aur mic ka access nahi mil raha.<br><br><b>Error:</b> ${error.message}</p>
+                <h3 class='fw-bold mb-2'>System Error</h3>
+                <p class='text-white-50 max-w-md mx-auto mb-4 text-center' style="font-size: 15px;">Video engine load nahi ho paya ya permissions nahi mili.<br><br><b>Error:</b> ${error.message}</p>
                 <button class='btn btn-primary px-4 rounded-pill fw-bold shadow' onclick='location.reload()'>Reload Video</button>
             </div>
         `;
