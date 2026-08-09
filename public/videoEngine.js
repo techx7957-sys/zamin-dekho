@@ -1,14 +1,40 @@
 // =======================================================
-// 🔥 ZAMIN DEKHO - ULTRA PREMIUM VIDEO ENGINE (BUG-FREE) 🔥
+// 🔥 ZAMIN DEKHO - ULTRA PREMIUM VIDEO ENGINE (SELF-HEALING) 🔥
 // =======================================================
 
-let zg; 
+let zg; // Zego Engine Instance
 let localStream = null;
 let publishStreamId = "";
 let isMicOn = true;
 let isCamOn = true;
 let isBeautyOn = false;
 let isBgBlurOn = false;
+
+// 🚀 SELF-HEALING ENGINE LOADER (Bina HTML edit kiye chalega)
+function ensureZegoLoaded() {
+    return new Promise((resolve, reject) => {
+        // Agar pehle se load hai toh wahi use karo
+        if (window.ZegoExpressEngine) {
+            return resolve(window.ZegoExpressEngine);
+        }
+
+        console.log("⚙️ HTML mein engine nahi mila, Auto-Injecting official engine...");
+        const script = document.createElement('script');
+        // 100% Working Official Link
+        script.src = "https://unpkg.com/zego-express-engine-webrtc@3.0.0/zego-express-webrtc.js";
+
+        script.onload = () => {
+            console.log("✅ Core Engine Auto-Loaded Successfully!");
+            resolve(window.ZegoExpressEngine);
+        };
+
+        script.onerror = () => {
+            reject(new Error("Engine download fail. Please check your internet connection."));
+        };
+
+        document.head.appendChild(script); // HTML mein khud script lagayega
+    });
+}
 
 // 🚀 ENGINE START FUNCTION (HTML se call hoga)
 window.startCustomZegoEngine = async function(appId, token, roomID, userID, userName) {
@@ -17,14 +43,17 @@ window.startCustomZegoEngine = async function(appId, token, roomID, userID, user
 
         document.getElementById('remote-video-container').innerHTML = `<span class="text-white small fw-bold" id="waiting-text"><i class="fas fa-cog fa-spin me-2"></i>Booting Pro Engine...</span>`;
 
-        // 🔥 ASLI CHECK: HTML se engine directly uthao (Koi auto-download nahi)
-        if (typeof window.ZegoExpressEngine === 'undefined') {
-            throw new Error("HTML file mein Zego Engine load nahi hua. Kripya bidding.html mein script tag check karein.");
+        // 🔥 SELF-HEALING TRIGGER: Ye function apne aap sab theek kar dega
+        const ZegoRaw = await ensureZegoLoaded();
+        const ZegoClass = ZegoRaw.ZegoExpressEngine || ZegoRaw;
+
+        if (!ZegoClass) {
+            throw new Error("System Error: Zego Engine initialization failed.");
         }
 
         // 1. Initialize Zego Express Engine
         const serverUrl = "wss://webliveroom" + appId + "-api.zegocloud.com/ws";
-        zg = new window.ZegoExpressEngine(appId, serverUrl);
+        zg = new ZegoClass(appId, serverUrl);
 
         // 2. Setup Event Listeners (Jab koi doosra join karega)
         zg.on('roomStreamUpdate', async (roomID, updateType, streamList, extendedData) => {
@@ -33,9 +62,11 @@ window.startCustomZegoEngine = async function(appId, token, roomID, userID, user
             if (updateType === 'ADD') {
                 console.log("🎥 Remote Stream Added:", streamList[0].streamID);
 
+                // Sirf "Waiting" text ko hatao, baaki videos ko nahi (Multi-user fix)
                 const waitingText = document.getElementById('waiting-text');
                 if (waitingText) waitingText.remove();
 
+                // Naye bande ki video play karo (Zoom Style Fade-in ke sath)
                 const remoteVideo = document.createElement('video');
                 remoteVideo.id = "remote-" + streamList[0].streamID;
                 remoteVideo.autoplay = true;
@@ -48,14 +79,18 @@ window.startCustomZegoEngine = async function(appId, token, roomID, userID, user
                 remoteView.appendChild(remoteVideo);
 
                 await zg.startPlayingStream(streamList[0].streamID, remoteVideo);
+
+                // Stream aane ke baad dhire se dikhao
                 setTimeout(() => remoteVideo.style.opacity = "1", 200);
 
             } else if (updateType === 'DELETE') {
                 console.log("❌ Remote Stream Removed:", streamList[0].streamID);
 
+                // Sirf jaane wale bande ki video hatao
                 const videoToRemove = document.getElementById("remote-" + streamList[0].streamID);
                 if (videoToRemove) videoToRemove.remove();
 
+                // Agar room khali ho gaya hai, wapas waiting text dikhao
                 if (remoteView.childElementCount === 0) {
                     remoteView.innerHTML = `
                         <div class="text-center" id="waiting-text" style="animation: fadeIn 0.5s ease-out;">
@@ -71,11 +106,13 @@ window.startCustomZegoEngine = async function(appId, token, roomID, userID, user
         await zg.loginRoom(roomID, token, { userID, userName });
         console.log("✅ Room Login Success");
 
-        // 4. 🔥 CREATE STREAM (Clear Audio & Video)
+        // 4. 🔥 THE MAGIC: ANTI-ECHO & ANTI-VIBRATION RULES
         localStream = await zg.createZegoStream({
             camera: {
                 video: true,
                 audio: true,
+                videoQuality: 2, // 720P HD Quality
+                audioBitrate: 48,
                 ans: true, // Noise Suppression
                 aec: true, // Echo Cancellation
                 agc: true  // Auto Gain Control
@@ -90,24 +127,25 @@ window.startCustomZegoEngine = async function(appId, token, roomID, userID, user
         const localVideo = document.createElement('video');
         localVideo.id = "my-local-video";
         localVideo.autoplay = true;
-        localVideo.muted = true; 
+        localVideo.muted = true; // 🔥 Ultimate Echo Fix
         localVideo.playsInline = true;
         localVideo.style.width = "100%";
         localVideo.style.height = "100%";
         localVideo.style.objectFit = "cover";
-        localVideo.style.transform = "scaleX(-1)"; 
-        localVideo.style.transition = "opacity 0.3s ease, filter 0.3s ease"; 
+        localVideo.style.transform = "scaleX(-1)"; // Mirror effect
+        localVideo.style.transition = "opacity 0.3s ease"; 
         localView.appendChild(localVideo);
 
         localVideo.srcObject = localStream;
 
-        // 6. Duniya ko apni stream bhejo
+        // 6. Duniya ko apni stream bhejo (Publish)
         await zg.startPublishingStream(publishStreamId, localStream);
         console.log("📡 Premium Stream Published Live!");
 
         // 7. Setup Buttons
         setupControls();
 
+        // Wait text set karo apni video start hone ke baad (Agar koi aur na ho)
         const remoteView = document.getElementById('remote-video-container');
         if (remoteView.childElementCount === 0 || remoteView.innerHTML.includes("Booting")) {
             remoteView.innerHTML = `<span class="text-white small fw-bold" id="waiting-text"><i class="fas fa-spinner fa-spin me-2"></i>Waiting for others...</span>`;
@@ -168,21 +206,19 @@ function setupControls() {
         } catch(e) { console.error("Camera toggle error:", e); }
     };
 
-    // ✨ BEAUTY FILTER (CSS Fallback to prevent crash)
+    // ✨ BEAUTY FILTER
     document.getElementById('btn-beauty').onclick = async function() {
         try {
-            if (!localStream) return;
+            if (!localStream || !zg) return;
             isBeautyOn = !isBeautyOn;
-            const localVideo = document.getElementById('my-local-video');
 
             if (isBeautyOn) {
-                // Smooth Studio Glow Effect
-                localVideo.style.filter = "brightness(1.1) contrast(1.05) saturate(1.1)";
+                zg.setEffectsBeauty(localStream, true, { whiten: 60, smooth: 70 });
                 this.style.background = "linear-gradient(135deg, #f59e0b, #fbbf24)";
                 this.style.color = "#000";
                 this.style.boxShadow = "0 0 15px rgba(251, 191, 36, 0.6)"; 
             } else {
-                localVideo.style.filter = "none";
+                zg.setEffectsBeauty(localStream, false);
                 this.style.background = "rgba(255,255,255,0.1)";
                 this.style.color = "white";
                 this.style.boxShadow = "none";
@@ -190,10 +226,14 @@ function setupControls() {
 
             this.style.transform = "scale(0.85)";
             setTimeout(() => this.style.transform = "scale(1)", 150);
-        } catch(e) { console.error("Beauty toggle error:", e); }
+        } catch(e) { 
+            console.warn("Beauty filter not supported on this device/browser.", e);
+            alert("Beauty filter is not supported on your current browser.");
+            isBeautyOn = false; // reset
+        }
     };
 
-    // 🖼️ VIRTUAL BG / CINEMATIC ENHANCE (CSS Fallback)
+    // 🖼️ VIRTUAL BG / CINEMATIC ENHANCE
     document.getElementById('btn-bg').onclick = async function() {
         try {
             if (!localStream) return;
@@ -201,7 +241,6 @@ function setupControls() {
             const localVideo = document.getElementById('my-local-video');
 
             if (isBgBlurOn) {
-                // Cinematic Effect
                 localVideo.style.filter = "contrast(1.15) brightness(1.05) saturate(1.2) drop-shadow(0px 0px 20px rgba(56, 189, 248, 0.4))";
                 this.style.background = "linear-gradient(135deg, #0ea5e9, #38bdf8)";
                 this.style.color = "#fff";
