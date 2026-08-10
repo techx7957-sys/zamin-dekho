@@ -58,28 +58,26 @@ const io = new Server(server, {
     }
 });
 
-// 🔥 NEW: Socket.io connection handling
+// 🔥 FIX 1: Socket.io broadcasting optimized.
+// 'io.to' sabko bhejta hai (sender ko bhi). Isse sender ke UI par message duplicate ho jata hai.
+// Ab hum 'socket.to' use kar rahe hain, jo sender ke alawa baaki sabko message bhejega.
 io.on("connection", (socket) => {
     console.log("🟢 A user connected to bidding socket:", socket.id);
 
-    // Join main bidding room
     socket.on("join_bidding_room", () => {
         socket.join("live_bidding");
         console.log(`User ${socket.id} joined live_bidding room`);
     });
 
-    // Handle new incoming bid message
     socket.on("send_bid", (data) => {
-        // Broadcast to everyone in the room (including sender to verify)
-        // You can add validation here later to check if user is whitelisted
-        io.to("live_bidding").emit("receive_bid", data);
+        // Broadcast to everyone EXCEPT the sender
+        socket.to("live_bidding").emit("receive_bid", data);
     });
 
     socket.on("disconnect", () => {
         console.log("🔴 User disconnected:", socket.id);
     });
 });
-
 
 // ==========================================
 // 🔐 FORCE HTTPS (VERY IMPORTANT)
@@ -101,101 +99,50 @@ const isProd = process.env.NODE_ENV === 'production';
 app.use(helmet({
     crossOriginResourcePolicy: false,
     frameguard: false,
-
-    // X-XSS-Protection explicitly disabled — deprecated header; modern browsers
-    // rely on CSP. Sending it can introduce vulnerabilities in old IE.
     xssFilter: false,
-
-    // HSTS only in production — Replit dev proxy is HTTP-terminated
-    // 63072000 = 2 years (minimum required for HSTS preload list submission)
     hsts: isProd
         ? { maxAge: 63072000, includeSubDomains: true, preload: true }
         : false,
-
-    // Permissions Policy: GPS for property verification; block everything else
     permissionsPolicy: {
         features: {
             geolocation:    ["'self'"],
             camera:         ["'self'"],
             microphone:     ["'self'"],
             payment:        ["'self'"],
-            "interest-cohort": [],      // opt out of FLoC/Topics API
+            "interest-cohort": [],
         }
     },
-
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-
-            // Scripts: own code + approved CDNs + auth/payment/analytics third parties
-            // 'unsafe-inline' is required — all pages use inline <script> blocks
             scriptSrc: [
-                "'self'",
-                "'unsafe-inline'",
-                "https://cdn.jsdelivr.net",       // Bootstrap, SweetAlert2, Leaflet, intl-tel-input, canvas-confetti
-                "https://cdnjs.cloudflare.com",   // FontAwesome (CSS only; listed for integrity checks)
-                "https://accounts.google.com",    // Google Identity Services (GSI)
-                "https://checkout.razorpay.com",  // Razorpay payment gateway
-                "https://www.clarity.ms",         // Microsoft Clarity session recording
-                "https://unpkg.com"               // Allowed Unpkg CDN just in case
+                "'self'", "'unsafe-inline'",
+                "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com",
+                "https://accounts.google.com", "https://checkout.razorpay.com",
+                "https://www.clarity.ms", "https://unpkg.com"
             ],
-
-            // Styles: own + CDN stylesheets + Google Fonts declarations
-            // 'unsafe-inline' required — all pages use inline <style> blocks
             styleSrc: [
-                "'self'",
-                "'unsafe-inline'",
-                "https://cdn.jsdelivr.net",       // Bootstrap, intl-tel-input CSS
-                "https://cdnjs.cloudflare.com",   // FontAwesome CSS
-                "https://fonts.googleapis.com",   // Google Fonts @import declarations
+                "'self'", "'unsafe-inline'",
+                "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com",
+                "https://fonts.googleapis.com"
             ],
-
-            // Images: own assets + known third-party image hosts
-            // blob: needed for camera snapshot canvas exports in dashboard
             imgSrc: [
-                "'self'",
-                "data:",
-                "blob:",
-                "https://images.unsplash.com",          // hero / background images
-                "https://i.pravatar.cc",                // avatar placeholders (dashboard)
-                "https://upload.wikimedia.org",         // Google G logo on login page
-                "https://*.tile.openstreetmap.org",     // Leaflet OSM map tiles
-                "https://maps.gstatic.com",             // Google Maps static assets
-
-                // 🚀 SOCIAL LOGIN AVATAR WHITELIST ADDED HERE
-                "https://lh3.googleusercontent.com",    // Google Profile Avatars
-                "https://pbs.twimg.com",                // Twitter/X Profile Avatars
-                "https://graph.facebook.com",           // Facebook Profile Avatars
-                "https://platform-lookaside.fbsbx.com", // Facebook Avatars Backup
-                "https://*.fbcdn.net"                   // Facebook Image CDN
+                "'self'", "data:", "blob:",
+                "https://images.unsplash.com", "https://i.pravatar.cc",
+                "https://upload.wikimedia.org", "https://*.tile.openstreetmap.org",
+                "https://maps.gstatic.com", "https://lh3.googleusercontent.com",
+                "https://pbs.twimg.com", "https://graph.facebook.com",
+                "https://platform-lookaside.fbsbx.com", "https://*.fbcdn.net"
             ],
-
-            // Fetch/XHR/WebSocket: own API + Clarity telemetry + deal-room WebSocket
-            // In dev keep broad (Replit subdomains vary); in prod lock to self + known endpoints
             connectSrc: isProd
                 ? ["'self'", "https://www.clarity.ms", "wss:", "https://*"]
-                : ["'self'", "https:", "wss:", "http://localhost:*"], // Updated to allow localhost ws in dev
-
-            // Web fonts: Google Fonts files + FontAwesome webfonts
-            fontSrc: [
-                "'self'",
-                "https://fonts.gstatic.com",
-                "https://cdnjs.cloudflare.com",
-                "https://cdn.jsdelivr.net",
-                "data:",
-            ],
-
+                : ["'self'", "https:", "wss:", "http://localhost:*"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net", "data:"],
             objectSrc:  ["'none'"],
-            mediaSrc:   ["'self'", "blob:"],         // camera stream / recorded blobs
-            workerSrc:  ["'self'", "blob:"],         // service workers / blob workers
-
-            // Restrict form submissions to own origin — closes ZAP "Missing form-action" alert
+            mediaSrc:   ["'self'", "blob:"],
+            workerSrc:  ["'self'", "blob:"],
             formAction: ["'self'"],
-
-            // upgrade-insecure-requests only in production — breaks Replit HTTP proxy in dev
             ...(isProd ? { upgradeInsecureRequests: [] } : {}),
-
-            // frame-ancestors supersedes X-Frame-Options; Helmet sets both automatically
             frameAncestors: isProd
                 ? ["'self'", "https://zamindekho.tech", "https://www.zamindekho.tech"]
                 : ["'self'", "https://*.replit.com", "https://*.replit.dev", "https://*.replit.app", "https://*.sisko.replit.dev"]
@@ -207,30 +154,15 @@ app.use(helmet({
 // 🌐 PERFECT & PROTECTED CORS SETUP
 // ==========================================
 const EXACT_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://localhost:5000',
-    'http://127.0.0.1:5500',
-    'https://zamindekho.tech',      
-    'https://www.zamindekho.tech',   
-    'https://zamin-dekho-m5iq.vercel.app' 
+    'http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:5500',
+    'https://zamindekho.tech', 'https://www.zamindekho.tech', 'https://zamin-dekho-m5iq.vercel.app' 
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
-        // 1. Allow mobile apps or backend-to-backend requests (No origin)
         if (!origin) return callback(null, true);
-
-        // 2. Exact match for Production Domains (Highest Security)
-        if (EXACT_ALLOWED_ORIGINS.includes(origin)) {
-            return callback(null, true);
-        }
-
-        // 3. Dynamic match ONLY for Replit preview links
-        if (origin.endsWith('.replit.dev') || origin.endsWith('.replit.app')) {
-            return callback(null, true);
-        }
-
-        // 4. Block everything else!
+        if (EXACT_ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+        if (origin.endsWith('.replit.dev') || origin.endsWith('.replit.app')) return callback(null, true);
         console.error(`🚨 CORS BLOCKED INTRUDER: ${origin}`); 
         callback(new Error("🚨 CORS Policy Blocked this request"));
     },
@@ -239,27 +171,16 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
 }));
 
-
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-
 
 // ==========================================
 // 🚫 RATE LIMIT
 // ==========================================
-const apiLimiter = rateLimit({
-    windowMs: 10 * 60 * 1000,
-    max: 150
-});
-
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 20
-});
-
+const apiLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 150 });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
 app.use("/api/", apiLimiter);
 app.use("/api/auth/login", authLimiter);
-
 
 // ==========================================
 // 🔐 SESSION (Vercel Serverless BULLETPROOF Fix)
@@ -273,31 +194,21 @@ app.use(cookieSession({
     domain: process.env.NODE_ENV === "production" ? ".zamindekho.tech" : undefined,
 }));
 
-// 🔥 THE PKCE HACK: Ye line cookie-session ko hamesha save karne par majboor karegi
 app.use((req, res, next) => {
-    if (req.session) {
-        req.session.lastAccess = Date.now(); 
-    }
+    if (req.session) req.session.lastAccess = Date.now(); 
     next();
 });
 
-// 🔥 Passport 0.6.0+ Bypass
 app.use((req, res, next) => {
-    if (req.session && !req.session.regenerate) {
-        req.session.regenerate = (cb) => { cb(); };
-    }
-    if (req.session && !req.session.save) {
-        req.session.save = (cb) => { cb(); };
-    }
+    if (req.session && !req.session.regenerate) req.session.regenerate = (cb) => { cb(); };
+    if (req.session && !req.session.save) req.session.save = (cb) => { cb(); };
     next();
 });
 
 // ==========================================
-// 🚦 ROOT REDIRECT (New Users -> Register)
+// 🚦 ROOT REDIRECT
 // ==========================================
-// Ye redirect static files ke upar hona zaroori hai
 app.get('/', (req, res) => {
-    // 🔥 FIX: Google ke ?token= ko zinda rakhne ke liye query string pass karna zaroori hai
     const queryString = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
     res.redirect('/register.html' + queryString);
 });
@@ -307,7 +218,6 @@ app.get('/', (req, res) => {
 // ==========================================
 app.use(express.static(path.join(__dirname, "public"), { maxAge: "30d", etag: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads"), { maxAge: "7d", etag: true }));
-
 
 // ==========================================
 // 🌐 DATABASE
@@ -320,115 +230,73 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => console.log("❌ DB Error:", err));
 
-
 // ==========================================
 // 🚀 ROUTES
 // ==========================================
-
-// 🟢 KEEP-ALIVE ROUTE
-app.all('/api/ping', (req, res) => {
-    res.status(200).send("OK");
-});
-
+app.all('/api/ping', (req, res) => res.status(200).send("OK"));
 app.use("/api/auth", authRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/broker", brokerRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/contact", contactRoutes);
-
-// 🔥 NEW: Mount Bidding Routes
-app.use("/api/bidding", biddingRoutes);
+app.use("/api/bidding", biddingRoutes); // 🔥 Mounted Bidding Routes
 
 app.get('/api/leads/my-visits', verifyToken, leadController.getMyVisits);
 app.post('/api/leads/verify-gps/:id', verifyToken, leadController.verifyGPS);
 
-
-// ==========================================
 // ❌ API 404
-// ==========================================
 app.all("/api/*", (req, res) => {
     res.status(404).json({ success: false, message: "API Endpoint Not Found" });
 });
 
-
-// ==========================================
 // 🔐 FILE PROTECTION + SPA
-// ==========================================
 app.get("*", (req, res) => {
-
-    if (req.path.includes('..') || req.path.includes('%00')) {
-        return res.status(403).send("🚨 Access Denied");
-    }
-
-    // 🔥 BACKUP REDIRECT (Security layer 2)
+    if (req.path.includes('..') || req.path.includes('%00')) return res.status(403).send("🚨 Access Denied");
     if (req.path === "/") {
-        // 🔥 FIX: Backup redirect mein bhi query string (token) zinda rakhni hai
         const queryString = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
         return res.redirect("/register.html" + queryString);
     }
-
     let filePath = path.join(__dirname, "public", req.path);
-
     const blockedFiles = [".env", "server.js", "package.json", "vercel.json"];
-    if (blockedFiles.some(file => filePath.endsWith(file))) {
-        return res.status(403).send("🚨 Forbidden");
-    }
+    if (blockedFiles.some(file => filePath.endsWith(file))) return res.status(403).send("🚨 Forbidden");
 
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
         res.sendFile(filePath);
     } else {
-        // Fallback for SPA routing to index html (logged in users flow)
         res.sendFile(path.join(__dirname, "public", "index.html"));
     }
 });
 
-
 // ==========================================
 // 🛡️ GLOBAL JSON ERROR CATCHER (Vercel fix)
 // ==========================================
-// 🚨 Is block ko use karke Backend crash hone par HTML error (502) ki jagah clean JSON dega
 app.use((err, req, res, next) => {
     console.error("🔥 Global Error Caught:", err.message);
-
-    // Default Twitter Logic
     let twitterRawError = "No exact details provided by Twitter";
     if (err.oauthError && err.oauthError.data) {
-        try {
-            twitterRawError = JSON.parse(err.oauthError.data);
-        } catch (e) {
-            twitterRawError = err.oauthError.data;
-        }
+        try { twitterRawError = JSON.parse(err.oauthError.data); } catch (e) { twitterRawError = err.oauthError.data; }
     }
-
-    // Agar API request fail ho rahi hai to HTML bhejna band karo, warna "Unexpected token <" wala error aata hai.
     if (req.path.startsWith("/api/")) {
-        return res.status(500).json({ 
-            success: false, 
-            message: "Internal Server Error Caught",
-            errorDetails: err.message,
-            twitter_exact_reason: twitterRawError
-        });
+        return res.status(500).json({ success: false, message: "Internal Server Error Caught", errorDetails: err.message, twitter_exact_reason: twitterRawError });
     }
-
-    // Baaki sab regular errors ke liye
-    res.status(500).json({ 
-        success: false, 
-        message: "Server Error",
-        stack_line: err.message
-    });
+    res.status(500).json({ success: false, message: "Server Error", stack_line: err.message });
 });
-
 
 // ==========================================
 // 🚀 SERVER / VERCEL
 // ==========================================
+// 🔥 FIX 2: Vercel Deployment Logic. 
+// Socket.io (Real-time) Cannot run on serverless (Vercel). 
+// Agar aap Vercel par deploy kar rahe ho, toh Backend purely REST API ban jayega. 
+// Isko chalaane ke liye aapko VPS (DigitalOcean/Railway/Render) par Node.js server chahiye.
 if (!process.env.VERCEL) {
     const PORT = process.env.PORT || 5000;
-    // 🔥 CHANGED: Listen using the HTTP server we created (not just the express app)
     server.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server running on ${PORT}`);
     });
 }
 
-module.exports = server; // 🔥 Export server for Vercel/Testing if needed
+// 🔥 FIX 3: Vercel ke liye sirf 'app' export karna safe hai.
+// Hata diya: module.exports = server;
+module.exports = app; 

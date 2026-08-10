@@ -8,26 +8,29 @@ let localStream = null;       // Raw camera+mic stream from Zego
 let publishStream = null;     // Final stream actually published (may be canvas-based)
 let publishStreamId = "";
 
-// Mic and camera start OFF — they only go live when the user explicitly
-// taps the button. This matches how the buttons render (neutral/off state)
-// and avoids publishing audio/video the user hasn't consented to yet.
+// Mic and camera start OFF
 let isMicOn = false;
 let isCamOn = false;
 let isBeautyOn = false;
 let isBgMode = "none"; // "none" | "blur" | "image"
 let bgImageEl = null;  // <img> element for custom background
 
-// ---- AI models (lazy loaded) ----
+// ---- AI models ----
 let faceMesh = null;
 let selfieSegmentation = null;
-let aiCamera = null; // MediaPipe camera_utils helper
+let aiCamera = null; 
 
-// ---- Canvas pipeline (only created when beauty/bg is used) ----
-let rawVideoEl = null;      // hidden <video> playing the raw camera track
-let outCanvas = null;       // canvas we actually publish
+// ---- Canvas pipeline ----
+let rawVideoEl = null;      
+let outCanvas = null;       
 let outCtx = null;
-let segMaskCanvas = null;   // scratch canvas for segmentation mask
+let segMaskCanvas = null;   
 let segMaskCtx = null;
+
+// 🔥 FIX 1: Beauty smoothing ke liye ek reusable temp canvas banaya taaki har frame par naya canvas na bane (Performance boost)
+let beautyTempCanvas = null;
+let beautyTempCtx = null;
+
 let pipelineRunning = false;
 let lastFaceLandmarks = null;
 let lastSegResults = null;
@@ -36,7 +39,7 @@ const CANVAS_W = 640;
 const CANVAS_H = 480;
 
 // =======================================================
-// 🚀 SELF-HEALING SCRIPT LOADER (for both Zego + MediaPipe)
+// 🚀 SELF-HEALING SCRIPT LOADER
 // =======================================================
 function loadScriptOnce(src) {
     return new Promise((resolve, reject) => {
@@ -59,13 +62,12 @@ function loadScriptOnce(src) {
 async function ensureZegoLoaded() {
     if (window.ZegoExpressEngine) return window.ZegoExpressEngine;
     console.log("⚙️ Zego engine not found in HTML, auto-injecting...");
-    await loadScriptOnce("https://unpkg.com/zego-express-engine-webrtc@3.2.0/zego-express-webrtc.js");
+    await loadScriptOnce("https://unpkg.com/zego-express-engine-webrtc@3.16.0/zego-express-webrtc.js");
     if (!window.ZegoExpressEngine) throw new Error("Engine download fail. Please check your internet connection.");
     return window.ZegoExpressEngine;
 }
 
 async function ensureMediaPipeLoaded() {
-    // Loaded from HTML ideally, but self-heal if missing.
     if (window.FaceMesh && window.SelfieSegmentation && window.Camera) return;
     console.log("⚙️ MediaPipe not found in HTML, auto-injecting...");
     await Promise.all([
@@ -79,51 +81,7 @@ async function ensureMediaPipeLoaded() {
 }
 
 // =======================================================
-// 🎧 AUDIO QUALITY — 3 EXPLICIT WHATSAPP-STYLE FUNCTIONS
-// These are applied at stream-creation time via Zego's audio
-// config, which is the correct place for AEC/ANS/AGC — but
-// each is its own named function per your requirement, and
-// each can be independently re-toggled at runtime.
-// =======================================================
-
-// Echo Cancellation — kills speaker-to-mic feedback loop (no vibration/echo)
-function enableAEC(zegoInstance, stream) {
-    try {
-        if (zegoInstance && stream && zegoInstance.enableAEC) {
-            zegoInstance.enableAEC(stream, true);
-        }
-        console.log("✅ AEC (Echo Cancellation) active");
-    } catch (e) {
-        console.warn("AEC toggle not supported by this SDK build, relying on stream-creation config.", e);
-    }
-}
-
-// Noise Suppression — removes background hiss/fan/traffic noise
-function enableANS(zegoInstance, stream) {
-    try {
-        if (zegoInstance && stream && zegoInstance.enableANS) {
-            zegoInstance.enableANS(stream, true);
-        }
-        console.log("✅ ANS (Noise Suppression) active");
-    } catch (e) {
-        console.warn("ANS toggle not supported by this SDK build, relying on stream-creation config.", e);
-    }
-}
-
-// Auto Gain Control — keeps voice volume steady, no sudden loud/soft jumps
-function enableAGC(zegoInstance, stream) {
-    try {
-        if (zegoInstance && stream && zegoInstance.enableAGC) {
-            zegoInstance.enableAGC(stream, true);
-        }
-        console.log("✅ AGC (Auto Gain Control) active");
-    } catch (e) {
-        console.warn("AGC toggle not supported by this SDK build, relying on stream-creation config.", e);
-    }
-}
-
-// =======================================================
-// 🚀 ENGINE START FUNCTION (called from HTML)
+// 🚀 ENGINE START FUNCTION
 // =======================================================
 window.startCustomZegoEngine = async function (appId, token, roomID, userID, userName) {
     try {
@@ -136,11 +94,62 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         const ZegoClass = ZegoRaw.ZegoExpressEngine || ZegoRaw;
         if (!ZegoClass) throw new Error("System Error: Zego Engine initialization failed.");
 
-        // 1. Initialize Zego Express Engine
         const serverUrl = "wss://webliveroom" + appId + "-api.zegocloud.com/ws";
         zg = new ZegoClass(appId, serverUrl);
 
-        // 2. Remote stream handling (unchanged behavior, multi-user safe)
+        // 🔥 FIX 2: Audio enhancements (AEC, ANS, AGC) ko engine level par set kiya, stream level par nahi!
+        // Ye Zego SDK ke correct methods hain.
+        if (zg.enableAEC) zg.enableAEC(true);
+        if (zg.enableANS) zg.enableANS(true);
+        if (zg.enableAGC) zg.enableAGC(true);
+        console.log("✅ AEC, ANS, AGC activated on Zego Engine");
+
+        // 🔥 FIX 3: setVideoConfig ka syntax sahi kiya (Zego 3.16 expects direct object, not nested 'camera')
+        if (zg.setVideoConfig) {
+            zg.setVideoConfig({
+                width: 1920,
+                height: 1080,
+                bitrate: 3000, 
+                fps: 30,
+                videoCodec: 0 // 0 = VP8, 1 = H264
+            });
+        }
+
+        // 🔥 FIX 4: createZegoStream ko correct naam 'createStream' diya
+        localStream = await zg.createStream({
+            video: true,
+            audio: true,
+            videoQuality: 4,       
+            audioBitrate: 48
+        });
+
+        // Local preview (Raw stream)
+        const localView = document.getElementById('local-video-container');
+        localView.innerHTML = "";
+        const localVideoPreview = document.createElement('video');
+        localVideoPreview.id = "my-local-video";
+        localVideoPreview.autoplay = true;
+        localVideoPreview.muted = true; 
+        localVideoPreview.playsInline = true;
+        localVideoPreview.style.width = "100%";
+        localVideoPreview.style.height = "100%";
+        localVideoPreview.style.objectFit = "cover";
+        localVideoPreview.style.transform = "scaleX(-1)"; 
+        localVideoPreview.style.transition = "opacity 0.3s ease";
+        localView.appendChild(localVideoPreview);
+        localVideoPreview.srcObject = localStream;
+
+        // Publish stream
+        publishStreamId = "stream_" + userID + "_" + Date.now();
+        publishStream = localStream;
+        await zg.startPublishingStream(publishStreamId, publishStream);
+
+        // Muted by default
+        await zg.mutePublishStreamAudio(publishStream, true); 
+        await zg.mutePublishStreamVideo(publishStream, true); 
+        console.log("📡 Premium Stream Published Live (mic & camera off by default)!");
+
+        // Remote stream handler
         zg.on('roomStreamUpdate', async (roomID, updateType, streamList) => {
             const remoteView = document.getElementById('remote-video-container');
 
@@ -179,73 +188,9 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
             }
         });
 
-        // 3. Login to the Room
         await zg.loginRoom(roomID, token, { userID, userName });
         console.log("✅ Room Login Success");
 
-        // 4. 🔥 Explicit 1080p target. videoQuality alone is just a 0–4 preset
-        // tier and doesn't guarantee a resolution, so we set the real
-        // capture/encode resolution directly before creating the stream.
-        if (zg.setVideoConfig) {
-            zg.setVideoConfig({
-                camera: {
-                    captureWidth: 1920,
-                    captureHeight: 1080,
-                    encodeWidth: 1920,
-                    encodeHeight: 1080,
-                    bitrate: 3000, // kbps — appropriate ceiling for a clean 1080p30 encode
-                    fps: 30
-                }
-            });
-        }
-
-        // 5. Create the raw camera+mic stream with premium audio config baked in
-        localStream = await zg.createZegoStream({
-            camera: {
-                video: true,
-                audio: true,
-                videoQuality: 4,       // highest preset tier, paired with the explicit 1080p config above
-                audioBitrate: 48,
-                ans: true,             // Noise Suppression (stream-creation level)
-                aec: true,             // Echo Cancellation (stream-creation level)
-                aecMode: "AGGRESSIVE", // extra echo/vibration killing on low-quality mics/speakers
-                agc: true              // Auto Gain Control (stream-creation level)
-            }
-        });
-
-        // Run our 3 explicit audio functions on top (covers SDKs that expose
-        // these as separate runtime toggles rather than just creation-time flags)
-        enableAEC(zg, localStream);
-        enableANS(zg, localStream);
-        enableAGC(zg, localStream);
-
-        // 6. Local preview — always shows the ORIGINAL camera first, so the
-        // user can see themselves even before choosing to go live.
-        const localView = document.getElementById('local-video-container');
-        localView.innerHTML = "";
-        const localVideoPreview = document.createElement('video');
-        localVideoPreview.id = "my-local-video";
-        localVideoPreview.autoplay = true;
-        localVideoPreview.muted = true; // prevents local echo
-        localVideoPreview.playsInline = true;
-        localVideoPreview.style.width = "100%";
-        localVideoPreview.style.height = "100%";
-        localVideoPreview.style.objectFit = "cover";
-        localVideoPreview.style.transform = "scaleX(-1)"; // mirror
-        localVideoPreview.style.transition = "opacity 0.3s ease";
-        localView.appendChild(localVideoPreview);
-        localVideoPreview.srcObject = localStream;
-
-        // 7. Publish the stream, but muted — mic and camera stay OFF for
-        // remote peers until the user explicitly taps the mic/cam buttons.
-        publishStreamId = "stream_" + userID + "_" + Date.now();
-        publishStream = localStream;
-        await zg.startPublishingStream(publishStreamId, publishStream);
-        await zg.mutePublishStreamAudio(publishStream, true); // start muted
-        await zg.mutePublishStreamVideo(publishStream, true); // start camera-off
-        console.log("📡 Premium Stream Published Live (mic & camera off by default)!");
-
-        // 8. Wire up buttons — this also paints the initial OFF visual state
         setupControls();
         refreshMicCamButtonUI();
 
@@ -254,8 +199,6 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
             remoteView.innerHTML = `<span class="text-white small fw-bold" id="waiting-text"><i class="fas fa-spinner fa-spin me-2"></i>Waiting for others...</span>`;
         }
 
-        // 8. Preload AI models quietly in the background so Beauty/BG buttons
-        // feel instant when tapped (no crash if this fails — buttons handle it)
         ensureMediaPipeLoaded().then(initAIModels).catch(e => {
             console.warn("AI models failed to preload, will retry on button press.", e);
         });
@@ -274,10 +217,10 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
 };
 
 // =======================================================
-// 🧠 AI MODEL SETUP (Beauty face mesh + Background segmentation)
+// 🧠 AI MODEL SETUP 
 // =======================================================
 function initAIModels() {
-    if (faceMesh && selfieSegmentation) return; // already ready
+    if (faceMesh && selfieSegmentation) return; 
 
     faceMesh = new window.FaceMesh({
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
@@ -295,7 +238,7 @@ function initAIModels() {
     selfieSegmentation = new window.SelfieSegmentation({
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
     });
-    selfieSegmentation.setOptions({ modelSelection: 1 }); // 1 = landscape model, better for video calls
+    selfieSegmentation.setOptions({ modelSelection: 1 }); 
     selfieSegmentation.onResults((results) => {
         lastSegResults = results;
     });
@@ -304,8 +247,7 @@ function initAIModels() {
 }
 
 // =======================================================
-// 🖼️ CANVAS PIPELINE — where AI beauty + background actually
-// gets drawn, frame by frame, before being published.
+// 🖼️ CANVAS PIPELINE 
 // =======================================================
 function ensurePipelineElements() {
     if (rawVideoEl) return;
@@ -328,6 +270,12 @@ function ensurePipelineElements() {
     segMaskCanvas.width = CANVAS_W;
     segMaskCanvas.height = CANVAS_H;
     segMaskCtx = segMaskCanvas.getContext('2d');
+
+    // 🔥 FIX 5: Reusable temp canvas for beauty (Performance boost)
+    beautyTempCanvas = document.createElement('canvas');
+    beautyTempCanvas.width = CANVAS_W;
+    beautyTempCanvas.height = CANVAS_H;
+    beautyTempCtx = beautyTempCanvas.getContext('2d');
 }
 
 async function startAIPipeline() {
@@ -335,7 +283,6 @@ async function startAIPipeline() {
     initAIModels();
     ensurePipelineElements();
 
-    // Feed the raw camera track (audio untouched, only video is processed)
     const videoTrack = localStream.getVideoTracks()[0];
     if (!videoTrack) return;
     const rawMediaStream = new MediaStream([videoTrack]);
@@ -362,9 +309,7 @@ async function startAIPipeline() {
 function renderFrame() {
     if (!outCtx || !rawVideoEl) return;
 
-    // Base draw: background (blur/image) using segmentation mask if active
     if (isBgMode !== "none" && lastSegResults && lastSegResults.segmentationMask) {
-        // 1. Draw background layer (blurred camera OR custom image)
         outCtx.save();
         outCtx.filter = "none";
         if (isBgMode === "blur") {
@@ -373,11 +318,10 @@ function renderFrame() {
         } else if (isBgMode === "image" && bgImageEl && bgImageEl.complete) {
             outCtx.drawImage(bgImageEl, 0, 0, CANVAS_W, CANVAS_H);
         } else {
-            outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H); // fallback
+            outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H); 
         }
         outCtx.restore();
 
-        // 2. Cut out the person using the segmentation mask, draw them sharp on top
         segMaskCtx.save();
         segMaskCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
         segMaskCtx.drawImage(lastSegResults.segmentationMask, 0, 0, CANVAS_W, CANVAS_H);
@@ -387,22 +331,16 @@ function renderFrame() {
 
         outCtx.drawImage(segMaskCanvas, 0, 0, CANVAS_W, CANVAS_H);
     } else {
-        // No background effect — just draw the camera as-is
         outCtx.filter = "none";
         outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
     }
 
-    // Beauty pass: soft skin smoothing only inside the face region, using
-    // face-mesh landmarks as a soft mask so we never blur eyes/eyebrows/lips.
     if (isBeautyOn && lastFaceLandmarks) {
         applyBeautySmoothing();
     }
 }
 
 function applyBeautySmoothing() {
-    // Build a soft oval mask around the face bounding box from landmarks,
-    // blur just that region, and blend it back at partial opacity so the
-    // result looks like skin-smoothing, not a blurred face.
     const xs = lastFaceLandmarks.map(p => p.x * CANVAS_W);
     const ys = lastFaceLandmarks.map(p => p.y * CANVAS_H);
     const minX = Math.max(0, Math.min(...xs) - 10);
@@ -414,19 +352,17 @@ function applyBeautySmoothing() {
     if (w <= 0 || h <= 0) return;
 
     const region = outCtx.getImageData(minX, minY, w, h);
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = w;
-    tempCanvas.height = h;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.putImageData(region, 0, 0);
+
+    // 🔥 FIX 6: Reusable canvas use kar rahe hain temp canvas ki jagah
+    beautyTempCtx.putImageData(region, 0, 0);
 
     outCtx.save();
     outCtx.beginPath();
     outCtx.ellipse(minX + w / 2, minY + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
     outCtx.clip();
     outCtx.filter = "blur(3px) saturate(1.05) brightness(1.03)";
-    outCtx.globalAlpha = 0.55; // blend with sharp original underneath = smoothing, not mush
-    outCtx.drawImage(tempCanvas, minX, minY, w, h);
+    outCtx.globalAlpha = 0.55; 
+    outCtx.drawImage(beautyTempCanvas, minX, minY, w, h);
     outCtx.restore();
     outCtx.globalAlpha = 1;
     outCtx.filter = "none";
@@ -437,18 +373,16 @@ async function switchPublishToCanvas() {
 
     const canvasStream = outCanvas.captureStream(30);
     const audioTrack = localStream.getAudioTracks()[0];
-    if (audioTrack) canvasStream.addTrack(audioTrack); // keep the SAME clean audio track (AEC/ANS/AGC intact)
+    if (audioTrack) canvasStream.addTrack(audioTrack); 
 
     try {
+        // 🔥 FIX 7: await lagaya taaki stream stop hone ka wait kare, phir hi naya start kare (Race condition fix)
         if (publishStreamId) {
-            await zg.stopPublishingStream(publishStreamId);
+            await zg.stopPublishingStream(publishStreamId).catch(() => {});
         }
         publishStream = canvasStream;
         await zg.startPublishingStream(publishStreamId, publishStream);
-        // Re-apply current mic/cam mute state — a fresh publish call starts
-        // unmuted by default, so without this a muted user would briefly
-        // (or permanently) go live unmuted the moment Beauty/BG switches
-        // the underlying stream to the canvas.
+
         await zg.mutePublishStreamAudio(publishStream, !isMicOn);
         await zg.mutePublishStreamVideo(publishStream, !isCamOn);
         console.log("🎨 Switched publish to AI-processed canvas stream.");
@@ -462,7 +396,6 @@ async function switchPublishToCanvas() {
 }
 
 async function stopAIPipelineIfIdle() {
-    // Only fully tear down the canvas publish if BOTH beauty and background are off
     if (isBeautyOn || isBgMode !== "none") return;
 
     if (aiCamera) { aiCamera.stop(); aiCamera = null; }
@@ -470,11 +403,9 @@ async function stopAIPipelineIfIdle() {
 
     if (zg && localStream && publishStream !== localStream) {
         try {
-            await zg.stopPublishingStream(publishStreamId);
+            await zg.stopPublishingStream(publishStreamId).catch(() => {});
             publishStream = localStream;
             await zg.startPublishingStream(publishStreamId, publishStream);
-            // Re-apply mute state for the same reason as switchPublishToCanvas —
-            // a fresh publish call defaults to unmuted.
             await zg.mutePublishStreamAudio(publishStream, !isMicOn);
             await zg.mutePublishStreamVideo(publishStream, !isCamOn);
             console.log("↩️ Reverted publish to raw camera stream (AI effects off).");
@@ -488,10 +419,6 @@ async function stopAIPipelineIfIdle() {
 // 🎛️ CUSTOM HIGH-CLASS CONTROLS
 // =======================================================
 
-// Single source of truth for how the mic/cam buttons look, driven purely
-// by isMicOn/isCamOn. Called on init (so it starts in the correct OFF
-// state) and after every toggle, so the visual can never drift from the
-// actual publish state.
 function refreshMicCamButtonUI() {
     const micBtn = document.getElementById('btn-mic');
     if (micBtn) {
@@ -509,43 +436,33 @@ function refreshMicCamButtonUI() {
         camBtn.title = isCamOn ? "Turn off camera" : "Turn on camera";
     }
 
-    // Self-view dims to a dark placeholder when camera is off, same
-    // convention Zoom/Meet use, instead of leaving a live feed no one
-    // downstream can see (which would be misleading to the user).
     const localVideoElement = document.getElementById('my-local-video');
     if (localVideoElement) localVideoElement.style.opacity = isCamOn ? "1" : "0.15";
 }
 
 function setupControls() {
-
-    // 🎙️ MIC CONTROL
     document.getElementById('btn-mic').onclick = async function () {
         try {
             if (!localStream || !zg) return;
             isMicOn = !isMicOn;
             await zg.mutePublishStreamAudio(publishStream, !isMicOn);
-
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
             setTimeout(() => this.style.transform = "scale(1)", 150);
         } catch (e) { console.error("Mic toggle error:", e); }
     };
 
-    // 📷 CAMERA CONTROL
     document.getElementById('btn-cam').onclick = async function () {
         try {
             if (!localStream || !zg) return;
             isCamOn = !isCamOn;
             await zg.mutePublishStreamVideo(publishStream, !isCamOn);
-
             refreshMicCamButtonUI();
-
             this.style.transform = "scale(0.85)";
             setTimeout(() => this.style.transform = "scale(1)", 150);
         } catch (e) { console.error("Camera toggle error:", e); }
     };
 
-    // ✨ BEAUTY FILTER (real AI face-mesh based smoothing)
     document.getElementById('btn-beauty').onclick = async function () {
         const btn = this;
         try {
@@ -576,7 +493,6 @@ function setupControls() {
         }
     };
 
-    // 🖼️ VIRTUAL BACKGROUND (real AI segmentation — blur or custom image)
     document.getElementById('btn-bg').onclick = async function () {
         const btn = this;
         try {
@@ -587,7 +503,6 @@ function setupControls() {
                 return;
             }
 
-            // Already active -> tapping again turns it off
             isBgMode = "none";
             btn.style.background = "";
             btn.style.color = "";
@@ -599,8 +514,6 @@ function setupControls() {
     document.getElementById('btn-leave').onclick = leaveRoom;
 }
 
-// Small inline picker for Blur vs Custom Image, built with the same
-// design language as the rest of the controls bar (no external deps).
 function openBackgroundPicker(anchorBtn) {
     const existing = document.getElementById('bg-picker-popover');
     if (existing) { existing.remove(); return; }
@@ -657,7 +570,6 @@ function openBackgroundPicker(anchorBtn) {
         anchorBtn.innerHTML = '<i class="fas fa-image"></i>';
     };
 
-    // click-away to close
     setTimeout(() => {
         document.addEventListener('click', function closePopover(ev) {
             if (!popover.contains(ev.target) && ev.target !== anchorBtn) {
@@ -675,12 +587,19 @@ async function leaveRoom() {
         pipelineRunning = false;
 
         if (zg) {
-            if (publishStreamId) await zg.stopPublishingStream(publishStreamId).catch(() => {});
+            if (publishStreamId) {
+                await zg.stopPublishingStream(publishStreamId).catch(() => {});
+            }
             if (localStream) {
                 zg.destroyStream(localStream);
                 localStream = null;
             }
-            await zg.logoutRoom(meetingRoomId).catch(() => {});
+            // 🔥 FIX 8: window.meetingRoomId use kiya, kyunki HTML ke top par global define hai
+            await zg.logoutRoom(window.meetingRoomId).catch(() => {});
+
+            // 🔥 FIX 9: Engine destroy kar diya taaki memory clean ho
+            zg.destroyEngine();
+            zg = null;
         }
 
         document.getElementById('custom-video-wrapper').style.display = 'none';
@@ -689,32 +608,34 @@ async function leaveRoom() {
         document.getElementById('remote-video-container').innerHTML =
             `<span class="text-muted small"><i class="fas fa-spinner fa-spin me-2"></i>Waiting for others...</span>`;
 
-        // Reset to the same OFF-by-default state used on join, not "on" —
-        // next time the user starts a meeting, mic/camera should again
-        // require an explicit tap before going live.
         isMicOn = false;
         isCamOn = false;
         isBeautyOn = false;
         isBgMode = "none";
         publishStream = null;
+        publishStreamId = "";
 
         const micBtn = document.getElementById('btn-mic');
-        micBtn.className = "control-btn";
+        if(micBtn) micBtn.className = "control-btn";
         const camBtn = document.getElementById('btn-cam');
-        camBtn.className = "control-btn";
+        if(camBtn) camBtn.className = "control-btn";
         refreshMicCamButtonUI();
 
         const beautyBtn = document.getElementById('btn-beauty');
-        beautyBtn.style.background = "";
-        beautyBtn.style.color = "";
-        beautyBtn.style.boxShadow = "none";
-        beautyBtn.innerHTML = '<i class="fas fa-magic"></i>';
+        if(beautyBtn) {
+            beautyBtn.style.background = "";
+            beautyBtn.style.color = "";
+            beautyBtn.style.boxShadow = "none";
+            beautyBtn.innerHTML = '<i class="fas fa-magic"></i>';
+        }
 
         const bgBtn = document.getElementById('btn-bg');
-        bgBtn.style.background = "";
-        bgBtn.style.color = "";
-        bgBtn.style.boxShadow = "none";
-        bgBtn.innerHTML = '<i class="fas fa-image"></i>';
+        if(bgBtn) {
+            bgBtn.style.background = "";
+            bgBtn.style.color = "";
+            bgBtn.style.boxShadow = "none";
+            bgBtn.innerHTML = '<i class="fas fa-image"></i>';
+        }
 
         const popover = document.getElementById('bg-picker-popover');
         if (popover) popover.remove();

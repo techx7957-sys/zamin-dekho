@@ -1,18 +1,15 @@
 const crypto = require('crypto');
 
-// IV (Initialization Vector) ke liye 16 character ki string zaruri hai (aes-256-cbc ke rules)
-function makeRandomIv() {
-    const str = '0123456789abcdefghijklmnopqrstuvwxyz';
-    const result = [];
-    for (let i = 0; i < 16; i++) {
-        result.push(str[Math.floor(Math.random() * str.length)]);
-    }
-    return result.join('');
+// 🔥 FIX 1: IV ke liye Math.random() hata kar cryptographically secure randomBytes use kiya.
+// Ye 16 byte (128-bit) ka buffer return karega, jo AES-256-CBC ke liye perfect hai.
+function generateSecureIv() {
+    return crypto.randomBytes(16);
 }
 
-// 🔥 FIX 1: Zego ko Nonce hamesha NUMBER format mein chahiye (String nahi).
-function makeNonce() {
-    return Math.floor(Math.random() * 2147483647);
+// 🔥 FIX 2: Nonce ke liye Math.random() hata kar crypto.randomInt use kiya.
+// Zego ko nonce number format mein chahiye, aur ye predict nahi kiya ja sakta.
+function generateSecureNonce() {
+    return crypto.randomInt(0, 2147483647);
 }
 
 function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload) {
@@ -33,11 +30,17 @@ function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload)
         throw new Error('secret must be exactly a 32 byte string');
     }
 
+    // 🔥 FIX 3: Secret ko explicitly UTF-8 Buffer mein convert kiya. 
+    // AES-256-CBC ko 32-byte (256-bit) key chahiye hoti hai. 
+    // Agar Zego dashboard se 32 ASCII characters ka secret mila hai, 
+    // toh Buffer.from(..., 'utf8') bilkul sahi 32 bytes banayega.
+    const secretKey = Buffer.from(cleanSecret, 'utf8');
+
     const createTime = Math.floor(Date.now() / 1000);
     const expireTime = createTime + effectiveTimeInSeconds;
 
-    // 🔥 FIX 2: Nonce ko IV wale function se hata kar naya Number wala function lagaya.
-    const nonce = makeNonce();
+    // 🔥 FIX 4: Secure nonce generate kiya
+    const nonce = generateSecureNonce();
 
     const tokenInfo = {
         app_id: numericAppId,
@@ -50,12 +53,16 @@ function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload)
     };
 
     const plaintText = JSON.stringify(tokenInfo);
-    const iv = makeRandomIv();
 
-    const cipher = crypto.createCipheriv('aes-256-cbc', cleanSecret, iv);
+    // 🔥 FIX 5: Secure IV generate kiya
+    const iv = generateSecureIv();
+
+    // 🔥 FIX 6: secretKey ab Buffer hai, aur iv bhi Buffer hai, crypto.createCipheriv ko ekdum sahi se kaam karega.
+    const cipher = crypto.createCipheriv('aes-256-cbc', secretKey, iv);
     let encrypted = cipher.update(plaintText, 'utf8');
     encrypted = Buffer.concat([encrypted, cipher.final()]);
 
+    // Packet structure building (Same as before, safe & correct)
     const b1 = Buffer.alloc(8);
     b1.writeBigInt64BE(BigInt(expireTime), 0);
 
@@ -68,7 +75,7 @@ function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload)
     const buf = Buffer.concat([
         b1,
         b2,
-        Buffer.from(iv),
+        iv, // 🔥 Direct buffer pass kar diya
         b3,
         encrypted
     ]);

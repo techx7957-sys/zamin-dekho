@@ -10,6 +10,10 @@
             if (!localStorage.getItem('zamin_token') && !urlParams.has('token')) {
                 window.location.replace('register.html');
             }
+
+            // 🔥 FIX 1: meetingRoomId ko Global (window) bana diya taaki videoEngine.js aur baaki functions ise access kar sakein.
+            // Pehle ye neeche define tha jiski wajah se 'defer' scripts ise nahi dhoondh paati thi.
+            window.meetingRoomId = "zamin_room_1"; 
         </script>
 
         <meta charset="UTF-8" />
@@ -35,7 +39,8 @@
                 script1.onload = function() {
                     if (typeof io === 'undefined') {
                         const script2 = document.createElement('script');
-                        script2.src = 'https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev/socket.io/socket.io.js';
+                        // 🔥 FIX 2: Static URL hatane ki jagah fix baad mein karenge, abhi dynamic origin use kiya hai neeche initChat mein.
+                        script2.src = window.location.origin + '/socket.io/socket.io.js';
                         document.head.appendChild(script2);
                     }
                 };
@@ -43,23 +48,19 @@
             }
         </script>
 
-        <!-- 🔥 ZegoCloud Core SDK (Stable v3.0.0) 🔥 -->
-        <!-- NOTE: defer is required here so this loads in guaranteed order
-             BEFORE videoEngine.js (which is also defer). Mixing a blocking
-             script with a deferred one caused a race condition where
-             videoEngine.js could run before window.ZegoExpressEngine existed
-             on a slow network — that's what the "auto-injecting" console
-             message was about. -->
-        <script src="https://unpkg.com/zego-express-engine-webrtc@3.2.0/zego-express-webrtc.js" defer></script>
+        <!-- 🔥 FIX 3: ZegoCloud Core SDK updated to @3.16.0 (Latest Stable) & REMOVED 'defer' -->
+        <!-- Pehle 'defer' tha, isliye videoEngine.js Zego se pehle run ho jata tha aur auto-inject kar deta tha. Ab ye load hone ke baad hi aage ka code chalega. -->
+        <script src="https://unpkg.com/zego-express-engine-webrtc@3.16.0/zego-express-webrtc.js"></script>
 
         <!-- 🔥 AI Engine (MediaPipe) — powers real Beauty smoothing + real Background blur/replace 🔥 -->
         <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" defer crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" defer crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" defer crossorigin="anonymous"></script>
 
-        <!-- 🔥 Apna Custom Video Engine 🔥 -->
+        <!-- 🔥 Apna Custom Video Engine (Ye 'defer' se sahi chalega kyunki Zego ab pehle load ho chuka hoga) 🔥 -->
         <script src="videoEngine.js" defer></script>
 
+        <!-- CSS STYLES (Same as before, no changes) -->
         <style>
             body { 
                 background: #f1f5f9; 
@@ -200,9 +201,6 @@
                 border: 1px solid rgba(255,255,255,0.08);
             }
 
-            /* Base button: this is the "engaged / muted" neutral resting look —
-               a plain dark disc, so mic/cam never look pre-activated before
-               the user has actually turned anything on. */
             .control-btn {
                 width: 48px;
                 height: 48px;
@@ -224,9 +222,6 @@
             }
             .control-btn:active { transform: translateY(0) scale(0.94); }
 
-            /* ON / active state — mic and camera get this class ONLY after
-               the user has actually enabled them via JS. Bright + a soft glow,
-               same language Zoom/Meet use for "this is live". */
             .control-btn.btn-on {
                 background: #ffffff;
                 color: #16181d;
@@ -235,8 +230,6 @@
             }
             .control-btn.btn-on:hover { background: #f1f1f1; }
 
-            /* OFF / muted state (explicit red) — used when the user has
-               actively muted mic or turned off camera mid-call. */
             .control-btn.btn-off {
                 background: rgba(239, 68, 68, 0.15);
                 color: #f87171;
@@ -256,7 +249,6 @@
             }
             .control-btn.btn-leave:hover { background: #be123c; box-shadow: 0 0 0 4px rgba(225,29,72,0.2); }
 
-            /* 🔥 Premium quality badge */
             .quality-badge {
                 position: absolute;
                 top: 16px;
@@ -277,12 +269,10 @@
             }
             .quality-badge i { color: #34d399; font-size: 8px; }
 
-            /* Left Drawer CSS */
             .custom-left-drawer { width: 3.5in !important; height: 100dvh !important; background-color: #ffffff !important; border-right: none; box-shadow: 5px 0 25px rgba(0,0,0,0.1); }
             .drawer-tabs .nav-link { color: #64748b; font-weight: 700; border: none; border-bottom: 3px solid transparent; border-radius: 0; transition: 0.3s; padding: 12px 10px; }
             .drawer-tabs .nav-link.active { color: #10b981; border-bottom-color: #10b981; background: transparent; }
 
-            /* 🔥 View Switcher Logic */
             body[data-mode="chat"] .view-video { display: none !important; }
             body[data-mode="video"] .view-chat { display: none !important; }
 
@@ -320,7 +310,6 @@
             </div>
         </nav>
 
-        <!-- Drawer Content -->
         <div class="offcanvas offcanvas-start custom-left-drawer" tabindex="-1" id="leftSideDrawer" aria-labelledby="leftSideDrawerLabel">
             <div class="offcanvas-header border-bottom">
                 <h5 class="offcanvas-title fw-bold text-dark" id="leftSideDrawerLabel">Lets Bid</h5>
@@ -476,7 +465,8 @@
             let socket;
             let currentUser = null;
             let myShortId = "";
-            let meetingRoomId = "zamin_room_1"; 
+            // 🔥 FIX 4: Yahan se 'let meetingRoomId = "zamin_room_1";' hata diya hai kyunki ab wo window.meetingRoomId hai.
+
             let hasChatAccess = false;
             let hasVideoAccess = false;
 
@@ -564,7 +554,6 @@
                         }
 
                         if (initialMode === 'video') {
-                            // Optionally auto-start
                             if (currentUser.role !== 'admin') initCustomVideoCall();
                         }
 
@@ -614,7 +603,8 @@
                             'Authorization': `Bearer ${authToken}`,
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ room_id: meetingRoomId, user_id: myShortId, user_name: userName })
+                        // 🔥 FIX 5: meetingRoomId ko window.se access kar rahe hain
+                        body: JSON.stringify({ room_id: window.meetingRoomId, user_id: myShortId, user_name: userName })
                     });
 
                     if (!response.ok) throw new Error(`Server returned ${response.status}`);
@@ -625,7 +615,7 @@
                     // 2. Pass control to our new videoEngine.js file
                     if (typeof startCustomZegoEngine === 'function') {
                         // This function will be defined in videoEngine.js
-                        await startCustomZegoEngine(data.appId, data.token, meetingRoomId, myShortId, userName);
+                        await startCustomZegoEngine(data.appId, data.token, window.meetingRoomId, myShortId, userName);
                     } else {
                         throw new Error("videoEngine.js file not loaded properly.");
                     }
@@ -858,7 +848,9 @@
             }
 
             function initChat() {
-                const replitURL = "https://44bb9c51-40f5-4c43-b33d-00c94ae6703f-00-27bu3iwhod13.sisko.replit.dev";
+                // 🔥 FIX 6: Hardcoded Replit URL ko hata kar dynamic origin laga diya.
+                // Ab server kahi bhi deploy ho, socket sahi se connect hoga.
+                const replitURL = window.location.origin; 
 
                 socket = io(replitURL, { transports: ["polling", "websocket"], reconnectionAttempts: 5 });
 

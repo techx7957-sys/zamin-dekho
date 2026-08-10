@@ -8,8 +8,11 @@ const BiddingParticipantSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: [true, "User ID is required"],
-        unique: true, // Ek user ko do baar add na kiya ja sake
         index: true   // 🔥 Super-fast lookup ke liye (Whitelist check instantly hoga)
+        // 🔥 FIX 1: 'unique: true' hata diya. 
+        // Kyunki hum controller mein 'findOneAndUpdate' (upsert) use kar rahe hain, 
+        // aur agar future mein kabhi 'isActive: false' (soft delete) use kiya, 
+        // toh unique constraint duplicate key error dega. Isliye unique hata kar index rakhna safest hai.
     },
     // 🔥 NEW: Check karne ke liye ki user ko Chat ka access hai ya nahi
     hasChatAccess: {
@@ -40,6 +43,10 @@ const BiddingParticipantSchema = new mongoose.Schema({
     timestamps: true 
 });
 
+// 🔥 FIX 2: Admin panel ke 'getParticipants' aur 'getVideoParticipants' queries ko super-fast banane ke liye compound index add kiya.
+// Jab admin list load karega, toh MongoDB seedha is index par jump karega, poora collection scan nahi karega.
+BiddingParticipantSchema.index({ hasChatAccess: 1, hasVideoAccess: 1 });
+
 
 // ==========================================
 // 💬 ADVANCED BID MESSAGE SCHEMA
@@ -55,20 +62,16 @@ const BidMessageSchema = new mongoose.Schema({
         type: String,
         required: [true, "Short ID is required for frontend UI"],
         trim: true
-        // Frontend UI ko ye directly chahiye hota hai, isko DB me save karne se 
-        // backend ko baar-baar "User" table join (populate) nahi karni padegi = 10x Fast API.
     },
     text: {
         type: String,
         required: [true, "Message text cannot be empty"],
         trim: true,
         maxlength: [2000, "Message is too long. Max 2000 characters allowed."] 
-        // Security: Koi bot lamba message bhej kar server crash (502) nahi kar payega
     },
     isSystemMessage: {
         type: Boolean,
         default: false 
-        // Future update ke liye: "User joined" ya "Bid Placed" jaise automated system messages ke liye
     }
 }, {
     timestamps: true 
