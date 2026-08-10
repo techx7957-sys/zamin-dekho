@@ -8,8 +8,11 @@ let localStream = null;       // Raw camera+mic stream from Zego
 let publishStream = null;     // Final stream actually published (may be canvas-based)
 let publishStreamId = "";
 
-let isMicOn = true;
-let isCamOn = true;
+// Mic and camera start OFF — they only go live when the user explicitly
+// taps the button. This matches how the buttons render (neutral/off state)
+// and avoids publishing audio/video the user hasn't consented to yet.
+let isMicOn = false;
+let isCamOn = false;
 let isBeautyOn = false;
 let isBgMode = "none"; // "none" | "blur" | "image"
 let bgImageEl = null;  // <img> element for custom background
@@ -180,12 +183,28 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         await zg.loginRoom(roomID, token, { userID, userName });
         console.log("✅ Room Login Success");
 
-        // 4. 🔥 Create the raw camera+mic stream with premium audio config baked in
+        // 4. 🔥 Explicit 1080p target. videoQuality alone is just a 0–4 preset
+        // tier and doesn't guarantee a resolution, so we set the real
+        // capture/encode resolution directly before creating the stream.
+        if (zg.setVideoConfig) {
+            zg.setVideoConfig({
+                camera: {
+                    captureWidth: 1920,
+                    captureHeight: 1080,
+                    encodeWidth: 1920,
+                    encodeHeight: 1080,
+                    bitrate: 3000, // kbps — appropriate ceiling for a clean 1080p30 encode
+                    fps: 30
+                }
+            });
+        }
+
+        // 5. Create the raw camera+mic stream with premium audio config baked in
         localStream = await zg.createZegoStream({
             camera: {
                 video: true,
                 audio: true,
-                videoQuality: 3,       // push toward 1080p when device allows
+                videoQuality: 4,       // highest preset tier, paired with the explicit 1080p config above
                 audioBitrate: 48,
                 ans: true,             // Noise Suppression (stream-creation level)
                 aec: true,             // Echo Cancellation (stream-creation level)
@@ -200,7 +219,8 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         enableANS(zg, localStream);
         enableAGC(zg, localStream);
 
-        // 5. Local preview — always shows the ORIGINAL camera first
+        // 6. Local preview — always shows the ORIGINAL camera first, so the
+        // user can see themselves even before choosing to go live.
         const localView = document.getElementById('local-video-container');
         localView.innerHTML = "";
         const localVideoPreview = document.createElement('video');
@@ -216,14 +236,18 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         localView.appendChild(localVideoPreview);
         localVideoPreview.srcObject = localStream;
 
-        // 6. Publish the raw stream first (fast join, AI loads in background)
+        // 7. Publish the stream, but muted — mic and camera stay OFF for
+        // remote peers until the user explicitly taps the mic/cam buttons.
         publishStreamId = "stream_" + userID + "_" + Date.now();
         publishStream = localStream;
         await zg.startPublishingStream(publishStreamId, publishStream);
-        console.log("📡 Premium Stream Published Live!");
+        await zg.mutePublishStreamAudio(publishStream, true); // start muted
+        await zg.mutePublishStreamVideo(publishStream, true); // start camera-off
+        console.log("📡 Premium Stream Published Live (mic & camera off by default)!");
 
-        // 7. Wire up buttons
+        // 8. Wire up buttons — this also paints the initial OFF visual state
         setupControls();
+        refreshMicCamButtonUI();
 
         const remoteView = document.getElementById('remote-video-container');
         if (remoteView.childElementCount === 0 || remoteView.innerHTML.includes("Booting")) {
@@ -421,11 +445,19 @@ async function switchPublishToCanvas() {
         }
         publishStream = canvasStream;
         await zg.startPublishingStream(publishStreamId, publishStream);
+        // Re-apply current mic/cam mute state — a fresh publish call starts
+        // unmuted by default, so without this a muted user would briefly
+        // (or permanently) go live unmuted the moment Beauty/BG switches
+        // the underlying stream to the canvas.
+        await zg.mutePublishStreamAudio(publishStream, !isMicOn);
+        await zg.mutePublishStreamVideo(publishStream, !isCamOn);
         console.log("🎨 Switched publish to AI-processed canvas stream.");
     } catch (e) {
         console.error("Failed to switch to processed stream, reverting to raw camera.", e);
         publishStream = localStream;
         await zg.startPublishingStream(publishStreamId, publishStream).catch(() => {});
+        await zg.mutePublishStreamAudio(publishStream, !isMicOn).catch(() => {});
+        await zg.mutePublishStreamVideo(publishStream, !isCamOn).catch(() => {});
     }
 }
 
@@ -441,6 +473,10 @@ async function stopAIPipelineIfIdle() {
             await zg.stopPublishingStream(publishStreamId);
             publishStream = localStream;
             await zg.startPublishingStream(publishStreamId, publishStream);
+            // Re-apply mute state for the same reason as switchPublishToCanvas —
+            // a fresh publish call defaults to unmuted.
+            await zg.mutePublishStreamAudio(publishStream, !isMicOn);
+            await zg.mutePublishStreamVideo(publishStream, !isCamOn);
             console.log("↩️ Reverted publish to raw camera stream (AI effects off).");
         } catch (e) {
             console.error("Failed to revert publish stream.", e);
@@ -451,6 +487,35 @@ async function stopAIPipelineIfIdle() {
 // =======================================================
 // 🎛️ CUSTOM HIGH-CLASS CONTROLS
 // =======================================================
+
+// Single source of truth for how the mic/cam buttons look, driven purely
+// by isMicOn/isCamOn. Called on init (so it starts in the correct OFF
+// state) and after every toggle, so the visual can never drift from the
+// actual publish state.
+function refreshMicCamButtonUI() {
+    const micBtn = document.getElementById('btn-mic');
+    if (micBtn) {
+        micBtn.classList.remove('btn-on', 'btn-off');
+        micBtn.classList.add(isMicOn ? 'btn-on' : 'btn-off');
+        micBtn.innerHTML = isMicOn ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
+        micBtn.title = isMicOn ? "Mute microphone" : "Turn on microphone";
+    }
+
+    const camBtn = document.getElementById('btn-cam');
+    if (camBtn) {
+        camBtn.classList.remove('btn-on', 'btn-off');
+        camBtn.classList.add(isCamOn ? 'btn-on' : 'btn-off');
+        camBtn.innerHTML = isCamOn ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
+        camBtn.title = isCamOn ? "Turn off camera" : "Turn on camera";
+    }
+
+    // Self-view dims to a dark placeholder when camera is off, same
+    // convention Zoom/Meet use, instead of leaving a live feed no one
+    // downstream can see (which would be misleading to the user).
+    const localVideoElement = document.getElementById('my-local-video');
+    if (localVideoElement) localVideoElement.style.opacity = isCamOn ? "1" : "0.15";
+}
+
 function setupControls() {
 
     // 🎙️ MIC CONTROL
@@ -460,8 +525,7 @@ function setupControls() {
             isMicOn = !isMicOn;
             await zg.mutePublishStreamAudio(publishStream, !isMicOn);
 
-            this.classList.toggle('btn-off', !isMicOn);
-            this.innerHTML = isMicOn ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
+            refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
             setTimeout(() => this.style.transform = "scale(1)", 150);
         } catch (e) { console.error("Mic toggle error:", e); }
@@ -474,11 +538,7 @@ function setupControls() {
             isCamOn = !isCamOn;
             await zg.mutePublishStreamVideo(publishStream, !isCamOn);
 
-            this.classList.toggle('btn-off', !isCamOn);
-            this.innerHTML = isCamOn ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
-
-            const localVideoElement = document.getElementById('my-local-video');
-            if (localVideoElement) localVideoElement.style.opacity = isCamOn ? "1" : "0";
+            refreshMicCamButtonUI();
 
             this.style.transform = "scale(0.85)";
             setTimeout(() => this.style.transform = "scale(1)", 150);
@@ -509,8 +569,8 @@ function setupControls() {
         } catch (e) {
             console.warn("Beauty filter unavailable on this device/browser.", e);
             isBeautyOn = false;
-            btn.style.background = "rgba(255,255,255,0.1)";
-            btn.style.color = "white";
+            btn.style.background = "";
+            btn.style.color = "";
             btn.style.boxShadow = "none";
             btn.innerHTML = '<i class="fas fa-magic"></i>';
         }
@@ -529,8 +589,8 @@ function setupControls() {
 
             // Already active -> tapping again turns it off
             isBgMode = "none";
-            btn.style.background = "rgba(255,255,255,0.1)";
-            btn.style.color = "white";
+            btn.style.background = "";
+            btn.style.color = "";
             btn.style.boxShadow = "none";
             await stopAIPipelineIfIdle();
         } catch (e) { console.error("BG toggle error:", e); }
@@ -629,29 +689,30 @@ async function leaveRoom() {
         document.getElementById('remote-video-container').innerHTML =
             `<span class="text-muted small"><i class="fas fa-spinner fa-spin me-2"></i>Waiting for others...</span>`;
 
-        isMicOn = true;
-        isCamOn = true;
+        // Reset to the same OFF-by-default state used on join, not "on" —
+        // next time the user starts a meeting, mic/camera should again
+        // require an explicit tap before going live.
+        isMicOn = false;
+        isCamOn = false;
         isBeautyOn = false;
         isBgMode = "none";
         publishStream = null;
 
         const micBtn = document.getElementById('btn-mic');
         micBtn.className = "control-btn";
-        micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
-
         const camBtn = document.getElementById('btn-cam');
         camBtn.className = "control-btn";
-        camBtn.innerHTML = '<i class="fas fa-video"></i>';
+        refreshMicCamButtonUI();
 
         const beautyBtn = document.getElementById('btn-beauty');
-        beautyBtn.style.background = "rgba(255,255,255,0.1)";
-        beautyBtn.style.color = "white";
+        beautyBtn.style.background = "";
+        beautyBtn.style.color = "";
         beautyBtn.style.boxShadow = "none";
         beautyBtn.innerHTML = '<i class="fas fa-magic"></i>';
 
         const bgBtn = document.getElementById('btn-bg');
-        bgBtn.style.background = "rgba(255,255,255,0.1)";
-        bgBtn.style.color = "white";
+        bgBtn.style.background = "";
+        bgBtn.style.color = "";
         bgBtn.style.boxShadow = "none";
         bgBtn.innerHTML = '<i class="fas fa-image"></i>';
 

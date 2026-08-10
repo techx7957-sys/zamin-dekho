@@ -44,12 +44,18 @@
         </script>
 
         <!-- 🔥 ZegoCloud Core SDK (Stable v3.0.0) 🔥 -->
-        <script src="https://unpkg.com/zego-express-engine-webrtc@3.2.0/zego-express-webrtc.js"></script>
+        <!-- NOTE: defer is required here so this loads in guaranteed order
+             BEFORE videoEngine.js (which is also defer). Mixing a blocking
+             script with a deferred one caused a race condition where
+             videoEngine.js could run before window.ZegoExpressEngine existed
+             on a slow network — that's what the "auto-injecting" console
+             message was about. -->
+        <script src="https://unpkg.com/zego-express-engine-webrtc@3.2.0/zego-express-webrtc.js" defer></script>
 
         <!-- 🔥 AI Engine (MediaPipe) — powers real Beauty smoothing + real Background blur/replace 🔥 -->
-        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" defer crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" defer crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" defer crossorigin="anonymous"></script>
 
         <!-- 🔥 Apna Custom Video Engine 🔥 -->
         <script src="videoEngine.js" defer></script>
@@ -178,37 +184,77 @@
             }
             .custom-controls-bar {
                 position: absolute; 
-                bottom: 20px; 
+                bottom: 24px; 
                 left: 50%; 
                 transform: translateX(-50%); 
                 display: flex; 
-                gap: 15px; 
-                background: rgba(15, 23, 42, 0.85); 
-                backdrop-filter: blur(10px);
-                padding: 12px 25px; 
+                align-items: center;
+                gap: 12px; 
+                background: rgba(24, 28, 38, 0.72); 
+                backdrop-filter: blur(20px) saturate(180%);
+                -webkit-backdrop-filter: blur(20px) saturate(180%);
+                padding: 10px 16px; 
                 border-radius: 50px; 
                 z-index: 20;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                border: 1px solid rgba(255,255,255,0.1);
+                box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.06) inset;
+                border: 1px solid rgba(255,255,255,0.08);
             }
+
+            /* Base button: this is the "engaged / muted" neutral resting look —
+               a plain dark disc, so mic/cam never look pre-activated before
+               the user has actually turned anything on. */
             .control-btn {
-                width: 45px;
-                height: 45px;
+                width: 48px;
+                height: 48px;
                 border-radius: 50%;
-                border: none;
-                background: rgba(255,255,255,0.1);
-                color: white;
-                font-size: 18px;
+                border: 1px solid rgba(255,255,255,0.06);
+                background: rgba(255,255,255,0.06);
+                color: rgba(255,255,255,0.55);
+                font-size: 17px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
-                transition: 0.3s;
+                transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
             }
-            .control-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.1); }
-            .control-btn.btn-off { background: #ef4444; color: white; }
-            .control-btn.btn-leave { background: #dc2626; }
-            .control-btn.btn-leave:hover { background: #b91c1c; }
+            .control-btn:hover {
+                background: rgba(255,255,255,0.14);
+                color: rgba(255,255,255,0.9);
+                transform: translateY(-2px);
+            }
+            .control-btn:active { transform: translateY(0) scale(0.94); }
+
+            /* ON / active state — mic and camera get this class ONLY after
+               the user has actually enabled them via JS. Bright + a soft glow,
+               same language Zoom/Meet use for "this is live". */
+            .control-btn.btn-on {
+                background: #ffffff;
+                color: #16181d;
+                border-color: rgba(255,255,255,0.9);
+                box-shadow: 0 0 0 4px rgba(255,255,255,0.08);
+            }
+            .control-btn.btn-on:hover { background: #f1f1f1; }
+
+            /* OFF / muted state (explicit red) — used when the user has
+               actively muted mic or turned off camera mid-call. */
+            .control-btn.btn-off {
+                background: rgba(239, 68, 68, 0.15);
+                color: #f87171;
+                border-color: rgba(239, 68, 68, 0.3);
+            }
+            .control-btn.btn-off:hover { background: rgba(239, 68, 68, 0.25); }
+
+            .control-btn.active-beauty { color: #16181d; }
+            .control-btn.active-bg { color: #16181d; }
+
+            .control-btn.btn-leave {
+                background: #e11d48;
+                color: white;
+                border-color: rgba(255,255,255,0.15);
+                width: 52px;
+                margin-left: 4px;
+            }
+            .control-btn.btn-leave:hover { background: #be123c; box-shadow: 0 0 0 4px rgba(225,29,72,0.2); }
 
             /* 🔥 Premium quality badge */
             .quality-badge {
@@ -412,11 +458,11 @@
 
                     <!-- Zoom-killer Controls Bar -->
                     <div class="custom-controls-bar">
-                        <button id="btn-mic" class="control-btn" title="Mute/Unmute"><i class="fas fa-microphone"></i></button>
-                        <button id="btn-cam" class="control-btn" title="Camera On/Off"><i class="fas fa-video"></i></button>
-                        <button id="btn-beauty" class="control-btn" style="color: #fbbf24;" title="Beauty Filter"><i class="fas fa-magic"></i></button>
-                        <button id="btn-bg" class="control-btn" style="color: #38bdf8;" title="Virtual Background"><i class="fas fa-image"></i></button>
-                        <button id="btn-leave" class="control-btn btn-leave" title="Leave Room"><i class="fas fa-phone-slash"></i></button>
+                        <button id="btn-mic" class="control-btn" title="Turn on microphone"><i class="fas fa-microphone-slash"></i></button>
+                        <button id="btn-cam" class="control-btn" title="Turn on camera"><i class="fas fa-video-slash"></i></button>
+                        <button id="btn-beauty" class="control-btn" title="Beauty Filter"><i class="fas fa-magic"></i></button>
+                        <button id="btn-bg" class="control-btn" title="Virtual Background"><i class="fas fa-image"></i></button>
+                        <button id="btn-leave" class="control-btn btn-leave" title="Leave Room"><i class="fas fa-phone" style="transform: rotate(135deg);"></i></button>
                     </div>
 
                 </div>
