@@ -45,7 +45,12 @@
 
         <!-- 🔥 ZegoCloud Core SDK (Stable v3.0.0) 🔥 -->
         <script src="https://unpkg.com/zego-express-engine-webrtc@3.2.0/zego-express-webrtc.js"></script>
-        
+
+        <!-- 🔥 AI Engine (MediaPipe) — powers real Beauty smoothing + real Background blur/replace 🔥 -->
+        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
         <!-- 🔥 Apna Custom Video Engine 🔥 -->
         <script src="videoEngine.js" defer></script>
 
@@ -204,6 +209,27 @@
             .control-btn.btn-off { background: #ef4444; color: white; }
             .control-btn.btn-leave { background: #dc2626; }
             .control-btn.btn-leave:hover { background: #b91c1c; }
+
+            /* 🔥 Premium quality badge */
+            .quality-badge {
+                position: absolute;
+                top: 16px;
+                left: 16px;
+                z-index: 20;
+                background: rgba(15, 23, 42, 0.8);
+                backdrop-filter: blur(8px);
+                border: 1px solid rgba(255,255,255,0.15);
+                color: #d1fae5;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.5px;
+                padding: 6px 14px;
+                border-radius: 50px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .quality-badge i { color: #34d399; font-size: 8px; }
 
             /* Left Drawer CSS */
             .custom-left-drawer { width: 3.5in !important; height: 100dvh !important; background-color: #ffffff !important; border-right: none; box-shadow: 5px 0 25px rgba(0,0,0,0.1); }
@@ -372,6 +398,9 @@
 
                 <!-- 🔥 NAYA: Custom Video Wrapper 🔥 -->
                 <div id="custom-video-wrapper">
+
+                    <!-- Premium quality indicator -->
+                    <div class="quality-badge"><i class="fas fa-circle"></i> HD · AI Enhanced</div>
 
                     <!-- Bada remote video yahan aayega -->
                     <div id="remote-video-container">
