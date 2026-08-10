@@ -1,13 +1,11 @@
 const crypto = require('crypto');
 
 // 🔥 FIX 1: IV ke liye Math.random() hata kar cryptographically secure randomBytes use kiya.
-// Ye 16 byte (128-bit) ka buffer return karega, jo AES-256-CBC ke liye perfect hai.
 function generateSecureIv() {
     return crypto.randomBytes(16);
 }
 
 // 🔥 FIX 2: Nonce ke liye Math.random() hata kar crypto.randomInt use kiya.
-// Zego ko nonce number format mein chahiye, aur ye predict nahi kiya ja sakta.
 function generateSecureNonce() {
     return crypto.randomInt(0, 2147483647);
 }
@@ -31,9 +29,6 @@ function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload)
     }
 
     // 🔥 FIX 3: Secret ko explicitly UTF-8 Buffer mein convert kiya. 
-    // AES-256-CBC ko 32-byte (256-bit) key chahiye hoti hai. 
-    // Agar Zego dashboard se 32 ASCII characters ka secret mila hai, 
-    // toh Buffer.from(..., 'utf8') bilkul sahi 32 bytes banayega.
     const secretKey = Buffer.from(cleanSecret, 'utf8');
 
     const createTime = Math.floor(Date.now() / 1000);

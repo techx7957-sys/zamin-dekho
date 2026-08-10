@@ -25,17 +25,13 @@ async function getUserAccessDetails(userId, role) {
     };
 }
 
-// 🔥 FIX 1: findUserSafely (Memory Leak & Performance Fix)
-// Sabhi users ko RAM mein load karne ki bajaye, ab MongoDB ke $regex ka use kar rahe hain.
-// Isse server kabhi bhi Out-Of-Memory error nahi dega, chahe users 1 lakh bhi ho jayein.
+// 🔥 HELPER: Safe User Finder (Regex Crash Fix)
 async function findUserSafely(accountId) {
-    // Agar full 24-char hex ID hai toh direct query (Fastest)
-    if (accountId.length === 24 && /^[0-9a-fA-F]{24}$/.test(accountId)) {
+    if (accountId.length === 24) {
         return await User.findById(accountId).lean();
     } else {
-        // Last 6 characters se search (MongoDB internally ObjectId ko string mein convert karta hai regex ke liye)
-        const regex = new RegExp(`${accountId}$`, 'i');
-        return await User.findOne({ _id: { $regex: regex } }).lean();
+        const allUsers = await User.find({}, "_id fullName email role").lean();
+        return allUsers.find(u => u._id.toString().endsWith(accountId));
     }
 }
 
@@ -59,8 +55,7 @@ exports.checkAccess = async (req, res) => {
         });
     } catch (error) {
         console.error("Check Access Error:", error);
-        // 🔥 FIX 2: Sensitive error details hata diye. Ab user ko generic message dikhega.
-        res.status(500).json({ success: false, message: "Internal server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -91,7 +86,7 @@ exports.getMessages = async (req, res) => {
         res.json({ success: true, messages: formattedMessages });
     } catch (error) {
         console.error("Get Messages Error:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+        res.status(500).json({ success: false, message: "Server error in fetching messages", details: error.message });
     }
 };
 
@@ -121,7 +116,7 @@ exports.saveMessage = async (req, res) => {
         res.json({ success: true, message: "Message saved" });
     } catch (error) {
         console.error("Save Message Error:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+        res.status(500).json({ success: false, message: "Server error while saving message", details: error.message });
     }
 };
 
@@ -140,7 +135,7 @@ exports.getParticipants = async (req, res) => {
         res.json({ success: true, participants: validParticipants });
     } catch (error) {
         console.error("Get Participants Error:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -157,23 +152,32 @@ exports.addParticipant = async (req, res) => {
 
         if (!user) return res.status(400).json({ success: false, message: `User not found with ID: ${accountId}` });
 
-        // 🔥 FIX 3: Mutually Exclusive Rule Hata Diya. 
-        // Ab user Chat aur Video DONO mein ho sakta hai. Admin ko tension lene ki zaroorat nahi.
-        // 🔥 FIX 4: Race Condition Fix - findOneAndUpdate use kiya (Upsert). 
-        // Agar 2 admin ek saath add karein toh bhi data corrupt nahi hoga.
-        await BiddingParticipant.findOneAndUpdate(
-            { user: user._id },
-            {
-                $set: { hasChatAccess: true },
-                $setOnInsert: { addedByAdmin: req.user.id, defaultView: 'chat' }
-            },
-            { upsert: true, new: true }
-        );
+        const existing = await BiddingParticipant.findOne({ user: user._id });
+
+        if (existing) {
+            // 🔥 MUTUALLY EXCLUSIVE RULE: Check if already in Video
+            if (existing.hasVideoAccess) {
+                return res.status(400).json({ success: false, message: "User is already in the Video Group. Remove them from Video first." });
+            }
+            if (existing.hasChatAccess) {
+                return res.status(400).json({ success: false, message: "User is already in the Chat Group." });
+            }
+            existing.hasChatAccess = true;
+            await existing.save();
+        } else {
+            const newParticipant = new BiddingParticipant({ 
+                user: user._id, 
+                hasChatAccess: true, 
+                defaultView: 'chat',
+                addedByAdmin: req.user.id
+            });
+            await newParticipant.save();
+        }
 
         res.json({ success: true, message: "User added to Live Chat Bidding!" });
     } catch (error) {
         console.error("Add Participant Error:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -182,23 +186,21 @@ exports.removeParticipant = async (req, res) => {
         if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: "Only admin can remove participants." });
 
         const { id } = req.params;
-
-        // 🔥 FIX 5: Atomic update use kiya
-        await BiddingParticipant.updateOne(
-            { _id: id },
-            { $set: { hasChatAccess: false } }
-        );
-
-        // Check if both permissions are false, then delete the doc permanently
         const participant = await BiddingParticipant.findById(id);
-        if (participant && !participant.hasChatAccess && !participant.hasVideoAccess) {
-            await participant.deleteOne();
+
+        if (participant) {
+            participant.hasChatAccess = false;
+            if (!participant.hasChatAccess && !participant.hasVideoAccess) {
+                await BiddingParticipant.findByIdAndDelete(id);
+            } else {
+                await participant.save();
+            }
         }
 
         res.json({ success: true, message: "User removed from Chat group." });
     } catch (error) {
         console.error("Remove Participant Error:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -215,7 +217,7 @@ exports.getVideoParticipants = async (req, res) => {
         res.json({ success: true, participants: validParticipants });
     } catch (error) {
         console.error("Get Video Participants Error:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -230,20 +232,32 @@ exports.addVideoParticipant = async (req, res) => {
 
         if (!user) return res.status(400).json({ success: false, message: `User not found with ID: ${accountId}` });
 
-        // 🔥 FIX 6: Mutually Exclusive Rule hata kar Upsert laga diya.
-        await BiddingParticipant.findOneAndUpdate(
-            { user: user._id },
-            {
-                $set: { hasVideoAccess: true },
-                $setOnInsert: { addedByAdmin: req.user.id, defaultView: 'video' }
-            },
-            { upsert: true, new: true }
-        );
+        const existing = await BiddingParticipant.findOne({ user: user._id });
+
+        if (existing) {
+            // 🔥 MUTUALLY EXCLUSIVE RULE: Check if already in Chat
+            if (existing.hasChatAccess) {
+                return res.status(400).json({ success: false, message: "User is already in the Chat Group. Remove them from Chat first." });
+            }
+            if (existing.hasVideoAccess) {
+                return res.status(400).json({ success: false, message: "User is already in the Video Group." });
+            }
+            existing.hasVideoAccess = true;
+            await existing.save();
+        } else {
+            const newParticipant = new BiddingParticipant({ 
+                user: user._id, 
+                hasVideoAccess: true, 
+                defaultView: 'video',
+                addedByAdmin: req.user.id
+            });
+            await newParticipant.save();
+        }
 
         res.json({ success: true, message: "User added to Video Call Access!" });
     } catch (error) {
         console.error("Add Video Participant Error:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -252,21 +266,21 @@ exports.removeVideoParticipant = async (req, res) => {
         if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: "Only admin can remove video participants." });
 
         const { id } = req.params;
-
-        await BiddingParticipant.updateOne(
-            { _id: id },
-            { $set: { hasVideoAccess: false } }
-        );
-
         const participant = await BiddingParticipant.findById(id);
-        if (participant && !participant.hasChatAccess && !participant.hasVideoAccess) {
-            await participant.deleteOne();
+
+        if (participant) {
+            participant.hasVideoAccess = false;
+            if (!participant.hasChatAccess && !participant.hasVideoAccess) {
+                await BiddingParticipant.findByIdAndDelete(id);
+            } else {
+                await participant.save();
+            }
         }
 
         res.json({ success: true, message: "User removed from Video group." });
     } catch (error) {
         console.error("Remove Video Participant Error:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+        res.status(500).json({ success: false, message: "Server error", details: error.message });
     }
 };
 
@@ -297,6 +311,7 @@ exports.generateZegoToken = async (req, res) => {
 
         const effectiveTimeInSeconds = 3600;
 
+        // 🔥 FIX: Use an empty string for the payload. UIKit Prebuilt SDKs often reject complex JSON payloads.
         const payload = ""; 
 
         const token = generateToken04(appId, user_id, serverSecret, effectiveTimeInSeconds, payload);
@@ -309,14 +324,14 @@ exports.generateZegoToken = async (req, res) => {
 
     } catch (error) {
         console.error("Token Generation Error:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+        res.status(500).json({ success: false, message: "Failed to create secure token.", details: error.message });
     }
 };
 
 // ==========================================
 // 🔥 RESET ROOM (ADMIN ONLY)
 // ==========================================
-exports.resetRoom = async (req, res) => {
+  exports.resetRoom = async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ success: false, message: "Only admin can reset room." });
@@ -328,7 +343,6 @@ exports.resetRoom = async (req, res) => {
         res.json({ success: true, message: "Room reset successfully" });
     } catch (error) {
         console.error("Reset Room Error:", error);
-        // 🔥 FIX 7: Error details leaked nahi honge
-        res.status(500).json({ success: false, message: "Internal server error" });
+        res.status(500).json({ success: false, message: "Server error during reset", details: error.message });
     }
 };

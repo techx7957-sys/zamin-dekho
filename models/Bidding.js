@@ -9,10 +9,6 @@ const BiddingParticipantSchema = new mongoose.Schema({
         ref: "User",
         required: [true, "User ID is required"],
         index: true   // 🔥 Super-fast lookup ke liye (Whitelist check instantly hoga)
-        // 🔥 FIX 1: 'unique: true' hata diya. 
-        // Kyunki hum controller mein 'findOneAndUpdate' (upsert) use kar rahe hain, 
-        // aur agar future mein kabhi 'isActive: false' (soft delete) use kiya, 
-        // toh unique constraint duplicate key error dega. Isliye unique hata kar index rakhna safest hai.
     },
     // 🔥 NEW: Check karne ke liye ki user ko Chat ka access hai ya nahi
     hasChatAccess: {
@@ -44,7 +40,6 @@ const BiddingParticipantSchema = new mongoose.Schema({
 });
 
 // 🔥 FIX 2: Admin panel ke 'getParticipants' aur 'getVideoParticipants' queries ko super-fast banane ke liye compound index add kiya.
-// Jab admin list load karega, toh MongoDB seedha is index par jump karega, poora collection scan nahi karega.
 BiddingParticipantSchema.index({ hasChatAccess: 1, hasVideoAccess: 1 });
 
 
@@ -80,8 +75,6 @@ const BidMessageSchema = new mongoose.Schema({
 // ==========================================
 // 🚀 HIGH-PERFORMANCE INDEXING (Vercel 502 Killer)
 // ==========================================
-// Chat API purane se naye messages fetch karti hai. Ye index database ko bata raha hai 
-// ki messages ko pehle se hi time ke hisaab se sort karke rakhe. Isse query instantly execute hogi!
 BidMessageSchema.index({ createdAt: 1 });
 
 
