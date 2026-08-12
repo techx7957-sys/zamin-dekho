@@ -137,7 +137,7 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         if (!ZegoClass) throw new Error("System Error: Zego Engine initialization failed.");
 
         // 1. Initialize Zego Express Engine
-        const serverUrl = "wss://webliveroom" + appId + "-api.zegocloud.com/ws";
+        const serverUrl = "wss://webliveroom" + appId + "-api.coolzcloud.com/ws";
         zg = new ZegoClass(appId, serverUrl);
 
         // 2. Remote stream handling (unchanged behavior, multi-user safe)
