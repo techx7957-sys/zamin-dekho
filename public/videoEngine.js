@@ -59,7 +59,7 @@ function loadScriptOnce(src) {
 async function ensureZegoLoaded() {
     if (window.ZegoExpressEngine) return window.ZegoExpressEngine;
     console.log("⚙️ Zego engine not found in HTML, auto-injecting...");
-    await loadScriptOnce("https://unpkg.com/zego-express-engine-webrtc@3.23.1/zego-express-webrtc.js");
+    await loadScriptOnce("https://unpkg.com/zego-express-engine-webrtc@3.12.0/ZegoExpressWebRTC.js");
     if (!window.ZegoExpressEngine) throw new Error("Engine download fail. Please check your internet connection.");
     return window.ZegoExpressEngine;
 }

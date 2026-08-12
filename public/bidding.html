@@ -43,14 +43,14 @@
             }
         </script>
 
-        <!-- 🔥 ZegoCloud Core SDK (Stable v3.23.1) 🔥 -->
+        <!-- 🔥 ZegoCloud Core SDK (Stable v3.12.0) 🔥 -->
         <!-- NOTE: defer is required here so this loads in guaranteed order
              BEFORE videoEngine.js (which is also defer). Mixing a blocking
              script with a deferred one caused a race condition where
              videoEngine.js could run before window.ZegoExpressEngine existed
              on a slow network — that's what the "auto-injecting" console
              message was about. -->
-        <script src="https://unpkg.com/zego-express-engine-webrtc@3.23.1/zego-express-webrtc.js" defer></script>
+        <script src="https://unpkg.com/zego-express-engine-webrtc@3.12.0/ZegoExpressWebRTC.js" defer></script>
 
         <!-- 🔥 AI Engine (MediaPipe) — powers real Beauty smoothing + real Background blur/replace 🔥 -->
         <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" defer crossorigin="anonymous"></script>
