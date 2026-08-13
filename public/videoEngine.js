@@ -40,18 +40,31 @@ const CANVAS_H = 480;
 // =======================================================
 function loadScriptOnce(src) {
     return new Promise((resolve, reject) => {
+        // 🔥 FIX: 10 second ka timeout add kar diya. Agar script load nahi hui, toh error throw karke agle CDN par jump karega.
+        const timeout = setTimeout(() => {
+            reject(new Error(`Timeout loading script from ${src}`));
+        }, 10000);
+
         const existing = document.querySelector(`script[src="${src}"]`);
         if (existing) {
+            clearTimeout(timeout);
             if (existing.dataset.loaded === "true") return resolve();
-            existing.addEventListener('load', () => resolve());
-            existing.addEventListener('error', () => reject(new Error("Failed to load " + src)));
+            existing.addEventListener('load', () => { clearTimeout(timeout); resolve(); });
+            existing.addEventListener('error', () => { clearTimeout(timeout); reject(new Error("Failed to load " + src)); });
             return;
         }
         const script = document.createElement('script');
         script.src = src;
         script.crossOrigin = "anonymous";
-        script.onload = () => { script.dataset.loaded = "true"; resolve(); };
-        script.onerror = () => reject(new Error("Failed to load " + src));
+        script.onload = () => {
+            clearTimeout(timeout);
+            script.dataset.loaded = "true";
+            resolve();
+        };
+        script.onerror = () => {
+            clearTimeout(timeout);
+            reject(new Error("Failed to load " + src));
+        };
         document.head.appendChild(script);
     });
 }
