@@ -59,9 +59,33 @@ function loadScriptOnce(src) {
 async function ensureZegoLoaded() {
     if (window.ZegoExpressEngine) return window.ZegoExpressEngine;
     console.log("⚙️ Zego engine not found in HTML, auto-injecting...");
-    await loadScriptOnce("https://web-sdk-express.zegocloud.com/zego-express-webrtc.js");
-    if (!window.ZegoExpressEngine) throw new Error("Engine download fail. Please check your internet connection.");
-    return window.ZegoExpressEngine;
+
+    // 🔥 FINAL FIX: Multi-CDN Fallback Strategy (Prevents DNS/Block errors)
+    const cdnUrls = [
+        "https://web-sdk-express.zegocloud.com/zego-express-webrtc.js",
+        "https://cdn.jsdelivr.net/npm/zego-express-engine-webrtc@3.12.0/ZegoExpressWebRTC.js",
+        "https://unpkg.com/zego-express-engine-webrtc@3.12.0/ZegoExpressWebRTC.js"
+    ];
+
+    for (let url of cdnUrls) {
+        try {
+            console.log(`Trying to load Zego from: ${url}`);
+            await loadScriptOnce(url);
+            if (window.ZegoExpressEngine) {
+                console.log(`✅ Zego loaded successfully from: ${url}`);
+                return window.ZegoExpressEngine;
+            }
+        } catch (e) {
+            console.warn(`❌ Failed to load from ${url}`, e.message);
+        }
+    }
+
+    // 🔥 Last Resort: Try loading the local file (if Zego was manually placed in /js/)
+    console.log("⚠️ Trying local fallback: /js/ZegoExpressEngine.min.js");
+    await loadScriptOnce("/js/ZegoExpressEngine.min.js");
+    if (window.ZegoExpressEngine) return window.ZegoExpressEngine;
+
+    throw new Error("Engine download fail. Please check your internet connection.");
 }
 
 async function ensureMediaPipeLoaded() {
