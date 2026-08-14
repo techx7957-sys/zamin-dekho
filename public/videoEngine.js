@@ -60,7 +60,7 @@ async function ensureZegoLoaded() {
     if (window.ZegoExpressEngine) return window.ZegoExpressEngine;
     console.log("⚙️ Zego engine not found in HTML, auto-injecting...");
     // 🔥 FINAL FIX: Sirf local file load hogi (Multiple CDN system hata diya)
-    await loadScriptOnce("/js/ZegoExpressEngine.v3.12.0.min.js");
+    await loadScriptOnce("/js/ZegoExpressEngine.min.js");
     if (!window.ZegoExpressEngine) throw new Error("Engine download fail. Please check your internet connection.");
     return window.ZegoExpressEngine;
 }
