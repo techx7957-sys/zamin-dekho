@@ -51,12 +51,12 @@
             // Mapping CDN Globals to Zego's exact expected internal names
             window.long = window.Long; 
             window["protobufjs/minimal"] = window.protobuf; 
-            // Safe dummy logger to prevent crash if exact logger is missing
-            window["zego-express-logger"] = {
-                info: function() {},
-                warn: function() {},
-                error: function() {},
-                setLogLevel: function() {}
+            // 🛠️ FIX: Mock logger as a CLASS (constructor) so Zego can call 'new ZegoLogger()'
+            window["zego-express-logger"] = function ZegoLoggerMock() {
+                this.info = function() {};
+                this.warn = function() {};
+                this.error = function() {};
+                this.setLogLevel = function() {};
             };
         </script>
 
