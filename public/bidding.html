@@ -43,8 +43,25 @@
             }
         </script>
 
+        <!-- 🔥 FIX: ZEGO CORE DEPENDENCIES (ADDED TO PREVENT CRASH) 🔥 -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/long/4.0.0/long.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/protobufjs/6.11.3/minimal/protobuf.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+        <script>
+            // Mapping CDN Globals to Zego's exact expected internal names
+            window.long = window.Long; 
+            window["protobufjs/minimal"] = window.protobuf; 
+            // Safe dummy logger to prevent crash if exact logger is missing
+            window["zego-express-logger"] = {
+                info: function() {},
+                warn: function() {},
+                error: function() {},
+                setLogLevel: function() {}
+            };
+        </script>
+
         <!-- 🔥 ZegoCloud Core SDK (Stable) 🔥 -->
-        <script src="/js/ZegoExpressEngine.v3.12.0.min.js"defer></script>
+        <script src="/js/ZegoExpressEngine.v3.12.0.min.js" defer></script>
 
         <!-- 🔥 AI Engine (MediaPipe) — powers real Beauty smoothing + real Background blur/replace 🔥 -->
         <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" defer crossorigin="anonymous"></script>

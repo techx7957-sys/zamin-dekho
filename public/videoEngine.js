@@ -137,6 +137,9 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         const serverUrl = "wss://webliveroom" + appId + "-api.coolzcloud.com/ws";
         zg = new ZegoClass(appId, serverUrl);
 
+        // 🔥 FIX: Store roomID globally so 'Leave Room' button can logout correctly
+        window.meetingRoomId = roomID;
+
         // 2. Remote stream handling
         zg.on('roomStreamUpdate', async (roomID, updateType, streamList) => {
             const remoteView = document.getElementById('remote-video-container');
