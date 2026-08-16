@@ -183,23 +183,12 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         await zg.loginRoom(roomID, token, { userID, userName });
         console.log("✅ Room Login Success");
 
-        // 🔥 FIX 4: Explicit 1080p target. Zego 3.12.0 mein setVideoConfig top-level keys leta hai, 'camera' nested object nahi!
-        if (zg.setVideoConfig) {
-            zg.setVideoConfig({
-                width: 1920,
-                height: 1080,
-                bitrate: 3000,
-                fps: 30
-            });
-        }
-
-        // 5. Create the raw camera+mic stream
-        // 🔥 FIX 2: Zego SDK mein method ka naam 'createStream' hota hai.
         localStream = await zg.createStream({
             camera: {
                 video: true,
                 audio: true,
                 videoQuality: 4,
+                frameRate: 30,
                 audioBitrate: 48,
                 ans: true,
                 aec: true,
@@ -207,6 +196,15 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
                 agc: true
             }
         });
+
+        if (zg.setVideoConfig) {
+            await zg.setVideoConfig({
+                width: 1920,
+                height: 1080,
+                bitrate: 3000,
+                fps: 30
+            });
+        }
 
         enableAEC(zg, localStream);
         enableANS(zg, localStream);
