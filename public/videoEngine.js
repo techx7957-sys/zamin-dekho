@@ -247,11 +247,18 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
 
     } catch (error) {
         console.error("❌ Engine Crash:", error);
+
+        // 🔥 FIX: User-friendly error message for Permission Denied
+        let displayMessage = error.message;
+        if (error.message.includes("NotAllowedError") || error.code === 110304) {
+            displayMessage = "Camera/Mic access blocked by browser. Please allow permissions in site settings or open this page via HTTPS/localhost.";
+        }
+
         document.getElementById('custom-video-wrapper').innerHTML = `
             <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
                 <i class="fas fa-exclamation-triangle text-danger mb-3" style="font-size: 3.5rem;"></i>
                 <h3 class='fw-bold mb-2'>System Error</h3>
-                <p class='text-white-50 max-w-md mx-auto mb-4 text-center' style="font-size: 15px;">${error.message}</p>
+                <p class='text-white-50 max-w-md mx-auto mb-4 text-center' style="font-size: 15px;">${displayMessage}</p>
                 <button class='btn btn-primary px-4 rounded-pill fw-bold shadow' onclick='location.reload()'>Reload Video</button>
             </div>
         `;
@@ -315,31 +322,47 @@ function ensurePipelineElements() {
 }
 
 async function startAIPipeline() {
-    await ensureMediaPipeLoaded();
-    initAIModels();
-    ensurePipelineElements();
+    try {
+        await ensureMediaPipeLoaded();
+        initAIModels();
+        ensurePipelineElements();
 
-    const videoTrack = localStream.getVideoTracks()[0];
-    if (!videoTrack) return;
-    const rawMediaStream = new MediaStream([videoTrack]);
-    rawVideoEl.srcObject = rawMediaStream;
-    await rawVideoEl.play().catch(() => {});
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (!videoTrack) {
+            console.warn("No video track available to process AI.");
+            return;
+        }
+        const rawMediaStream = new MediaStream([videoTrack]);
+        rawVideoEl.srcObject = rawMediaStream;
+        await rawVideoEl.play().catch(() => {
+            console.warn("Failed to play hidden video for AI pipeline.");
+        });
 
-    if (aiCamera) { aiCamera.stop(); aiCamera = null; }
+        if (aiCamera) { aiCamera.stop(); aiCamera = null; }
 
-    aiCamera = new window.Camera(rawVideoEl, {
-        onFrame: async () => {
-            if (isBeautyOn) await faceMesh.send({ image: rawVideoEl });
-            if (isBgMode !== "none") await selfieSegmentation.send({ image: rawVideoEl });
-            renderFrame();
-        },
-        width: CANVAS_W,
-        height: CANVAS_H
-    });
-    aiCamera.start();
-    pipelineRunning = true;
+        aiCamera = new window.Camera(rawVideoEl, {
+            onFrame: async () => {
+                if (isBeautyOn) await faceMesh.send({ image: rawVideoEl });
+                if (isBgMode !== "none") await selfieSegmentation.send({ image: rawVideoEl });
+                renderFrame();
+            },
+            width: CANVAS_W,
+            height: CANVAS_H
+        });
+        aiCamera.start();
+        pipelineRunning = true;
 
-    await switchPublishToCanvas();
+        await switchPublishToCanvas();
+    } catch (e) {
+        console.error("❌ AI Pipeline failed to start:", e);
+        isBeautyOn = false;
+        isBgMode = "none";
+        // Reset buttons
+        document.getElementById('btn-beauty').style.background = "";
+        document.getElementById('btn-bg').style.background = "";
+        document.getElementById('btn-beauty').innerHTML = '<i class="fas fa-magic"></i>';
+        document.getElementById('btn-bg').innerHTML = '<i class="fas fa-image"></i>';
+    }
 }
 
 function renderFrame() {
@@ -480,7 +503,12 @@ function setupControls() {
         try {
             if (!localStream || !zg) return;
             isMicOn = !isMicOn;
-            await zg.mutePublishStreamAudio(publishStream, !isMicOn);
+            // 🔥 FIX: Try-catch around mute so UI updates even if SDK has glitch
+            try {
+                await zg.mutePublishStreamAudio(publishStream, !isMicOn);
+            } catch (muteErr) {
+                console.warn("Mic mute function threw an error but UI will update:", muteErr);
+            }
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
             setTimeout(() => this.style.transform = "scale(1)", 150);
@@ -491,7 +519,12 @@ function setupControls() {
         try {
             if (!localStream || !zg) return;
             isCamOn = !isCamOn;
-            await zg.mutePublishStreamVideo(publishStream, !isCamOn);
+            // 🔥 FIX: Try-catch around mute so UI updates even if SDK has glitch
+            try {
+                await zg.mutePublishStreamVideo(publishStream, !isCamOn);
+            } catch (muteErr) {
+                console.warn("Cam mute function threw an error but UI will update:", muteErr);
+            }
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
             setTimeout(() => this.style.transform = "scale(1)", 150);
@@ -616,21 +649,31 @@ function openBackgroundPicker(anchorBtn) {
     }, 0);
 }
 
-// ❌ LEAVE ROOM
+// ❌ LEAVE ROOM (FULLY UPGRADED)
 async function leaveRoom() {
     try {
-        if (aiCamera) { aiCamera.stop(); aiCamera = null; }
+        // 1. Stop AI camera first
+        if (aiCamera) { 
+            try { aiCamera.stop(); } catch (e) {} 
+            aiCamera = null; 
+        }
         pipelineRunning = false;
 
+        // 2. Clean up Zego streams
         if (zg) {
-            if (publishStreamId) await zg.stopPublishingStream(publishStreamId).catch(() => {});
-            if (localStream) {
-                zg.destroyStream(localStream);
-                localStream = null;
+            if (publishStreamId) {
+                try { await zg.stopPublishingStream(publishStreamId); } catch (e) { console.warn("Stop publish stream error:", e); }
             }
-            await zg.logoutRoom(window.meetingRoomId).catch(() => {});
+            if (localStream) {
+                try { 
+                    zg.destroyStream(localStream); 
+                    localStream = null; 
+                } catch (e) { console.warn("Destroy stream error:", e); }
+            }
+            try { await zg.logoutRoom(window.meetingRoomId); } catch (e) { console.warn("Logout room error:", e); }
         }
 
+        // 3. Reset UI
         document.getElementById('custom-video-wrapper').style.display = 'none';
         document.getElementById('preJoinScreen').style.display = 'flex';
         document.getElementById('local-video-container').innerHTML = "";
@@ -643,10 +686,6 @@ async function leaveRoom() {
         isBgMode = "none";
         publishStream = null;
 
-        const micBtn = document.getElementById('btn-mic');
-        micBtn.className = "control-btn";
-        const camBtn = document.getElementById('btn-cam');
-        camBtn.className = "control-btn";
         refreshMicCamButtonUI();
 
         const beautyBtn = document.getElementById('btn-beauty');
@@ -664,5 +703,18 @@ async function leaveRoom() {
         const popover = document.getElementById('bg-picker-popover');
         if (popover) popover.remove();
 
-    } catch (e) { console.error("Leave room error:", e); }
+        console.log("✅ Successfully left the meeting.");
+
+        // 🔥 FIX: Agar browser cleanup mein slow ho, toh page reload kar do!
+        setTimeout(() => {
+            if (document.getElementById('custom-video-wrapper').style.display !== 'none') {
+                location.reload();
+            }
+        }, 500);
+
+    } catch (e) { 
+        console.error("Leave room error:", e);
+        // Force reload if something went wrong
+        setTimeout(() => location.reload(), 300);
+    }
 }
