@@ -355,65 +355,77 @@ async function startAIPipeline() {
         await switchPublishToCanvas();
     } catch (e) {
         console.error("❌ AI Pipeline failed to start:", e);
-        isBeautyOn = false;
-        isBgMode = "none";
-        // Reset buttons
-        document.getElementById('btn-beauty').style.background = "";
-        document.getElementById('btn-bg').style.background = "";
-        document.getElementById('btn-beauty').innerHTML = '<i class="fas fa-magic"></i>';
-        document.getElementById('btn-bg').innerHTML = '<i class="fas fa-image"></i>';
+        // 🔥 FIX: AI fail hone par bhi isBgMode reset mat karo. RenderFrame fallback handle kar lega!
+        // isBgMode = "none"; <--- YEH LINE HATA DIYI HAI
+        // Buttons reset nahi honge kyunki blur abhi bhi canvas par apply hoga
     }
 }
 
-// 🔥 BOHOT IMPORTANT: YAHAN BLUR KA LOGIC FULLY UPDATE KIYA HAI 🔥
+// 🔥 BOHOT IMPORTANT: YAHAN BLUR LOGIC FULLY UPGRADE KIYA HAI 🔥
 function renderFrame() {
     if (!outCtx || !rawVideoEl) return;
 
-    // 1. Canvas ko pehle saaf karo
+    // Canvas ko pehle saaf karo taaki pichli frame ghost na dikhe
     outCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
-    if (isBgMode === "blur" || isBgMode === "image") {
+    if (isBgMode === "blur") {
+        // Step 1: Poore raw video ko 100px blur karke canvas par bithao.
+        // Isse piche ka background pura dhundle mein chala jayega.
         outCtx.save();
-        // Background draw karo (Blurred ya Image)
-        if (isBgMode === "blur") {
-            // 🔥 ULTIMATE HEAVY BLUR: 60px! Ab koi bhi background nahi pehchaan payega.
-            outCtx.filter = "blur(60px)";
-            outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
-            outCtx.filter = "none";
-        } else if (isBgMode === "image" && bgImageEl && bgImageEl.complete) {
-            outCtx.drawImage(bgImageEl, 0, 0, CANVAS_W, CANVAS_H);
-        }
+        outCtx.filter = "blur(100px)"; // Ab koi detective kuch nahi pehchaan payega!
+        outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
+        outCtx.filter = "none";
         outCtx.restore();
 
-        // 2. Agar segmentation mask available hai, toh person ko cut out karo
+        // Step 2: Agar selfie segmentation ka mask available hai, toh insaan ka clear face draw kar do.
         if (lastSegResults && lastSegResults.segmentationMask) {
-            // Mask canvas ko clear karo
             segMaskCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
             segMaskCtx.drawImage(lastSegResults.segmentationMask, 0, 0, CANVAS_W, CANVAS_H);
             segMaskCtx.globalCompositeOperation = "source-in";
             segMaskCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
-            segMaskCtx.globalCompositeOperation = "source-over"; // reset
+            segMaskCtx.globalCompositeOperation = "source-over";
 
-            // Person ko blurred background ke upar draw karo
             outCtx.drawImage(segMaskCanvas, 0, 0, CANVAS_W, CANVAS_H);
         } else {
-            // 🔥 EMERGENCY FALLBACK: Agar AI slow hai aur mask nahi mila,
-            // toh bhi poora frame blur hi rahega! Aapko clear background kabhi nahi dikhega.
+            // 🔥 ULTIMATE FALLBACK: Agar AI mask nahi mila, toh poora 100px blur hi dikhega.
+            // Aapko kabhi bhi clear background nahi dikhega, chahe AI kitna slow ho.
+            console.log("⚠️ AI mask not ready, showing 100px full-screen blur fallback...");
+        }
+
+        // Step 3: Beauty filter (agar on hai)
+        if (isBeautyOn && lastFaceLandmarks) {
+            applyBeautySmoothing();
+        }
+
+    } else if (isBgMode === "image") {
+        // Agar image background choose kiya hai:
+        if (bgImageEl && bgImageEl.complete) {
+            outCtx.drawImage(bgImageEl, 0, 0, CANVAS_W, CANVAS_H);
+        } else {
+            // Agar image load nahi hui, to blur backup
             outCtx.save();
-            outCtx.filter = "blur(60px)";
+            outCtx.filter = "blur(100px)";
             outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
             outCtx.filter = "none";
             outCtx.restore();
         }
-    } else {
-        // No AI effect, raw video dikhao
-        outCtx.filter = "none";
-        outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
-    }
+        if (lastSegResults && lastSegResults.segmentationMask) {
+            segMaskCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+            segMaskCtx.drawImage(lastSegResults.segmentationMask, 0, 0, CANVAS_W, CANVAS_H);
+            segMaskCtx.globalCompositeOperation = "source-in";
+            segMaskCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
+            segMaskCtx.globalCompositeOperation = "source-over";
+            outCtx.drawImage(segMaskCanvas, 0, 0, CANVAS_W, CANVAS_H);
+        } else {
+            outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
+        }
+        if (isBeautyOn && lastFaceLandmarks) {
+            applyBeautySmoothing();
+        }
 
-    // 3. Beauty Filter on top (Agar on hai toh)
-    if (isBeautyOn && lastFaceLandmarks) {
-        applyBeautySmoothing();
+    } else {
+        // No effect (Normal video)
+        outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
     }
 }
 
