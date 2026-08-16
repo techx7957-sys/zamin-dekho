@@ -126,8 +126,8 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
     try {
         console.log("🚀 Starting Ultra Premium Video Engine v2.0...");
 
-        document.getElementById('remote-video-container').innerHTML =
-            `<span class="text-white small fw-bold" id="waiting-text"><i class="fas fa-cog fa-spin me-2"></i>Booting Pro Engine...</span>`;
+        // 🔥 FIX: Start par "Waiting for others" mat dikhao. Bilkul khali rakho.
+        document.getElementById('remote-video-container').innerHTML = '';
 
         const ZegoRaw = await ensureZegoLoaded();
         // 🔥 FIX 1: 'default' property check.
@@ -168,6 +168,7 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
                 const videoToRemove = document.getElementById("remote-" + streamList[0].streamID);
                 if (videoToRemove) videoToRemove.remove();
 
+                // Jab koi user join karke chala jaye, TABHI "Waiting for others" dikhega.
                 if (remoteView.childElementCount === 0) {
                     remoteView.innerHTML = `
                         <div class="text-center" id="waiting-text" style="animation: fadeIn 0.5s ease-out;">
@@ -236,10 +237,9 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         setupControls();
         refreshMicCamButtonUI();
 
+        // 🔥 FIX: Starting state mein "Waiting for others" nahi dikhega, sirf dark screen dikhegi.
         const remoteView = document.getElementById('remote-video-container');
-        if (remoteView.childElementCount === 0 || remoteView.innerHTML.includes("Booting")) {
-            remoteView.innerHTML = `<span class="text-white small fw-bold" id="waiting-text"><i class="fas fa-spinner fa-spin me-2"></i>Waiting for others...</span>`;
-        }
+        if (remoteView.innerHTML.includes("Booting")) remoteView.innerHTML = "";
 
         ensureMediaPipeLoaded().then(initAIModels).catch(e => {
             console.warn("AI models failed to preload, will retry on button press.", e);
@@ -677,8 +677,7 @@ async function leaveRoom() {
         document.getElementById('custom-video-wrapper').style.display = 'none';
         document.getElementById('preJoinScreen').style.display = 'flex';
         document.getElementById('local-video-container').innerHTML = "";
-        document.getElementById('remote-video-container').innerHTML =
-            `<span class="text-muted small"><i class="fas fa-spinner fa-spin me-2"></i>Waiting for others...</span>`;
+        document.getElementById('remote-video-container').innerHTML = ""; // Full empty after leave
 
         isMicOn = false;
         isCamOn = false;
