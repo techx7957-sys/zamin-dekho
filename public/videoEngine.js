@@ -35,6 +35,9 @@ let lastSegResults = null;
 const CANVAS_W = 640;
 const CANVAS_H = 480;
 
+// 🔥 NEW FIX: Timer for fallback when AI fails
+let blurFallbackTimer = null;
+
 // =======================================================
 // 🚀 SELF-HEALING SCRIPT LOADER (for both Zego + MediaPipe)
 // =======================================================
@@ -321,6 +324,7 @@ function ensurePipelineElements() {
     segMaskCtx = segMaskCanvas.getContext('2d');
 }
 
+// 🔥 FULLY ROBUST START FUNCTION: AI fail hone par bhi canvas fallback publish karega!
 async function startAIPipeline() {
     try {
         await ensureMediaPipeLoaded();
@@ -328,14 +332,12 @@ async function startAIPipeline() {
         ensurePipelineElements();
 
         const videoTrack = localStream.getVideoTracks()[0];
-        if (!videoTrack) {
-            console.warn("No video track available to process AI.");
-            return;
-        }
+        if (!videoTrack) throw new Error("No video track available to process AI.");
+
         const rawMediaStream = new MediaStream([videoTrack]);
         rawVideoEl.srcObject = rawMediaStream;
         await rawVideoEl.play().catch(() => {
-            console.warn("Failed to play hidden video for AI pipeline.");
+            throw new Error("Failed to play hidden video for AI pipeline.");
         });
 
         if (aiCamera) { aiCamera.stop(); aiCamera = null; }
@@ -352,12 +354,37 @@ async function startAIPipeline() {
         aiCamera.start();
         pipelineRunning = true;
 
+        // Agar AI start ho gaya, toh fallback timer ko saaf kar do
+        if (blurFallbackTimer) { clearInterval(blurFallbackTimer); blurFallbackTimer = null; }
+
         await switchPublishToCanvas();
+
     } catch (e) {
-        console.error("❌ AI Pipeline failed to start:", e);
-        // 🔥 FIX: AI fail hone par bhi isBgMode reset mat karo. RenderFrame fallback handle kar lega!
-        // isBgMode = "none"; <--- YEH LINE HATA DIYI HAI
-        // Buttons reset nahi honge kyunki blur abhi bhi canvas par apply hoga
+        console.error("❌ AI Pipeline failed. Using 100% working JS Blur fallback!", e);
+
+        // 🔥 FIX: AI ke bina canvas aur publish ko force karo
+        ensurePipelineElements();
+        if (localStream && localStream.getVideoTracks().length > 0) {
+            const fallbackStream = new MediaStream([localStream.getVideoTracks()[0]]);
+            rawVideoEl.srcObject = fallbackStream;
+            await rawVideoEl.play().catch(() => {});
+        }
+
+        // Purana timer saaf karo
+        if (blurFallbackTimer) clearInterval(blurFallbackTimer);
+
+        // Har 40ms (25 FPS) par renderFrame call karo (AI ke bina direct blur)
+        blurFallbackTimer = setInterval(() => {
+            if (!rawVideoEl || !outCtx) { 
+                clearInterval(blurFallbackTimer); 
+                blurFallbackTimer = null; 
+                return; 
+            }
+            renderFrame(); 
+        }, 40);
+
+        pipelineRunning = true;
+        await switchPublishToCanvas(); // Force publish karo!
     }
 }
 
@@ -488,6 +515,7 @@ async function stopAIPipelineIfIdle() {
     if (isBeautyOn || isBgMode !== "none") return;
 
     if (aiCamera) { aiCamera.stop(); aiCamera = null; }
+    if (blurFallbackTimer) { clearInterval(blurFallbackTimer); blurFallbackTimer = null; }
     pipelineRunning = false;
 
     if (zg && localStream && publishStream !== localStream) {
@@ -687,6 +715,7 @@ async function leaveRoom() {
             try { aiCamera.stop(); } catch (e) {} 
             aiCamera = null; 
         }
+        if (blurFallbackTimer) { clearInterval(blurFallbackTimer); blurFallbackTimer = null; }
         pipelineRunning = false;
 
         // 2. Clean up Zego streams
