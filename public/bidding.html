@@ -51,15 +51,6 @@
             // Mapping CDN Globals to Zego's exact expected internal names
             window.long = window.Long; 
             window["protobufjs/minimal"] = window.protobuf; 
-            // ✅ FINAL FIX: Zego ko 'ZegoLogger' constructor property ke saath ek module chahiye
-            window["zego-express-logger"] = {
-                ZegoLogger: function ZegoLoggerMock() {
-                    this.info = function() {};
-                    this.warn = function() {};
-                    this.error = function() {};
-                    this.setLogLevel = function() {};
-                }
-            };
         </script>
 
         <!-- 🔥 ZegoCloud Core SDK (Stable) 🔥 -->
