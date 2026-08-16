@@ -193,6 +193,7 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
                 width: 1920,
                 height: 1080,
                 frameRate: 30,
+                bitrate: 3000,   
 
                 audioBitrate: 48,
 
