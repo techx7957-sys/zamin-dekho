@@ -365,35 +365,53 @@ async function startAIPipeline() {
     }
 }
 
+// 🔥 BOHOT IMPORTANT: YAHAN BLUR KA LOGIC FULLY UPDATE KIYA HAI 🔥
 function renderFrame() {
     if (!outCtx || !rawVideoEl) return;
 
-    if (isBgMode !== "none" && lastSegResults && lastSegResults.segmentationMask) {
+    // 1. Canvas ko pehle saaf karo
+    outCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+    if (isBgMode === "blur" || isBgMode === "image") {
         outCtx.save();
-        outCtx.filter = "none";
+        // Background draw karo (Blurred ya Image)
         if (isBgMode === "blur") {
-            outCtx.filter = "blur(14px)";
+            // 🔥 ULTIMATE HEAVY BLUR: 60px! Ab koi bhi background nahi pehchaan payega.
+            outCtx.filter = "blur(60px)";
             outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
+            outCtx.filter = "none";
         } else if (isBgMode === "image" && bgImageEl && bgImageEl.complete) {
             outCtx.drawImage(bgImageEl, 0, 0, CANVAS_W, CANVAS_H);
-        } else {
-            outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
         }
         outCtx.restore();
 
-        segMaskCtx.save();
-        segMaskCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-        segMaskCtx.drawImage(lastSegResults.segmentationMask, 0, 0, CANVAS_W, CANVAS_H);
-        segMaskCtx.globalCompositeOperation = "source-in";
-        segMaskCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
-        segMaskCtx.restore();
+        // 2. Agar segmentation mask available hai, toh person ko cut out karo
+        if (lastSegResults && lastSegResults.segmentationMask) {
+            // Mask canvas ko clear karo
+            segMaskCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+            segMaskCtx.drawImage(lastSegResults.segmentationMask, 0, 0, CANVAS_W, CANVAS_H);
+            segMaskCtx.globalCompositeOperation = "source-in";
+            segMaskCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
+            segMaskCtx.globalCompositeOperation = "source-over"; // reset
 
-        outCtx.drawImage(segMaskCanvas, 0, 0, CANVAS_W, CANVAS_H);
+            // Person ko blurred background ke upar draw karo
+            outCtx.drawImage(segMaskCanvas, 0, 0, CANVAS_W, CANVAS_H);
+        } else {
+            // 🔥 EMERGENCY FALLBACK: Agar AI slow hai aur mask nahi mila,
+            // toh bhi poora frame blur hi rahega! Aapko clear background kabhi nahi dikhega.
+            outCtx.save();
+            outCtx.filter = "blur(60px)";
+            outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
+            outCtx.filter = "none";
+            outCtx.restore();
+        }
     } else {
+        // No AI effect, raw video dikhao
         outCtx.filter = "none";
         outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
     }
 
+    // 3. Beauty Filter on top (Agar on hai toh)
     if (isBeautyOn && lastFaceLandmarks) {
         applyBeautySmoothing();
     }
