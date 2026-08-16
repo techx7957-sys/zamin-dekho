@@ -53,6 +53,17 @@
             window["protobufjs/minimal"] = window.protobuf; 
         </script>
         <script src="/js/ZegoExpressLogger.js"></script>
+
+        <script>
+            // Bridge ZEGO logger globals to the module name expected by
+            // ZegoExpressEngine.v3.12.0 browser UMD bundle.
+            window["zego-express-logger"] = {
+                ZegoLogger: window.ZegoLogger,
+                ZegoDataReport: window.ZegoDataReport
+            };
+        </script>
+
+        <script src="/js/ZegoExpressEngine.v3.12.0.min.js"></script>
         <!-- 🔥 ZegoCloud Core SDK (Stable) 🔥 -->
         <script src="/js/ZegoExpressEngine.v3.12.0.min.js" defer></script>
 
