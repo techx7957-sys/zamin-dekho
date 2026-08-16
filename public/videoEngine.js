@@ -187,24 +187,21 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
             camera: {
                 video: true,
                 audio: true,
+
                 videoQuality: 4,
+
+                width: 1920,
+                height: 1080,
                 frameRate: 30,
+
                 audioBitrate: 48,
+
                 ans: true,
                 aec: true,
                 aecMode: "AGGRESSIVE",
                 agc: true
             }
         });
-
-        if (zg.setVideoConfig) {
-            await zg.setVideoConfig({
-                width: 1920,
-                height: 1080,
-                bitrate: 3000,
-                fps: 30
-            });
-        }
 
         enableAEC(zg, localStream);
         enableANS(zg, localStream);
