@@ -55,12 +55,11 @@
         <script src="/js/ZegoExpressLogger.js"></script>
 
         <script>
-            // Bridge ZEGO logger globals to the module name expected by
-            // ZegoExpressEngine.v3.12.0 browser UMD bundle.
-            window["zego-express-logger"] = {
-                ZegoLogger: window.ZegoLogger,
-                ZegoDataReport: window.ZegoDataReport
-            };
+        window["zego-express-logger"] = {
+            ZegoLogger: window.ZegoLogger,
+            ZegoDataReport: window.ZegoDataReport,
+            LoggerStateCenter: window.LoggerStateCenter
+        };
         </script>
         
         <!-- 🔥 ZegoCloud Core SDK (Stable) 🔥 -->
