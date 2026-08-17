@@ -1,7 +1,6 @@
 // =======================================================
-// 🔥 ZAMIN DEKHO - ULTRA PREMIUM VIDEO ENGINE v2.2 (AI POWERED) 🔥
-// Highly-grade audio + Real AI Beauty + Real AI Background
-// FULLY FIXED: Black Screen, Pixel-Mask Isolation, Remote Audio Unmute
+// 🔥 ZAMIN DEKHO - ULTRA PREMIUM VIDEO ENGINE v2.0 (AI POWERED) 🔥
+// WhatsApp-grade audio + Real AI Beauty + Real AI Background
 // =======================================================
 
 let zg; // Zego Engine Instance
@@ -63,12 +62,14 @@ function loadScriptOnce(src) {
 async function ensureZegoLoaded() {
     if (window.ZegoExpressEngine) return window.ZegoExpressEngine;
     console.log("⚙️ Zego engine not found in HTML, auto-injecting...");
+    // 🔥 FINAL FIX: Sirf local file load hogi (Multiple CDN system hata diya)
     await loadScriptOnce("/js/ZegoExpressEngine.v3.12.0.min.js");
     if (!window.ZegoExpressEngine) throw new Error("Engine download fail. Please check your internet connection.");
     return window.ZegoExpressEngine;
 }
 
 async function ensureMediaPipeLoaded() {
+    // Loaded from HTML ideally, but self-heal if missing.
     if (window.FaceMesh && window.SelfieSegmentation && window.Camera) return;
     console.log("⚙️ MediaPipe not found in HTML, auto-injecting...");
     await Promise.all([
@@ -85,6 +86,7 @@ async function ensureMediaPipeLoaded() {
 // 🎧 AUDIO QUALITY — 3 EXPLICIT WHATSAPP-STYLE FUNCTIONS
 // =======================================================
 
+// Echo Cancellation — kills speaker-to-mic feedback loop (no vibration/echo)
 function enableAEC(zegoInstance, stream) {
     try {
         if (zegoInstance && zegoInstance.enableAEC) {
@@ -96,6 +98,7 @@ function enableAEC(zegoInstance, stream) {
     }
 }
 
+// Noise Suppression — removes background hiss/fan/traffic noise
 function enableANS(zegoInstance, stream) {
     try {
         if (zegoInstance && zegoInstance.enableANS) {
@@ -107,6 +110,7 @@ function enableANS(zegoInstance, stream) {
     }
 }
 
+// Auto Gain Control — keeps voice volume steady, no sudden loud/soft jumps
 function enableAGC(zegoInstance, stream) {
     try {
         if (zegoInstance && zegoInstance.enableAGC) {
@@ -125,15 +129,18 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
     try {
         console.log("🚀 Starting Ultra Premium Video Engine v2.0...");
 
+        // 🔥 FIX: Start par "Waiting for others" mat dikhao. Bilkul khali rakho.
         document.getElementById('remote-video-container').innerHTML = '';
 
         const ZegoRaw = await ensureZegoLoaded();
+        // 🔥 FIX 1: 'default' property check.
         const ZegoClass = ZegoRaw.ZegoExpressEngine ? (ZegoRaw.ZegoExpressEngine.default || ZegoRaw.ZegoExpressEngine) : ZegoRaw;
         if (!ZegoClass) throw new Error("System Error: Zego Engine initialization failed.");
 
         const serverUrl = "wss://webliveroom" + appId + "-api.coolzcloud.com/ws";
         zg = new ZegoClass(appId, serverUrl);
 
+        // 🔥 FIX: Store roomID globally so 'Leave Room' button can logout correctly
         window.meetingRoomId = roomID;
 
         // 2. Remote stream handling
@@ -149,11 +156,6 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
                 remoteVideo.id = "remote-" + streamList[0].streamID;
                 remoteVideo.autoplay = true;
                 remoteVideo.playsInline = true;
-
-                // 🔥 CRITICAL FIX 2: Unmute remote video so you can hear opponent!
-                remoteVideo.muted = false; 
-                remoteVideo.volume = 1.0;
-
                 remoteVideo.style.width = "100%";
                 remoteVideo.style.height = "100%";
                 remoteVideo.style.objectFit = "cover";
@@ -169,6 +171,7 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
                 const videoToRemove = document.getElementById("remote-" + streamList[0].streamID);
                 if (videoToRemove) videoToRemove.remove();
 
+                // Jab koi user join karke chala jaye, TABHI "Waiting for others" dikhega.
                 if (remoteView.childElementCount === 0) {
                     remoteView.innerHTML = `
                         <div class="text-center" id="waiting-text" style="animation: fadeIn 0.5s ease-out;">
@@ -188,12 +191,16 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
             camera: {
                 video: true,
                 audio: true,
+
                 videoQuality: 4,
+
                 width: 1920,
                 height: 1080,
                 frameRate: 30,
                 bitrate: 3000,   
+
                 audioBitrate: 48,
+
                 ans: true,
                 aec: true,
                 aecMode: "AGGRESSIVE",
@@ -225,16 +232,15 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         publishStreamId = "stream_" + userID + "_" + Date.now();
         publishStream = localStream;
         await zg.startPublishingStream(publishStreamId, publishStream);
-
-        // 🔥 CRITICAL FIX 1: Use publishStreamId, not publishStream object!
-        await zg.mutePublishStreamAudio(publishStreamId, true);
-        await zg.mutePublishStreamVideo(publishStreamId, true);
+        await zg.mutePublishStreamAudio(publishStream, true);
+        await zg.mutePublishStreamVideo(publishStream, true);
         console.log("📡 Premium Stream Published Live (mic & camera off by default)!");
 
         // 8. Wire up buttons
         setupControls();
         refreshMicCamButtonUI();
 
+        // 🔥 FIX: Starting state mein "Waiting for others" nahi dikhega, sirf dark screen dikhegi.
         const remoteView = document.getElementById('remote-video-container');
         if (remoteView.innerHTML.includes("Booting")) remoteView.innerHTML = "";
 
@@ -244,6 +250,8 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
 
     } catch (error) {
         console.error("❌ Engine Crash:", error);
+
+        // 🔥 FIX: User-friendly error message for Permission Denied
         let displayMessage = error.message;
         if (error.message.includes("NotAllowedError") || error.code === 110304) {
             displayMessage = "Camera/Mic access blocked by browser. Please allow permissions in site settings or open this page via HTTPS/localhost.";
@@ -316,6 +324,7 @@ function ensurePipelineElements() {
     segMaskCtx = segMaskCanvas.getContext('2d');
 }
 
+// 🔥 FULLY ROBUST START FUNCTION: AI fail hone par bhi canvas fallback publish karega!
 async function startAIPipeline() {
     try {
         await ensureMediaPipeLoaded();
@@ -345,6 +354,7 @@ async function startAIPipeline() {
         aiCamera.start();
         pipelineRunning = true;
 
+        // Agar AI start ho gaya, toh fallback timer ko saaf kar do
         if (blurFallbackTimer) { clearInterval(blurFallbackTimer); blurFallbackTimer = null; }
 
         await switchPublishToCanvas();
@@ -352,6 +362,7 @@ async function startAIPipeline() {
     } catch (e) {
         console.error("❌ AI Pipeline failed. Using 100% working JS Blur fallback!", e);
 
+        // 🔥 FIX: AI ke bina canvas aur publish ko force karo
         ensurePipelineElements();
         if (localStream && localStream.getVideoTracks().length > 0) {
             const fallbackStream = new MediaStream([localStream.getVideoTracks()[0]]);
@@ -359,8 +370,10 @@ async function startAIPipeline() {
             await rawVideoEl.play().catch(() => {});
         }
 
+        // Purana timer saaf karo
         if (blurFallbackTimer) clearInterval(blurFallbackTimer);
 
+        // Har 40ms (25 FPS) par renderFrame call karo (AI ke bina direct blur)
         blurFallbackTimer = setInterval(() => {
             if (!rawVideoEl || !outCtx) { 
                 clearInterval(blurFallbackTimer); 
@@ -371,132 +384,105 @@ async function startAIPipeline() {
         }, 40);
 
         pipelineRunning = true;
-        await switchPublishToCanvas();
+        await switchPublishToCanvas(); // Force publish karo!
     }
 }
 
-// 🔥 CRITICAL FIX 3: Advanced Pixel-Mask Isolation (Only human appears)
+// 🔥 BOHOT IMPORTANT: YAHAN BLUR LOGIC FULLY UPGRADE KIYA HAI 🔥
 function renderFrame() {
     if (!outCtx || !rawVideoEl) return;
 
+    // Canvas ko pehle saaf karo taaki pichli frame ghost na dikhe
     outCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
     if (isBgMode === "blur") {
-        // Step 1: Draw highly blurred background
+        // Step 1: Poore raw video ko 100px blur karke canvas par bithao.
+        // Isse piche ka background pura dhundle mein chala jayega.
         outCtx.save();
-        outCtx.filter = "blur(40px)"; 
+        outCtx.filter = "blur(100px)"; // Ab koi detective kuch nahi pehchaan payega!
         outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
         outCtx.filter = "none";
         outCtx.restore();
 
-        // Step 2: Draw the person clearly on top
+        // Step 2: Agar selfie segmentation ka mask available hai, toh insaan ka clear face draw kar do.
         if (lastSegResults && lastSegResults.segmentationMask) {
-            try {
-                // Draw the AI mask
-                segMaskCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-                segMaskCtx.drawImage(lastSegResults.segmentationMask, 0, 0, CANVAS_W, CANVAS_H);
+            segMaskCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+            segMaskCtx.drawImage(lastSegResults.segmentationMask, 0, 0, CANVAS_W, CANVAS_H);
+            segMaskCtx.globalCompositeOperation = "source-in";
+            segMaskCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
+            segMaskCtx.globalCompositeOperation = "source-over";
 
-                // 🔥 PIXEL LOOP: Convert black background to Transparent Alpha 0
-                const maskData = segMaskCtx.getImageData(0, 0, CANVAS_W, CANVAS_H);
-                const data = maskData.data;
-                for (let i = 0; i < data.length; i += 4) {
-                    // Check for black pixels (Background)
-                    if (data[i] < 30 && data[i+1] < 30 && data[i+2] < 30) {
-                        data[i+3] = 0; // Make Alpha 0 (Transparent)
-                    } else {
-                        data[i] = 255; data[i+1] = 255; data[i+2] = 255; data[i+3] = 255; // White person
-                    }
-                }
-                segMaskCtx.putImageData(maskData, 0, 0);
-
-                // Now segMaskCtx has white person (opaque) and transparent bg.
-                // Draw raw video ONLY where the mask is opaque (Person!)
-                segMaskCtx.globalCompositeOperation = "source-in";
-                segMaskCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
-                segMaskCtx.globalCompositeOperation = "source-over";
-
-                // Draw masked person over the blurred bg
-                outCtx.drawImage(segMaskCtx, 0, 0, CANVAS_W, CANVAS_H);
-            } catch (e) {
-                console.warn("Segmentation failed, fallback raw.", e);
-                outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
-            }
+            outCtx.drawImage(segMaskCanvas, 0, 0, CANVAS_W, CANVAS_H);
         } else {
-            outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
+            // 🔥 ULTIMATE FALLBACK: Agar AI mask nahi mila, toh poora 100px blur hi dikhega.
+            // Aapko kabhi bhi clear background nahi dikhega, chahe AI kitna slow ho.
+            console.log("⚠️ AI mask not ready, showing 100px full-screen blur fallback...");
         }
 
-        // Beauty filter (if enabled)
+        // Step 3: Beauty filter (agar on hai)
         if (isBeautyOn && lastFaceLandmarks) {
             applyBeautySmoothing();
         }
 
     } else if (isBgMode === "image") {
+        // Agar image background choose kiya hai:
         if (bgImageEl && bgImageEl.complete) {
             outCtx.drawImage(bgImageEl, 0, 0, CANVAS_W, CANVAS_H);
         } else {
+            // Agar image load nahi hui, to blur backup
             outCtx.save();
-            outCtx.filter = "blur(40px)";
+            outCtx.filter = "blur(100px)";
             outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
             outCtx.filter = "none";
             outCtx.restore();
         }
         if (lastSegResults && lastSegResults.segmentationMask) {
-            try {
-                segMaskCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-                segMaskCtx.drawImage(lastSegResults.segmentationMask, 0, 0, CANVAS_W, CANVAS_H);
-                const maskData = segMaskCtx.getImageData(0, 0, CANVAS_W, CANVAS_H);
-                const data = maskData.data;
-                for (let i = 0; i < data.length; i += 4) {
-                    if (data[i] < 30 && data[i+1] < 30 && data[i+2] < 30) data[i+3] = 0;
-                    else { data[i] = 255; data[i+1] = 255; data[i+2] = 255; data[i+3] = 255; }
-                }
-                segMaskCtx.putImageData(maskData, 0, 0);
-                segMaskCtx.globalCompositeOperation = "source-in";
-                segMaskCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
-                segMaskCtx.globalCompositeOperation = "source-over";
-                outCtx.drawImage(segMaskCtx, 0, 0, CANVAS_W, CANVAS_H);
-            } catch (e) { outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H); }
-        } else { outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H); }
-        if (isBeautyOn && lastFaceLandmarks) { applyBeautySmoothing(); }
+            segMaskCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+            segMaskCtx.drawImage(lastSegResults.segmentationMask, 0, 0, CANVAS_W, CANVAS_H);
+            segMaskCtx.globalCompositeOperation = "source-in";
+            segMaskCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
+            segMaskCtx.globalCompositeOperation = "source-over";
+            outCtx.drawImage(segMaskCanvas, 0, 0, CANVAS_W, CANVAS_H);
+        } else {
+            outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
+        }
+        if (isBeautyOn && lastFaceLandmarks) {
+            applyBeautySmoothing();
+        }
 
     } else {
+        // No effect (Normal video)
         outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
-        if (isBeautyOn && lastFaceLandmarks) { applyBeautySmoothing(); }
     }
 }
 
-// 🔥 IMPROVED BEAUTY FILTER - Face brightening and smoothing
 function applyBeautySmoothing() {
-    if (!lastFaceLandmarks || lastFaceLandmarks.length === 0) return;
-
-    let minX = CANVAS_W, minY = CANVAS_H, maxX = 0, maxY = 0;
-    for (const lm of lastFaceLandmarks) {
-        const x = lm.x * CANVAS_W; const y = lm.y * CANVAS_H;
-        if (x < minX) minX = x; if (x > maxX) maxX = x;
-        if (y < minY) minY = y; if (y > maxY) maxY = y;
-    }
-    const pad = 20;
-    minX = Math.max(0, minX - pad); maxX = Math.min(CANVAS_W, maxX + pad);
-    minY = Math.max(0, minY - pad); maxY = Math.min(CANVAS_H, maxY + pad);
-    const w = maxX - minX; const h = maxY - minY;
+    const xs = lastFaceLandmarks.map(p => p.x * CANVAS_W);
+    const ys = lastFaceLandmarks.map(p => p.y * CANVAS_H);
+    const minX = Math.max(0, Math.min(...xs) - 10);
+    const maxX = Math.min(CANVAS_W, Math.max(...xs) + 10);
+    const minY = Math.max(0, Math.min(...ys) - 10);
+    const maxY = Math.min(CANVAS_H, Math.max(...ys) + 10);
+    const w = maxX - minX;
+    const h = maxY - minY;
     if (w <= 0 || h <= 0) return;
 
-    const regionData = outCtx.getImageData(minX, minY, w, h);
+    const region = outCtx.getImageData(minX, minY, w, h);
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = w; tempCanvas.height = h;
+    tempCanvas.width = w;
+    tempCanvas.height = h;
     const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.putImageData(regionData, 0, 0);
+    tempCtx.putImageData(region, 0, 0);
 
     outCtx.save();
     outCtx.beginPath();
-    outCtx.ellipse(minX + w/2, minY + h/2, w/2, h/2, 0, 0, Math.PI * 2);
+    outCtx.ellipse(minX + w / 2, minY + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
     outCtx.clip();
-    // Light smoothing + brightness boost for crystal clear face
-    outCtx.filter = "blur(3px) saturate(1.15) brightness(1.1)";
-    outCtx.globalAlpha = 0.2; // Very subtle, natural glow
+    outCtx.filter = "blur(3px) saturate(1.05) brightness(1.03)";
+    outCtx.globalAlpha = 0.55;
     outCtx.drawImage(tempCanvas, minX, minY, w, h);
     outCtx.restore();
-    outCtx.globalAlpha = 1.0;
+    outCtx.globalAlpha = 1;
     outCtx.filter = "none";
 }
 
@@ -508,18 +494,20 @@ async function switchPublishToCanvas() {
     if (audioTrack) canvasStream.addTrack(audioTrack);
 
     try {
-        await zg.startPublishingStream(publishStreamId, canvasStream);
+        if (publishStreamId) {
+            await zg.stopPublishingStream(publishStreamId);
+        }
         publishStream = canvasStream;
-
-        await zg.mutePublishStreamAudio(publishStreamId, !isMicOn);
-        await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
+        await zg.startPublishingStream(publishStreamId, publishStream);
+        await zg.mutePublishStreamAudio(publishStream, !isMicOn);
+        await zg.mutePublishStreamVideo(publishStream, !isCamOn);
         console.log("🎨 Switched publish to AI-processed canvas stream.");
     } catch (e) {
         console.error("Failed to switch to processed stream, reverting to raw camera.", e);
         publishStream = localStream;
         await zg.startPublishingStream(publishStreamId, publishStream).catch(() => {});
-        await zg.mutePublishStreamAudio(publishStreamId, !isMicOn).catch(() => {});
-        await zg.mutePublishStreamVideo(publishStreamId, !isCamOn).catch(() => {});
+        await zg.mutePublishStreamAudio(publishStream, !isMicOn).catch(() => {});
+        await zg.mutePublishStreamVideo(publishStream, !isCamOn).catch(() => {});
     }
 }
 
@@ -532,12 +520,15 @@ async function stopAIPipelineIfIdle() {
 
     if (zg && localStream && publishStream !== localStream) {
         try {
-            await zg.startPublishingStream(publishStreamId, localStream);
+            await zg.stopPublishingStream(publishStreamId);
             publishStream = localStream;
-            await zg.mutePublishStreamAudio(publishStreamId, !isMicOn);
-            await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
+            await zg.startPublishingStream(publishStreamId, publishStream);
+            await zg.mutePublishStreamAudio(publishStream, !isMicOn);
+            await zg.mutePublishStreamVideo(publishStream, !isCamOn);
             console.log("↩️ Reverted publish to raw camera stream (AI effects off).");
-        } catch (e) { console.error("Failed to revert publish stream.", e); }
+        } catch (e) {
+            console.error("Failed to revert publish stream.", e);
+        }
     }
 }
 
@@ -570,7 +561,12 @@ function setupControls() {
         try {
             if (!localStream || !zg) return;
             isMicOn = !isMicOn;
-            try { await zg.mutePublishStreamAudio(publishStreamId, !isMicOn); } catch (e) {}
+            // 🔥 FIX: Try-catch around mute so UI updates even if SDK has glitch
+            try {
+                await zg.mutePublishStreamAudio(publishStream, !isMicOn);
+            } catch (muteErr) {
+                console.warn("Mic mute function threw an error but UI will update:", muteErr);
+            }
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
             setTimeout(() => this.style.transform = "scale(1)", 150);
@@ -581,7 +577,12 @@ function setupControls() {
         try {
             if (!localStream || !zg) return;
             isCamOn = !isCamOn;
-            try { await zg.mutePublishStreamVideo(publishStreamId, !isCamOn); } catch (e) {}
+            // 🔥 FIX: Try-catch around mute so UI updates even if SDK has glitch
+            try {
+                await zg.mutePublishStreamVideo(publishStream, !isCamOn);
+            } catch (muteErr) {
+                console.warn("Cam mute function threw an error but UI will update:", muteErr);
+            }
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
             setTimeout(() => this.style.transform = "scale(1)", 150);
@@ -609,7 +610,7 @@ function setupControls() {
                 await stopAIPipelineIfIdle();
             }
         } catch (e) {
-            console.warn("Beauty filter unavailable.", e);
+            console.warn("Beauty filter unavailable on this device/browser.", e);
             isBeautyOn = false;
             btn.style.background = "";
             btn.style.color = "";
@@ -622,9 +623,16 @@ function setupControls() {
         const btn = this;
         try {
             if (!localStream) return;
-            if (isBgMode === "none") { openBackgroundPicker(btn); return; }
+
+            if (isBgMode === "none") {
+                openBackgroundPicker(btn);
+                return;
+            }
+
             isBgMode = "none";
-            btn.style.background = ""; btn.style.color = ""; btn.style.boxShadow = "none";
+            btn.style.background = "";
+            btn.style.color = "";
+            btn.style.boxShadow = "none";
             await stopAIPipelineIfIdle();
         } catch (e) { console.error("BG toggle error:", e); }
     };
@@ -661,7 +669,8 @@ function openBackgroundPicker(anchorBtn) {
         popover.remove();
         isBgMode = "blur";
         anchorBtn.style.background = "linear-gradient(135deg, #0ea5e9, #38bdf8)";
-        anchorBtn.style.color = "#fff"; anchorBtn.style.boxShadow = "0 0 15px rgba(56, 189, 248, 0.6)";
+        anchorBtn.style.color = "#fff";
+        anchorBtn.style.boxShadow = "0 0 15px rgba(56, 189, 248, 0.6)";
         anchorBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         await startAIPipeline();
         anchorBtn.innerHTML = '<i class="fas fa-image"></i>';
@@ -670,14 +679,19 @@ function openBackgroundPicker(anchorBtn) {
     const fileInput = document.getElementById('bg-file-input');
     document.getElementById('bg-pick-image').onclick = () => fileInput.click();
     fileInput.onchange = async (e) => {
-        const file = e.target.files[0]; if (!file) return;
+        const file = e.target.files[0];
+        if (!file) return;
         popover.remove();
+
         const url = URL.createObjectURL(file);
-        bgImageEl = new Image(); bgImageEl.src = url;
+        bgImageEl = new Image();
+        bgImageEl.src = url;
         await new Promise(res => { bgImageEl.onload = res; });
+
         isBgMode = "image";
         anchorBtn.style.background = "linear-gradient(135deg, #a78bfa, #7c3aed)";
-        anchorBtn.style.color = "#fff"; anchorBtn.style.boxShadow = "0 0 15px rgba(167, 139, 250, 0.6)";
+        anchorBtn.style.color = "#fff";
+        anchorBtn.style.boxShadow = "0 0 15px rgba(167, 139, 250, 0.6)";
         anchorBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         await startAIPipeline();
         anchorBtn.innerHTML = '<i class="fas fa-image"></i>';
@@ -686,45 +700,79 @@ function openBackgroundPicker(anchorBtn) {
     setTimeout(() => {
         document.addEventListener('click', function closePopover(ev) {
             if (!popover.contains(ev.target) && ev.target !== anchorBtn) {
-                popover.remove(); document.removeEventListener('click', closePopover);
+                popover.remove();
+                document.removeEventListener('click', closePopover);
             }
         });
     }, 0);
 }
 
-// ❌ LEAVE ROOM
+// ❌ LEAVE ROOM (FULLY UPGRADED)
 async function leaveRoom() {
     try {
-        if (aiCamera) { try { aiCamera.stop(); } catch (e) {} aiCamera = null; }
+        // 1. Stop AI camera first
+        if (aiCamera) { 
+            try { aiCamera.stop(); } catch (e) {} 
+            aiCamera = null; 
+        }
         if (blurFallbackTimer) { clearInterval(blurFallbackTimer); blurFallbackTimer = null; }
         pipelineRunning = false;
 
+        // 2. Clean up Zego streams
         if (zg) {
-            if (publishStreamId) { try { await zg.stopPublishingStream(publishStreamId); } catch (e) {} }
-            if (localStream) { try { zg.destroyStream(localStream); localStream = null; } catch (e) {} }
-            try { await zg.logoutRoom(window.meetingRoomId); } catch (e) {}
+            if (publishStreamId) {
+                try { await zg.stopPublishingStream(publishStreamId); } catch (e) { console.warn("Stop publish stream error:", e); }
+            }
+            if (localStream) {
+                try { 
+                    zg.destroyStream(localStream); 
+                    localStream = null; 
+                } catch (e) { console.warn("Destroy stream error:", e); }
+            }
+            try { await zg.logoutRoom(window.meetingRoomId); } catch (e) { console.warn("Logout room error:", e); }
         }
 
+        // 3. Reset UI
         document.getElementById('custom-video-wrapper').style.display = 'none';
         document.getElementById('preJoinScreen').style.display = 'flex';
         document.getElementById('local-video-container').innerHTML = "";
-        document.getElementById('remote-video-container').innerHTML = ""; 
+        document.getElementById('remote-video-container').innerHTML = ""; // Full empty after leave
 
-        isMicOn = false; isCamOn = false; isBeautyOn = false; isBgMode = "none"; publishStream = null;
+        isMicOn = false;
+        isCamOn = false;
+        isBeautyOn = false;
+        isBgMode = "none";
+        publishStream = null;
+
         refreshMicCamButtonUI();
 
         const beautyBtn = document.getElementById('btn-beauty');
-        beautyBtn.style.background = ""; beautyBtn.style.color = ""; beautyBtn.style.boxShadow = "none"; beautyBtn.innerHTML = '<i class="fas fa-magic"></i>';
+        beautyBtn.style.background = "";
+        beautyBtn.style.color = "";
+        beautyBtn.style.boxShadow = "none";
+        beautyBtn.innerHTML = '<i class="fas fa-magic"></i>';
 
         const bgBtn = document.getElementById('btn-bg');
-        bgBtn.style.background = ""; bgBtn.style.color = ""; bgBtn.style.boxShadow = "none"; bgBtn.innerHTML = '<i class="fas fa-image"></i>';
+        bgBtn.style.background = "";
+        bgBtn.style.color = "";
+        bgBtn.style.boxShadow = "none";
+        bgBtn.innerHTML = '<i class="fas fa-image"></i>';
 
         const popover = document.getElementById('bg-picker-popover');
         if (popover) popover.remove();
 
+        console.log("✅ Successfully left the meeting.");
+
+        // 🔥 FIX: Agar browser cleanup mein slow ho, toh page reload kar do!
         setTimeout(() => {
-            if (document.getElementById('custom-video-wrapper').style.display !== 'none') { location.reload(); }
+            if (document.getElementById('custom-video-wrapper').style.display !== 'none') {
+                location.reload();
+            }
         }, 500);
 
-    } catch (e) { console.error("Leave room error:", e); setTimeout(() => location.reload(), 300); }
+    } catch (e) { 
+        console.error("Leave room error:", e);
+        // Force reload if something went wrong
+        setTimeout(() => location.reload(), 300);
+    }
 }
