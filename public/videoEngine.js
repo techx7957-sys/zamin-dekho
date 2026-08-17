@@ -886,7 +886,6 @@ async function leaveRoom() {
                 location.reload();
             }
         }, 500);
-
     } catch (e) { 
         console.error("Leave room error:", e);
         setTimeout(() => location.reload(), 300);
