@@ -12,8 +12,8 @@ let publishStreamId = "";
 
 // Mic and camera start ON by default so the other user sees you immediately.
 // The user can mute them via the buttons.
-let isMicOn = true;
-let isCamOn = true;
+let isMicOn = false;
+let isCamOn = false;
 let isBeautyOn = false;
 let isBgMode = "none"; // "none" | "blur" | "image"
 let bgImageEl = null;  // <img> element for custom background
@@ -268,12 +268,12 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         publishStream = localStream;
         await zg.startPublishingStream(publishStreamId, publishStream);
 
-        // FIX: Initialize isMicOn and isCamOn to true, and un-mute immediately.
-        isMicOn = true;
-        isCamOn = true;
-        await zg.mutePublishStreamAudio(publishStreamId, !isMicOn); // false = unmute
-        await zg.mutePublishStreamVideo(publishStreamId, !isCamOn); // false = unmute
-        console.log("📡 Premium Stream Published Live (Mic & Camera are ON by default)!");
+        // FIX: Initialize isMicOn and isCamOn to false, and mute immediately.
+        isMicOn = false;
+        isCamOn = false;
+        await zg.mutePublishStreamAudio(publishStreamId, true);  // true = mute 
+        await zg.mutePublishStreamVideo(publishStreamId, true);  // true = mute 
+        console.log("📡 Premium Stream Published Live (Mic & Camera are OFF by default)!");
 
         // 7. Wire up the UI Controls
         setupControls();
@@ -650,8 +650,10 @@ function refreshMicCamButtonUI() {
     }
 
     const localVideoElement = document.getElementById('my-local-video');
-    if (localVideoElement) localVideoElement.style.opacity = isCamOn ? "1" : "0.15";
-}
+    if (localVideoElement) {
+        localVideoElement.style.opacity = isCamOn ? "1" : "0";
+        localVideoElement.style.display = isCamOn ? "block" : "none"; 
+    }
 
 function setupControls() {
     // --- MICROPHONE TOGGLE ---
