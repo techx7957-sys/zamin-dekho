@@ -890,4 +890,3 @@ async function leaveRoom() {
         console.error("Leave room error:", e);
         setTimeout(() => location.reload(), 300);
     }
-}
