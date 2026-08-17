@@ -228,13 +228,13 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
             camera: {
                 video: true,
                 audio: true,
-                videoQuality: 5,          // Optional: 5 = 2K supported by Zego SDK
-                width: 2560,              // 2K Width
-                height: 1440,             // 2K Height
+                videoQuality: 4, // 1080p
+                width: 1920,
+                height: 1080,
                 frameRate: 30,
-                bitrate: 5000,            // 2K ke liye bitrate badha di (1080p ke liye 3000 tha)
-                audioBitrate: 64,
-                audioMode: "Speech",
+                bitrate: 3000,
+                audioBitrate: 64, // Clearer voice
+                audioMode: "Speech", // Optimizes for voice
                 ans: true,
                 aec: true,
                 aecMode: "AGGRESSIVE",
