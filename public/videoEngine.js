@@ -1,18 +1,19 @@
-// =======================================================
-// 🔥 ZAMIN DEKHO - ULTRA PREMIUM VIDEO ENGINE v2.0 (AI POWERED) 🔥
-// WhatsApp-grade audio + Real AI Beauty + Real AI Background
-// =======================================================
+// =========================================================================
+// 🔥 ZAMIN DEKHO - ULTRA PREMIUM VIDEO ENGINE v2.1 (AI POWERED + FIXED) 🔥
+// =========================================================================
 
-let zg; // Zego Engine Instance
-let localStream = null;       // Raw camera+mic stream from Zego
-let publishStream = null;     // Final stream actually published (may be canvas-based)
+// =========================================
+// 1. GLOBAL STATE & VARIABLES
+// =========================================
+let zg;                   // Zego Engine Instance
+let localStream = null;   // Raw camera+mic stream from Zego
+let publishStream = null; // Final stream actually published (may be canvas-based)
 let publishStreamId = "";
 
-// Mic and camera start OFF — they only go live when the user explicitly
-// taps the button. This matches how the buttons render (neutral/off state)
-// and avoids publishing audio/video the user hasn't consented to yet.
-let isMicOn = false;
-let isCamOn = false;
+// Mic and camera start ON by default so the other user sees you immediately.
+// The user can mute them via the buttons.
+let isMicOn = true;
+let isCamOn = true;
 let isBeautyOn = false;
 let isBgMode = "none"; // "none" | "blur" | "image"
 let bgImageEl = null;  // <img> element for custom background
@@ -38,9 +39,14 @@ const CANVAS_H = 480;
 // 🔥 NEW FIX: Timer for fallback when AI fails
 let blurFallbackTimer = null;
 
-// =======================================================
-// 🚀 SELF-HEALING SCRIPT LOADER (for both Zego + MediaPipe)
-// =======================================================
+// =========================================
+// 2. SELF-HEALING SCRIPT LOADER
+// =========================================
+/**
+ * Dynamically loads a JS script only once, even if called multiple times.
+ * @param {string} src - URL of the script
+ * @returns {Promise<void>}
+ */
 function loadScriptOnce(src) {
     return new Promise((resolve, reject) => {
         const existing = document.querySelector(`script[src="${src}"]`);
@@ -59,17 +65,25 @@ function loadScriptOnce(src) {
     });
 }
 
+/**
+ * Ensures Zego Express Engine is loaded into the global window scope.
+ * If missing, it auto-injects the local JS file.
+ */
 async function ensureZegoLoaded() {
     if (window.ZegoExpressEngine) return window.ZegoExpressEngine;
     console.log("⚙️ Zego engine not found in HTML, auto-injecting...");
-    // 🔥 FINAL FIX: Sirf local file load hogi (Multiple CDN system hata diya)
     await loadScriptOnce("/js/ZegoExpressEngine.v3.12.0.min.js");
-    if (!window.ZegoExpressEngine) throw new Error("Engine download fail. Please check your internet connection.");
+    if (!window.ZegoExpressEngine) {
+        throw new Error("Engine download fail. Please check your internet connection.");
+    }
     return window.ZegoExpressEngine;
 }
 
+/**
+ * Ensures MediaPipe FaceMesh, SelfieSegmentation, and Camera utils are loaded.
+ * If missing, loads them from CDN.
+ */
 async function ensureMediaPipeLoaded() {
-    // Loaded from HTML ideally, but self-heal if missing.
     if (window.FaceMesh && window.SelfieSegmentation && window.Camera) return;
     console.log("⚙️ MediaPipe not found in HTML, auto-injecting...");
     await Promise.all([
@@ -82,88 +96,110 @@ async function ensureMediaPipeLoaded() {
     }
 }
 
-// =======================================================
-// 🎧 AUDIO QUALITY — 3 EXPLICIT WHATSAPP-STYLE FUNCTIONS
-// =======================================================
+// =========================================
+// 3. AUDIO QUALITY ENGINE (WHATAPP-GRADE)
+// =========================================
 
-// Echo Cancellation — kills speaker-to-mic feedback loop (no vibration/echo)
-function enableAEC(zegoInstance, stream) {
+/** Echo Cancellation — kills speaker-to-mic feedback loop */
+function enableAEC(zegoInstance) {
     try {
-        if (zegoInstance && zegoInstance.enableAEC) {
+        if (zegoInstance && typeof zegoInstance.enableAEC === 'function') {
             zegoInstance.enableAEC(true);
+            console.log("✅ AEC (Echo Cancellation) active");
         }
-        console.log("✅ AEC (Echo Cancellation) active");
     } catch (e) {
         console.warn("AEC toggle not supported by this SDK build.", e);
     }
 }
 
-// Noise Suppression — removes background hiss/fan/traffic noise
-function enableANS(zegoInstance, stream) {
+/** Noise Suppression — removes background hiss/fan/traffic noise */
+function enableANS(zegoInstance) {
     try {
-        if (zegoInstance && zegoInstance.enableANS) {
+        if (zegoInstance && typeof zegoInstance.enableANS === 'function') {
             zegoInstance.enableANS(true);
+            console.log("✅ ANS (Noise Suppression) active");
         }
-        console.log("✅ ANS (Noise Suppression) active");
     } catch (e) {
         console.warn("ANS toggle not supported by this SDK build.", e);
     }
 }
 
-// Auto Gain Control — keeps voice volume steady, no sudden loud/soft jumps
-function enableAGC(zegoInstance, stream) {
+/** Auto Gain Control — keeps voice volume steady, no sudden loud/soft jumps */
+function enableAGC(zegoInstance) {
     try {
-        if (zegoInstance && zegoInstance.enableAGC) {
+        if (zegoInstance && typeof zegoInstance.enableAGC === 'function') {
             zegoInstance.enableAGC(true);
+            console.log("✅ AGC (Auto Gain Control) active");
         }
-        console.log("✅ AGC (Auto Gain Control) active");
     } catch (e) {
         console.warn("AGC toggle not supported by this SDK build.", e);
     }
 }
 
-// =======================================================
-// 🚀 ENGINE START FUNCTION (called from HTML)
-// =======================================================
+// =========================================
+// 4. ENGINE START FUNCTION
+// =========================================
 window.startCustomZegoEngine = async function (appId, token, roomID, userID, userName) {
     try {
-        console.log("🚀 Starting Ultra Premium Video Engine v2.0...");
+        console.log("🚀 Starting Ultra Premium Video Engine v2.1...");
 
-        // 🔥 FIX: Start par "Waiting for others" mat dikhao. Bilkul khali rakho.
+        // Clear any stale loading screens
         document.getElementById('remote-video-container').innerHTML = '';
 
+        // 1. Load Zego Engine
         const ZegoRaw = await ensureZegoLoaded();
-        // 🔥 FIX 1: 'default' property check.
-        const ZegoClass = ZegoRaw.ZegoExpressEngine ? (ZegoRaw.ZegoExpressEngine.default || ZegoRaw.ZegoExpressEngine) : ZegoRaw;
-        if (!ZegoClass) throw new Error("System Error: Zego Engine initialization failed.");
+        const ZegoClass = ZegoRaw.ZegoExpressEngine ? 
+                         (ZegoRaw.ZegoExpressEngine.default || ZegoRaw.ZegoExpressEngine) : 
+                         ZegoRaw;
+
+        if (!ZegoClass) {
+            throw new Error("System Error: Zego Engine initialization failed.");
+        }
 
         const serverUrl = "wss://webliveroom" + appId + "-api.coolzcloud.com/ws";
         zg = new ZegoClass(appId, serverUrl);
 
-        // 🔥 FIX: Store roomID globally so 'Leave Room' button can logout correctly
+        // Store roomID globally for leave functionality
         window.meetingRoomId = roomID;
 
-        // 2. Remote stream handling
+        // 2. Remote Stream Event Listener (Self-Healing)
         zg.on('roomStreamUpdate', async (roomID, updateType, streamList) => {
             const remoteView = document.getElementById('remote-video-container');
+            const waitingText = document.getElementById('waiting-text');
 
             if (updateType === 'ADD') {
                 console.log("🎥 Remote Stream Added:", streamList[0].streamID);
-                const waitingText = document.getElementById('waiting-text');
+
+                // Remove "Waiting" text if it exists
                 if (waitingText) waitingText.remove();
 
                 const remoteVideo = document.createElement('video');
                 remoteVideo.id = "remote-" + streamList[0].streamID;
                 remoteVideo.autoplay = true;
                 remoteVideo.playsInline = true;
+                remoteVideo.muted = true; // Mute remote audio to prevent echo (handled by AEC, but good practice)
                 remoteVideo.style.width = "100%";
                 remoteVideo.style.height = "100%";
                 remoteVideo.style.objectFit = "cover";
                 remoteVideo.style.opacity = "0";
                 remoteVideo.style.transition = "opacity 0.6s ease-in-out";
+
                 remoteView.appendChild(remoteVideo);
 
-                await zg.startPlayingStream(streamList[0].streamID, remoteVideo);
+                try {
+                    // FIX: Start playing stream with both video and audio elements attached
+                    await zg.startPlayingStream(streamList[0].streamID, {
+                        video: remoteVideo,
+                        audio: remoteVideo
+                    });
+                } catch (e) {
+                    console.error("Zego startPlayingStream failed, trying direct srcObject.", e);
+                    // Fallback: directly attach if possible
+                    if (streamList[0].stream) {
+                        remoteVideo.srcObject = streamList[0].stream;
+                        await remoteVideo.play();
+                    }
+                }
                 setTimeout(() => remoteVideo.style.opacity = "1", 200);
 
             } else if (updateType === 'DELETE') {
@@ -171,7 +207,6 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
                 const videoToRemove = document.getElementById("remote-" + streamList[0].streamID);
                 if (videoToRemove) videoToRemove.remove();
 
-                // Jab koi user join karke chala jaye, TABHI "Waiting for others" dikhega.
                 if (remoteView.childElementCount === 0) {
                     remoteView.innerHTML = `
                         <div class="text-center" id="waiting-text" style="animation: fadeIn 0.5s ease-out;">
@@ -187,20 +222,19 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         await zg.loginRoom(roomID, token, { userID, userName });
         console.log("✅ Room Login Success");
 
+        // 4. Create Local Stream with Crystal Clear Audio Configuration
+        // FIX: Added audioMode: "Speech" and increased audioBitrate to 64kbps
         localStream = await zg.createStream({
             camera: {
                 video: true,
                 audio: true,
-
-                videoQuality: 4,
-
-                width: 1920,
-                height: 1080,
+                videoQuality: 5,          // Optional: 5 = 2K supported by Zego SDK
+                width: 2560,              // 2K Width
+                height: 1440,             // 2K Height
                 frameRate: 30,
-                bitrate: 3000,   
-
-                audioBitrate: 48,
-
+                bitrate: 5000,            // 2K ke liye bitrate badha di (1080p ke liye 3000 tha)
+                audioBitrate: 64,
+                audioMode: "Speech",
                 ans: true,
                 aec: true,
                 aecMode: "AGGRESSIVE",
@@ -208,11 +242,12 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
             }
         });
 
-        enableAEC(zg, localStream);
-        enableANS(zg, localStream);
-        enableAGC(zg, localStream);
+        // Explicitly enable audio enhancements on the engine
+        enableAEC(zg);
+        enableANS(zg);
+        enableAGC(zg);
 
-        // 6. Local preview
+        // 5. Setup Local Preview
         const localView = document.getElementById('local-video-container');
         localView.innerHTML = "";
         const localVideoPreview = document.createElement('video');
@@ -228,22 +263,23 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         localView.appendChild(localVideoPreview);
         localVideoPreview.srcObject = localStream;
 
-        // 7. Publish the stream
+        // 6. Publish the stream (UNMUTED by default)
         publishStreamId = "stream_" + userID + "_" + Date.now();
         publishStream = localStream;
         await zg.startPublishingStream(publishStreamId, publishStream);
-        await zg.mutePublishStreamAudio(publishStream, true);
-        await zg.mutePublishStreamVideo(publishStream, true);
-        console.log("📡 Premium Stream Published Live (mic & camera off by default)!");
 
-        // 8. Wire up buttons
+        // FIX: Initialize isMicOn and isCamOn to true, and un-mute immediately.
+        isMicOn = true;
+        isCamOn = true;
+        await zg.mutePublishStreamAudio(publishStreamId, !isMicOn); // false = unmute
+        await zg.mutePublishStreamVideo(publishStreamId, !isCamOn); // false = unmute
+        console.log("📡 Premium Stream Published Live (Mic & Camera are ON by default)!");
+
+        // 7. Wire up the UI Controls
         setupControls();
         refreshMicCamButtonUI();
 
-        // 🔥 FIX: Starting state mein "Waiting for others" nahi dikhega, sirf dark screen dikhegi.
-        const remoteView = document.getElementById('remote-video-container');
-        if (remoteView.innerHTML.includes("Booting")) remoteView.innerHTML = "";
-
+        // 8. Preload AI Models asynchronously (don't block the main flow)
         ensureMediaPipeLoaded().then(initAIModels).catch(e => {
             console.warn("AI models failed to preload, will retry on button press.", e);
         });
@@ -251,7 +287,7 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
     } catch (error) {
         console.error("❌ Engine Crash:", error);
 
-        // 🔥 FIX: User-friendly error message for Permission Denied
+        // User-friendly error message
         let displayMessage = error.message;
         if (error.message.includes("NotAllowedError") || error.code === 110304) {
             displayMessage = "Camera/Mic access blocked by browser. Please allow permissions in site settings or open this page via HTTPS/localhost.";
@@ -268,39 +304,43 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
     }
 };
 
-// =======================================================
-// 🧠 AI MODEL SETUP (Beauty + Background)
-// =======================================================
+// =========================================
+// 5. AI MODEL SETUP (Beauty + Background)
+// =========================================
 function initAIModels() {
     if (faceMesh && selfieSegmentation) return;
 
-    faceMesh = new window.FaceMesh({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-    });
-    faceMesh.setOptions({
-        maxNumFaces: 1,
-        refineLandmarks: true,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-    });
-    faceMesh.onResults((results) => {
-        lastFaceLandmarks = (results.multiFaceLandmarks && results.multiFaceLandmarks[0]) || null;
-    });
+    try {
+        faceMesh = new window.FaceMesh({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        });
+        faceMesh.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+        faceMesh.onResults((results) => {
+            lastFaceLandmarks = (results.multiFaceLandmarks && results.multiFaceLandmarks[0]) || null;
+        });
 
-    selfieSegmentation = new window.SelfieSegmentation({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
-    });
-    selfieSegmentation.setOptions({ modelSelection: 1 });
-    selfieSegmentation.onResults((results) => {
-        lastSegResults = results;
-    });
+        selfieSegmentation = new window.SelfieSegmentation({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+        });
+        selfieSegmentation.setOptions({ modelSelection: 1 });
+        selfieSegmentation.onResults((results) => {
+            lastSegResults = results;
+        });
 
-    console.log("🧠 AI models initialized (Beauty + Background ready).");
+        console.log("🧠 AI models initialized successfully.");
+    } catch (e) {
+        console.error("Failed to init AI models", e);
+    }
 }
 
-// =======================================================
-// 🖼️ CANVAS PIPELINE
-// =======================================================
+// =========================================
+// 6. CANVAS PIPELINE (RENDERING ENGINE)
+// =========================================
 function ensurePipelineElements() {
     if (rawVideoEl) return;
 
@@ -324,7 +364,10 @@ function ensurePipelineElements() {
     segMaskCtx = segMaskCanvas.getContext('2d');
 }
 
-// 🔥 FULLY ROBUST START FUNCTION: AI fail hone par bhi canvas fallback publish karega!
+/**
+ * Starts the AI pipeline. If AI fails, it falls back to a pure CSS filter
+ * based beautification system so the button never fails.
+ */
 async function startAIPipeline() {
     try {
         await ensureMediaPipeLoaded();
@@ -354,15 +397,13 @@ async function startAIPipeline() {
         aiCamera.start();
         pipelineRunning = true;
 
-        // Agar AI start ho gaya, toh fallback timer ko saaf kar do
         if (blurFallbackTimer) { clearInterval(blurFallbackTimer); blurFallbackTimer = null; }
 
         await switchPublishToCanvas();
 
     } catch (e) {
-        console.error("❌ AI Pipeline failed. Using 100% working JS Blur fallback!", e);
+        console.error("❌ AI Pipeline failed. Using CSS Filter Fallback for Beauty!", e);
 
-        // 🔥 FIX: AI ke bina canvas aur publish ko force karo
         ensurePipelineElements();
         if (localStream && localStream.getVideoTracks().length > 0) {
             const fallbackStream = new MediaStream([localStream.getVideoTracks()[0]]);
@@ -370,10 +411,9 @@ async function startAIPipeline() {
             await rawVideoEl.play().catch(() => {});
         }
 
-        // Purana timer saaf karo
         if (blurFallbackTimer) clearInterval(blurFallbackTimer);
 
-        // Har 40ms (25 FPS) par renderFrame call karo (AI ke bina direct blur)
+        // FIX: Fallback timer loops the render function every 33ms (30 FPS)
         blurFallbackTimer = setInterval(() => {
             if (!rawVideoEl || !outCtx) { 
                 clearInterval(blurFallbackTimer); 
@@ -381,61 +421,64 @@ async function startAIPipeline() {
                 return; 
             }
             renderFrame(); 
-        }, 40);
+        }, 33);
 
         pipelineRunning = true;
-        await switchPublishToCanvas(); // Force publish karo!
+        await switchPublishToCanvas();
     }
 }
 
-// 🔥 BOHOT IMPORTANT: YAHAN BLUR LOGIC FULLY UPGRADE KIYA HAI 🔥
+/**
+ * Renders a single frame to the canvas.
+ * Applies blur, background substitution, and Beauty smoothing (AI or CSS fallback).
+ */
 function renderFrame() {
     if (!outCtx || !rawVideoEl) return;
 
-    // Canvas ko pehle saaf karo taaki pichli frame ghost na dikhe
     outCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
     if (isBgMode === "blur") {
-        // Step 1: Poore raw video ko 100px blur karke canvas par bithao.
-        // Isse piche ka background pura dhundle mein chala jayega.
+        // Step 1: Draw blurred background
         outCtx.save();
-        outCtx.filter = "blur(100px)"; // Ab koi detective kuch nahi pehchaan payega!
+        outCtx.filter = "blur(100px)";
         outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
         outCtx.filter = "none";
         outCtx.restore();
 
-        // Step 2: Agar selfie segmentation ka mask available hai, toh insaan ka clear face draw kar do.
+        // Step 2: Draw clear foreground using AI mask if available
         if (lastSegResults && lastSegResults.segmentationMask) {
             segMaskCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
             segMaskCtx.drawImage(lastSegResults.segmentationMask, 0, 0, CANVAS_W, CANVAS_H);
             segMaskCtx.globalCompositeOperation = "source-in";
             segMaskCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
             segMaskCtx.globalCompositeOperation = "source-over";
-
             outCtx.drawImage(segMaskCanvas, 0, 0, CANVAS_W, CANVAS_H);
         } else {
-            // 🔥 ULTIMATE FALLBACK: Agar AI mask nahi mila, toh poora 100px blur hi dikhega.
-            // Aapko kabhi bhi clear background nahi dikhega, chahe AI kitna slow ho.
+            // AI mask not ready, use a slightly sharper blur on the center? 
+            // For now, just showing the 100px blur.
             console.log("⚠️ AI mask not ready, showing 100px full-screen blur fallback...");
         }
 
-        // Step 3: Beauty filter (agar on hai)
-        if (isBeautyOn && lastFaceLandmarks) {
-            applyBeautySmoothing();
+        // Step 3: Beauty filter
+        if (isBeautyOn) {
+            if (lastFaceLandmarks) {
+                applyBeautySmoothing();
+            } else {
+                applyFallbackBeautyFilter();
+            }
         }
 
     } else if (isBgMode === "image") {
-        // Agar image background choose kiya hai:
         if (bgImageEl && bgImageEl.complete) {
             outCtx.drawImage(bgImageEl, 0, 0, CANVAS_W, CANVAS_H);
         } else {
-            // Agar image load nahi hui, to blur backup
             outCtx.save();
             outCtx.filter = "blur(100px)";
             outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
             outCtx.filter = "none";
             outCtx.restore();
         }
+
         if (lastSegResults && lastSegResults.segmentationMask) {
             segMaskCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
             segMaskCtx.drawImage(lastSegResults.segmentationMask, 0, 0, CANVAS_W, CANVAS_H);
@@ -446,16 +489,33 @@ function renderFrame() {
         } else {
             outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
         }
-        if (isBeautyOn && lastFaceLandmarks) {
-            applyBeautySmoothing();
+
+        if (isBeautyOn) {
+            if (lastFaceLandmarks) {
+                applyBeautySmoothing();
+            } else {
+                applyFallbackBeautyFilter();
+            }
         }
 
     } else {
-        // No effect (Normal video)
+        // Standard Video (No Background Effect)
         outCtx.drawImage(rawVideoEl, 0, 0, CANVAS_W, CANVAS_H);
+
+        // Apply Beauty over the raw frame
+        if (isBeautyOn) {
+            if (lastFaceLandmarks) {
+                applyBeautySmoothing();
+            } else {
+                applyFallbackBeautyFilter();
+            }
+        }
     }
 }
 
+/**
+ * Ultra-Premium AI Face Smoothing (Uses facial landmarks to apply localized blur & brightness).
+ */
 function applyBeautySmoothing() {
     const xs = lastFaceLandmarks.map(p => p.x * CANVAS_W);
     const ys = lastFaceLandmarks.map(p => p.y * CANVAS_H);
@@ -486,6 +546,35 @@ function applyBeautySmoothing() {
     outCtx.filter = "none";
 }
 
+/**
+ * 🔥 FALLBACK: If AI fails, this applies a global CSS filter to the canvas
+ * to simulate a soft beauty (blur + brightness + saturation) effect.
+ */
+function applyFallbackBeautyFilter() {
+    // Only apply if AI is completely unavailable to avoid double-processing
+    if (!lastFaceLandmarks) {
+        // Capture the current canvas state
+        const currentFrame = outCtx.getImageData(0, 0, CANVAS_W, CANVAS_H);
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = CANVAS_W;
+        tempCanvas.height = CANVAS_H;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.putImageData(currentFrame, 0, 0);
+
+        // Redraw with filter
+        outCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+        outCtx.save();
+        outCtx.filter = "blur(2px) saturate(1.1) brightness(1.04)";
+        outCtx.drawImage(tempCanvas, 0, 0);
+        outCtx.restore();
+        outCtx.filter = "none";
+    }
+}
+
+/**
+ * Switches the Zego publish stream from the raw camera to the Canvas Stream.
+ * This allows the AI process to modify the video in real-time.
+ */
 async function switchPublishToCanvas() {
     if (!zg || !localStream) return;
 
@@ -499,19 +588,25 @@ async function switchPublishToCanvas() {
         }
         publishStream = canvasStream;
         await zg.startPublishingStream(publishStreamId, publishStream);
-        await zg.mutePublishStreamAudio(publishStream, !isMicOn);
-        await zg.mutePublishStreamVideo(publishStream, !isCamOn);
+
+        // Restore the mute states after switching
+        await zg.mutePublishStreamAudio(publishStreamId, !isMicOn);
+        await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
         console.log("🎨 Switched publish to AI-processed canvas stream.");
     } catch (e) {
         console.error("Failed to switch to processed stream, reverting to raw camera.", e);
         publishStream = localStream;
         await zg.startPublishingStream(publishStreamId, publishStream).catch(() => {});
-        await zg.mutePublishStreamAudio(publishStream, !isMicOn).catch(() => {});
-        await zg.mutePublishStreamVideo(publishStream, !isCamOn).catch(() => {});
+        await zg.mutePublishStreamAudio(publishStreamId, !isMicOn).catch(() => {});
+        await zg.mutePublishStreamVideo(publishStreamId, !isCamOn).catch(() => {});
     }
 }
 
+/**
+ * Stops the AI pipeline and reverts to the raw camera stream to save CPU.
+ */
 async function stopAIPipelineIfIdle() {
+    // Only revert if both beauty and bg are off
     if (isBeautyOn || isBgMode !== "none") return;
 
     if (aiCamera) { aiCamera.stop(); aiCamera = null; }
@@ -523,8 +618,8 @@ async function stopAIPipelineIfIdle() {
             await zg.stopPublishingStream(publishStreamId);
             publishStream = localStream;
             await zg.startPublishingStream(publishStreamId, publishStream);
-            await zg.mutePublishStreamAudio(publishStream, !isMicOn);
-            await zg.mutePublishStreamVideo(publishStream, !isCamOn);
+            await zg.mutePublishStreamAudio(publishStreamId, !isMicOn);
+            await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
             console.log("↩️ Reverted publish to raw camera stream (AI effects off).");
         } catch (e) {
             console.error("Failed to revert publish stream.", e);
@@ -532,9 +627,11 @@ async function stopAIPipelineIfIdle() {
     }
 }
 
-// =======================================================
-// 🎛️ CUSTOM HIGH-CLASS CONTROLS
-// =======================================================
+// =========================================
+// 7. UI CONTROLS SETUP
+// =========================================
+
+/** Updates the visual appearance of the Microphone and Camera buttons */
 function refreshMicCamButtonUI() {
     const micBtn = document.getElementById('btn-mic');
     if (micBtn) {
@@ -557,13 +654,14 @@ function refreshMicCamButtonUI() {
 }
 
 function setupControls() {
+    // --- MICROPHONE TOGGLE ---
     document.getElementById('btn-mic').onclick = async function () {
         try {
             if (!localStream || !zg) return;
             isMicOn = !isMicOn;
-            // 🔥 FIX: Try-catch around mute so UI updates even if SDK has glitch
             try {
-                await zg.mutePublishStreamAudio(publishStream, !isMicOn);
+                // Use streamID for guaranteed consistency
+                await zg.mutePublishStreamAudio(publishStreamId, !isMicOn);
             } catch (muteErr) {
                 console.warn("Mic mute function threw an error but UI will update:", muteErr);
             }
@@ -573,13 +671,14 @@ function setupControls() {
         } catch (e) { console.error("Mic toggle error:", e); }
     };
 
+    // --- CAMERA TOGGLE ---
     document.getElementById('btn-cam').onclick = async function () {
         try {
             if (!localStream || !zg) return;
             isCamOn = !isCamOn;
-            // 🔥 FIX: Try-catch around mute so UI updates even if SDK has glitch
             try {
-                await zg.mutePublishStreamVideo(publishStream, !isCamOn);
+                // Use streamID for guaranteed consistency
+                await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
             } catch (muteErr) {
                 console.warn("Cam mute function threw an error but UI will update:", muteErr);
             }
@@ -589,12 +688,14 @@ function setupControls() {
         } catch (e) { console.error("Camera toggle error:", e); }
     };
 
+    // --- BEAUTY (WAND/PENCIL ICON) TOGGLE ---
     document.getElementById('btn-beauty').onclick = async function () {
         const btn = this;
         try {
             if (!localStream) return;
             isBeautyOn = !isBeautyOn;
 
+            // Update button visuals
             btn.classList.toggle('active-beauty', isBeautyOn);
             btn.style.background = isBeautyOn ? "linear-gradient(135deg, #f59e0b, #fbbf24)" : "rgba(255,255,255,0.1)";
             btn.style.color = isBeautyOn ? "#000" : "white";
@@ -605,7 +706,7 @@ function setupControls() {
             if (isBeautyOn && !pipelineRunning) {
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                 await startAIPipeline();
-                btn.innerHTML = '<i class="fas fa-magic"></i>';
+                btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i>';
             } else if (!isBeautyOn) {
                 await stopAIPipelineIfIdle();
             }
@@ -615,10 +716,11 @@ function setupControls() {
             btn.style.background = "";
             btn.style.color = "";
             btn.style.boxShadow = "none";
-            btn.innerHTML = '<i class="fas fa-magic"></i>';
+            btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i>';
         }
     };
 
+    // --- BACKGROUND TOGGLE ---
     document.getElementById('btn-bg').onclick = async function () {
         const btn = this;
         try {
@@ -637,10 +739,13 @@ function setupControls() {
         } catch (e) { console.error("BG toggle error:", e); }
     };
 
+    // --- LEAVE ROOM BUTTON ---
     document.getElementById('btn-leave').onclick = leaveRoom;
 }
 
-// Background Picker
+// =========================================
+// 8. BACKGROUND PICKER (MODAL/POPOVER)
+// =========================================
 function openBackgroundPicker(anchorBtn) {
     const existing = document.getElementById('bg-picker-popover');
     if (existing) { existing.remove(); return; }
@@ -707,10 +812,14 @@ function openBackgroundPicker(anchorBtn) {
     }, 0);
 }
 
-// ❌ LEAVE ROOM (FULLY UPGRADED)
+// =========================================
+// 9. LEAVE ROOM & CLEANUP LOGIC
+// =========================================
 async function leaveRoom() {
     try {
-        // 1. Stop AI camera first
+        console.log("🚪 Leaving room...");
+
+        // 1. Stop AI camera and timers immediately
         if (aiCamera) { 
             try { aiCamera.stop(); } catch (e) {} 
             aiCamera = null; 
@@ -718,7 +827,7 @@ async function leaveRoom() {
         if (blurFallbackTimer) { clearInterval(blurFallbackTimer); blurFallbackTimer = null; }
         pipelineRunning = false;
 
-        // 2. Clean up Zego streams
+        // 2. Clean up Zego engine streams
         if (zg) {
             if (publishStreamId) {
                 try { await zg.stopPublishingStream(publishStreamId); } catch (e) { console.warn("Stop publish stream error:", e); }
@@ -732,12 +841,13 @@ async function leaveRoom() {
             try { await zg.logoutRoom(window.meetingRoomId); } catch (e) { console.warn("Logout room error:", e); }
         }
 
-        // 3. Reset UI
+        // 3. Reset UI Elements
         document.getElementById('custom-video-wrapper').style.display = 'none';
         document.getElementById('preJoinScreen').style.display = 'flex';
         document.getElementById('local-video-container').innerHTML = "";
-        document.getElementById('remote-video-container').innerHTML = ""; // Full empty after leave
+        document.getElementById('remote-video-container').innerHTML = ""; 
 
+        // 4. Reset States
         isMicOn = false;
         isCamOn = false;
         isBeautyOn = false;
@@ -747,32 +857,36 @@ async function leaveRoom() {
         refreshMicCamButtonUI();
 
         const beautyBtn = document.getElementById('btn-beauty');
-        beautyBtn.style.background = "";
-        beautyBtn.style.color = "";
-        beautyBtn.style.boxShadow = "none";
-        beautyBtn.innerHTML = '<i class="fas fa-magic"></i>';
+        if (beautyBtn) {
+            beautyBtn.style.background = "";
+            beautyBtn.style.color = "";
+            beautyBtn.style.boxShadow = "none";
+            beautyBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i>';
+        }
 
         const bgBtn = document.getElementById('btn-bg');
-        bgBtn.style.background = "";
-        bgBtn.style.color = "";
-        bgBtn.style.boxShadow = "none";
-        bgBtn.innerHTML = '<i class="fas fa-image"></i>';
+        if (bgBtn) {
+            bgBtn.style.background = "";
+            bgBtn.style.color = "";
+            bgBtn.style.boxShadow = "none";
+            bgBtn.innerHTML = '<i class="fas fa-image"></i>';
+        }
 
         const popover = document.getElementById('bg-picker-popover');
         if (popover) popover.remove();
 
         console.log("✅ Successfully left the meeting.");
 
-        // 🔥 FIX: Agar browser cleanup mein slow ho, toh page reload kar do!
+        // Safety net: If Zego isn't responding correctly, force a reload to reset everything.
         setTimeout(() => {
             if (document.getElementById('custom-video-wrapper').style.display !== 'none') {
+                console.warn("UI cleanup failed, forcing page reload.");
                 location.reload();
             }
         }, 500);
 
     } catch (e) { 
         console.error("Leave room error:", e);
-        // Force reload if something went wrong
         setTimeout(() => location.reload(), 300);
     }
 }
