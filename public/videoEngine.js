@@ -654,6 +654,7 @@ function refreshMicCamButtonUI() {
         localVideoElement.style.opacity = isCamOn ? "1" : "0";
         localVideoElement.style.display = isCamOn ? "block" : "none"; 
     }
+} // <--- 🔥 FIX: YEH BRACKET MISSING THA (यहाँ बहुत जरूरी है)
 
 function setupControls() {
     // --- MICROPHONE TOGGLE ---
@@ -743,7 +744,7 @@ function setupControls() {
 
     // --- LEAVE ROOM BUTTON ---
     document.getElementById('btn-leave').onclick = leaveRoom;
-}
+} // <--- SetupControls ka closing bracket
 
 // =========================================
 // 8. BACKGROUND PICKER (MODAL/POPOVER)
