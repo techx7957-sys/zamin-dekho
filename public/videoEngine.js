@@ -271,8 +271,6 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         // FIX: Initialize isMicOn and isCamOn to false, and mute immediately.
         isMicOn = false;
         isCamOn = false;
-        await zg.mutePublishStreamAudio(publishStreamId, true);  // true = mute 
-        await zg.mutePublishStreamVideo(publishStreamId, true);  // true = mute 
         console.log("📡 Premium Stream Published Live (Mic & Camera are OFF by default)!");
 
         // 7. Wire up the UI Controls
