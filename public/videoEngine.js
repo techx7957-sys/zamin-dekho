@@ -822,35 +822,48 @@ async function leaveRoom() {
     try {
         console.log("🚪 Leaving room...");
 
-        // 1. Stop AI camera and timers immediately
         if (aiCamera) { 
             try { aiCamera.stop(); } catch (e) {} 
             aiCamera = null; 
         }
-        if (blurFallbackTimer) { clearInterval(blurFallbackTimer); blurFallbackTimer = null; }
-        pipelineRunning = false;
 
-        // 2. Clean up Zego engine streams
-        if (zg) {
-            if (publishStreamId) {
-                try { await zg.stopPublishingStream(publishStreamId); } catch (e) { console.warn("Stop publish stream error:", e); }
-            }
-            if (localStream) {
-                try { 
-                    zg.destroyStream(localStream); 
-                    localStream = null; 
-                } catch (e) { console.warn("Destroy stream error:", e); }
-            }
-            try { await zg.logoutRoom(window.meetingRoomId); } catch (e) { console.warn("Logout room error:", e); }
+        if (blurFallbackTimer) {
+            clearInterval(blurFallbackTimer);
+            blurFallbackTimer = null;
         }
 
-        // 3. Reset UI Elements
+        pipelineRunning = false;
+
+        if (zg) {
+            if (publishStreamId) {
+                try {
+                    await zg.stopPublishingStream(publishStreamId);
+                } catch (e) {
+                    console.warn("Stop publish stream error:", e);
+                }
+            }
+
+            if (localStream) {
+                try {
+                    zg.destroyStream(localStream);
+                    localStream = null;
+                } catch (e) {
+                    console.warn("Destroy stream error:", e);
+                }
+            }
+
+            try {
+                await zg.logoutRoom(window.meetingRoomId);
+            } catch (e) {
+                console.warn("Logout room error:", e);
+            }
+        }
+
         document.getElementById('custom-video-wrapper').style.display = 'none';
         document.getElementById('preJoinScreen').style.display = 'flex';
         document.getElementById('local-video-container').innerHTML = "";
-        document.getElementById('remote-video-container').innerHTML = ""; 
+        document.getElementById('remote-video-container').innerHTML = "";
 
-        // 4. Reset States
         isMicOn = false;
         isCamOn = false;
         isBeautyOn = false;
@@ -880,17 +893,17 @@ async function leaveRoom() {
 
         console.log("✅ Successfully left the meeting.");
 
-        // Safety net: If Zego isn't responding correctly, force a reload to reset everything.
         setTimeout(() => {
-            if (document.getElementById('custom-video-wrapper').style.display !== 'none') {
+            if (
+                document.getElementById('custom-video-wrapper').style.display !== 'none'
+            ) {
                 console.warn("UI cleanup failed, forcing page reload.");
                 location.reload();
             }
         }, 500);
 
-    } catch (e) { 
+    } catch (e) {
         console.error("Leave room error:", e);
         setTimeout(() => location.reload(), 300);
-      }
-   }
+    }
 }
