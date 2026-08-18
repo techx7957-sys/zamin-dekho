@@ -158,6 +158,10 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
 
         const serverUrl = "wss://webliveroom" + appId + "-api.coolzcloud.com/ws";
         zg = new ZegoClass(appId, serverUrl);
+        zg.on('publisherStateUpdate', (result) => {
+            console.log('===== PUBLISHER STATE =====');
+            console.log(result);
+        });
 
         // Store roomID globally for leave functionality
         window.meetingRoomId = roomID;
