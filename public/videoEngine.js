@@ -328,8 +328,8 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         isMicOn = false;
         isCamOn = false;
         await new Promise(r => setTimeout(r, 300)); 
-        await zg.mutePublishStreamAudio(true);
-        await zg.mutePublishStreamVideo(true);
+        await zg.mutePublishStreamAudio(publishStreamId, true);
+        await zg.mutePublishStreamVideo(publishStreamId, true);
         console.log("📡 Stream published. Mic OFF + Camera OFF.");
 
         setupControls();
@@ -1367,7 +1367,7 @@ function setupControls() {
         try {
             if (!localStream || !zg) return;
             const nextState = !isMicOn;
-            await zg.mutePublishStreamAudio(!nextState);
+            await zg.mutePublishStreamAudio(publishStreamId, !nextState);
             isMicOn = nextState;
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
@@ -1379,7 +1379,7 @@ function setupControls() {
         try {
             if (!localStream || !zg) return;
             const nextState = !isCamOn;
-            await zg.mutePublishStreamVideo(!nextState);
+            await zg.mutePublishStreamvideo(publishStreamId, !nextState);
             isCamOn = nextState;
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
