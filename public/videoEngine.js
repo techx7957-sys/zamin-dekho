@@ -58,6 +58,10 @@ const TARGET_ASPECT_RATIO = CANVAS_W / CANVAS_H;
 let gpu = null;
 let gpuReady = false;
 
+let maskRawTexture = null;          
+let maskRefinedTexture = null;      
+let maskRefineFramebuffer = null;
+
 let videoTexture = null;
 let maskTexture = null;
 let prevMaskTexture = null; // For temporal smoothing
@@ -271,6 +275,8 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
                 video: true,
                 audio: true,
                 videoQuality: 4,
+                width: 1280,      
+                height: 720,
                 frameRate: 30,
                 bitrate: 3000,
                 audioBitrate: 64,
