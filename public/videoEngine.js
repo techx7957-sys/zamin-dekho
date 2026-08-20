@@ -1223,8 +1223,8 @@ async function switchPublishToCanvas() {
         await zg.startPublishingStream(publishStreamId, customZegoStream);
         await new Promise(r => setTimeout(r, 300));
         // 8. Restore mic/camera states
-        await zg.mutePublishStreamAudio(!isMicOn);
-        await zg.mutePublishStreamVideo(!isCamOn);
+        await zg.mutePublishStreamAudio(publishStreamId, !isMicOn);
+        await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
 
         // 🔥 FIXED: Update local preview to show processed video
         const localVideoPreview = document.getElementById('my-local-video');
@@ -1248,8 +1248,8 @@ async function switchPublishToCanvas() {
         try {
             await zg.startPublishingStream(publishStreamId, localStream);
             await new Promise(r => setTimeout(r, 300));
-            await zg.mutePublishStreamAudio(!isMicOn);
-            await zg.mutePublishStreamVideo(!isCamOn);
+            await zg.mutePublishStreamAudio(publishStreamId, !isMicOn);
+            await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
             console.log("↩️ Reverted to original camera stream.");
         } catch (fallbackError) {
             console.error("❌ Raw camera fallback also failed:", fallbackError);
@@ -1306,8 +1306,8 @@ async function stopAIPipelineIfIdle() {
             publishStream = localStream;
             await zg.startPublishingStream(publishStreamId, localStream);
             await new Promise(r => setTimeout(r, 300));
-            await zg.mutePublishStreamAudio(!isMicOn);
-            await zg.mutePublishStreamVideo(!isCamOn);
+            await zg.mutePublishStreamAudio(publishStreamId, !isMicOn);
+            await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
             console.log("✅ Original camera stream restored.");
         } catch (e) {
             console.error("❌ Failed to restore original camera stream:", e);
