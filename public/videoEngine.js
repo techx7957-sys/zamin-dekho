@@ -327,6 +327,7 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
 
         isMicOn = false;
         isCamOn = false;
+        await new Promise(r => setTimeout(r, 300)); 
         await zg.mutePublishStreamAudio(true);
         await zg.mutePublishStreamVideo(true);
         console.log("📡 Stream published. Mic OFF + Camera OFF.");
@@ -1220,7 +1221,7 @@ async function switchPublishToCanvas() {
         // 7. Publish custom stream
         publishStream = customZegoStream;
         await zg.startPublishingStream(publishStreamId, customZegoStream);
-
+        await new Promise(r => setTimeout(r, 300));
         // 8. Restore mic/camera states
         await zg.mutePublishStreamAudio(!isMicOn);
         await zg.mutePublishStreamVideo(!isCamOn);
@@ -1246,6 +1247,7 @@ async function switchPublishToCanvas() {
         publishStream = localStream;
         try {
             await zg.startPublishingStream(publishStreamId, localStream);
+            await new Promise(r => setTimeout(r, 300));
             await zg.mutePublishStreamAudio(!isMicOn);
             await zg.mutePublishStreamVideo(!isCamOn);
             console.log("↩️ Reverted to original camera stream.");
@@ -1303,6 +1305,7 @@ async function stopAIPipelineIfIdle() {
             }
             publishStream = localStream;
             await zg.startPublishingStream(publishStreamId, localStream);
+            await new Promise(r => setTimeout(r, 300));
             await zg.mutePublishStreamAudio(!isMicOn);
             await zg.mutePublishStreamVideo(!isCamOn);
             console.log("✅ Original camera stream restored.");
