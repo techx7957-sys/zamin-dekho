@@ -2034,103 +2034,530 @@ function openBackgroundPicker(anchorBtn) {
 }
 
 // =========================================
-// 9. PERFORMANCE MONITOR (UPDATED)
+// 9. PERFORMANCE / NETWORK QUALITY MONITOR
 // =========================================
+
+let performanceMonitorInterval = null;
+
 function startPerformanceMonitor() {
-    setInterval(() => {
-        // FPS calculation
+
+    // Prevent duplicate performance monitors
+    if (performanceMonitorInterval) {
+        clearInterval(performanceMonitorInterval);
+        performanceMonitorInterval = null;
+    }
+
+    console.log("📊 Starting performance monitor...");
+
+    performanceMonitorInterval = setInterval(() => {
+
+        // =====================================================
+        // 🔴 CRITICAL LIFECYCLE GUARD
+        // If Zego engine / local stream / publish ID is gone,
+        // DO NOT perform any more quality operations.
+        // =====================================================
+        if (!zg || !localStream || !publishStreamId) {
+
+            console.log(
+                "🛑 Performance monitor stopped:",
+                {
+                    zgExists: !!zg,
+                    localStreamExists: !!localStream,
+                    publishStreamId: publishStreamId || ""
+                }
+            );
+
+            clearInterval(performanceMonitorInterval);
+            performanceMonitorInterval = null;
+
+            return;
+        }
+
+        // =====================================================
+        // FPS CALCULATION
+        // =====================================================
         const now = performance.now();
+
         if (lastFPSCheckTime > 0) {
+
             const elapsed = (now - lastFPSCheckTime) / 1000;
-            currentFPS = frameRateCounter / elapsed;
+
+            if (elapsed > 0) {
+                currentFPS = frameRateCounter / elapsed;
+            }
+
             frameRateCounter = 0;
         }
+
         lastFPSCheckTime = now;
 
-        // 🔥 PATCH 4/5: Unified quality evaluation
-        evaluateQuality();
-
-        // If network quality callback is not supported, use polling fallback
-        if (!zg?.onNetworkQuality && zg?.getNetworkQuality) {
-            try {
-                const quality = zg.getNetworkQuality();
-                // Convert to 0-1 if it's a number, else assume 0.5
-                networkQuality = typeof quality === 'number' ? Math.min(1, Math.max(0, quality)) : 0.5;
-            } catch (e) { }
+        // =====================================================
+        // UNIFIED QUALITY EVALUATION
+        // =====================================================
+        try {
+            evaluateQuality();
+        } catch (e) {
+            console.warn(
+                "⚠️ Quality evaluation failed:",
+                e
+            );
         }
+
+        // =====================================================
+        // NETWORK QUALITY FALLBACK
+        // =====================================================
+        if (
+            zg &&
+            typeof zg.onNetworkQuality !== "function" &&
+            typeof zg.getNetworkQuality === "function"
+        ) {
+
+            try {
+
+                const quality = zg.getNetworkQuality();
+
+                if (typeof quality === "number") {
+                    networkQuality = Math.min(
+                        1,
+                        Math.max(0, quality)
+                    );
+                } else {
+                    networkQuality = 0.5;
+                }
+
+            } catch (e) {
+
+                console.warn(
+                    "⚠️ Network quality polling failed:",
+                    e
+                );
+            }
+        }
+
     }, 2000);
+}
+
+
+// =========================================
+// STOP PERFORMANCE MONITOR
+// =========================================
+
+function stopPerformanceMonitor() {
+
+    if (performanceMonitorInterval) {
+
+        clearInterval(performanceMonitorInterval);
+
+        performanceMonitorInterval = null;
+
+        console.log(
+            "🛑 Performance monitor stopped."
+        );
+    }
 }
 
 // =========================================
 // 10. LEAVE ROOM & CLEANUP
 // =========================================
+
 async function leaveRoom() {
-    try {
-        console.log("🚪 Leaving room...");
 
-        if (aiCamera) { try { aiCamera.stop(); } catch (e) {} aiCamera = null; }
+    console.log("🚪 Leaving room...");
 
-        if (videoFrameCallbackId && rawVideoEl && typeof rawVideoEl.cancelVideoFrameCallback === 'function') {
-            rawVideoEl.cancelVideoFrameCallback(videoFrameCallbackId);
-            videoFrameCallbackId = null;
+    // =====================================================
+    // 🔴 STEP 1 — STOP BACKGROUND MONITOR FIRST
+    // =====================================================
+
+    stopPerformanceMonitor();
+
+    // Prevent quality evaluation / resolution switching
+    // while cleanup is happening.
+    pipelineRunning = false;
+
+    // =====================================================
+    // STEP 2 — STOP AI CAMERA
+    // =====================================================
+
+    if (aiCamera) {
+
+        try {
+            aiCamera.stop();
+            console.log("✅ AI camera stopped.");
+        } catch (e) {
+            console.warn(
+                "⚠️ AI camera stop failed:",
+                e
+            );
         }
-        if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
-        if (fallbackTimeoutId) { clearTimeout(fallbackTimeoutId); fallbackTimeoutId = null; }
 
-        pipelineRunning = false;
-        segmentationBusy = false;
-        segmentationFrameCounter = 0;
-        lastSegResults = null;
-        lastFaceLandmarks = null;
-
-        if (zg) {
-            if (publishStreamId) {
-                try { await zg.stopPublishingStream(publishStreamId); originalPublishingStopped = true; } catch (e) {}
-            }
-            if (localStream) {
-                try { zg.destroyStream(localStream); localStream = null; } catch (e) {}
-            }
-            try { await zg.logoutRoom(window.meetingRoomId); } catch (e) {}
-        }
-
-        document.getElementById('custom-video-wrapper').style.display = 'none';
-        document.getElementById('preJoinScreen').style.display = 'flex';
-        document.getElementById('local-video-container').innerHTML = "";
-        document.getElementById('remote-video-container').innerHTML = "";
-
-        isMicOn = false;
-        isCamOn = false;
-        isBeautyOn = false;
-        isBgMode = "none";
-        currentZoom = 1.0;
-        publishStream = null;
-        canvasStream = null;
-        customZegoStream = null;
-
-        refreshMicCamButtonUI();
-
-        const beautyBtn = document.getElementById('btn-beauty');
-        if (beautyBtn) { beautyBtn.style.background = ""; beautyBtn.style.color = ""; beautyBtn.style.boxShadow = "none"; beautyBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i>'; }
-
-        const bgBtn = document.getElementById('btn-bg');
-        if (bgBtn) { bgBtn.style.background = ""; bgBtn.style.color = ""; bgBtn.style.boxShadow = "none"; bgBtn.innerHTML = '<i class="fas fa-image"></i>'; }
-
-        const popover = document.getElementById('bg-picker-popover');
-        if (popover) popover.remove();
-
-        const zoomControlBar = document.getElementById('zoom-control-bar');
-        if (zoomControlBar) zoomControlBar.remove();
-
-        console.log("✅ Successfully left the meeting.");
-        setTimeout(() => {
-            if (document.getElementById('custom-video-wrapper').style.display !== 'none') {
-                console.warn("UI cleanup failed, forcing page reload.");
-                location.reload();
-            }
-        }, 500);
-
-    } catch (e) {
-        console.error("Leave room error:", e);
-        setTimeout(() => location.reload(), 300);
+        aiCamera = null;
     }
+
+    // =====================================================
+    // STEP 3 — STOP VIDEO FRAME CALLBACK
+    // =====================================================
+
+    if (
+        videoFrameCallbackId &&
+        rawVideoEl &&
+        typeof rawVideoEl.cancelVideoFrameCallback === "function"
+    ) {
+
+        try {
+            rawVideoEl.cancelVideoFrameCallback(
+                videoFrameCallbackId
+            );
+
+            console.log(
+                "✅ Video frame callback cancelled."
+            );
+
+        } catch (e) {
+
+            console.warn(
+                "⚠️ Video frame callback cancellation failed:",
+                e
+            );
+        }
+
+        videoFrameCallbackId = null;
+    }
+
+    // =====================================================
+    // STEP 4 — STOP ANIMATION FRAME
+    // =====================================================
+
+    if (animationFrameId) {
+
+        try {
+            cancelAnimationFrame(animationFrameId);
+        } catch (e) {
+            console.warn(
+                "⚠️ Animation frame cancellation failed:",
+                e
+            );
+        }
+
+        animationFrameId = null;
+    }
+
+    // =====================================================
+    // STEP 5 — STOP FALLBACK TIMER
+    // =====================================================
+
+    if (fallbackTimeoutId) {
+
+        try {
+            clearTimeout(fallbackTimeoutId);
+        } catch (e) {
+            console.warn(
+                "⚠️ Fallback timer cancellation failed:",
+                e
+            );
+        }
+
+        fallbackTimeoutId = null;
+    }
+
+    // =====================================================
+    // STEP 6 — RESET AI / PIPELINE STATE
+    // =====================================================
+
+    segmentationBusy = false;
+    segmentationFrameCounter = 0;
+
+    lastSegResults = null;
+    lastFaceLandmarks = null;
+    previousMaskData = null;
+
+    // =====================================================
+    // STEP 7 — SNAPSHOT ZEGO REFERENCES
+    // =====================================================
+    // Keep local references so that cleanup remains stable
+    // even if global state is reset later.
+
+    const engine = zg;
+    const stream = localStream;
+    const streamId = publishStreamId;
+    const roomId = window.meetingRoomId;
+
+    // =====================================================
+    // STEP 8 — CLEAR GLOBAL ZEGO STATE EARLY
+    // =====================================================
+    // This prevents background code from treating the old
+    // engine/stream as active while cleanup is running.
+
+    zg = null;
+    localStream = null;
+    publishStreamId = "";
+
+    // =====================================================
+    // STEP 9 — STOP PUBLISHING
+    // =====================================================
+
+    if (engine && streamId) {
+
+        try {
+
+            await engine.stopPublishingStream(
+                streamId
+            );
+
+            originalPublishingStopped = true;
+
+            console.log(
+                "✅ Publishing stopped:",
+                streamId
+            );
+
+        } catch (e) {
+
+            console.warn(
+                "⚠️ stopPublishingStream failed:",
+                e
+            );
+        }
+    }
+
+    // =====================================================
+    // STEP 10 — DESTROY LOCAL ZEGO STREAM
+    // =====================================================
+
+    if (engine && stream) {
+
+        try {
+
+            engine.destroyStream(
+                stream
+            );
+
+            console.log(
+                "✅ Local Zego stream destroyed."
+            );
+
+        } catch (e) {
+
+            console.warn(
+                "⚠️ destroyStream failed:",
+                e
+            );
+        }
+    }
+
+    // =====================================================
+    // STEP 11 — LOGOUT ROOM
+    // =====================================================
+
+    if (engine && roomId) {
+
+        try {
+
+            await engine.logoutRoom(
+                roomId
+            );
+
+            console.log(
+                "✅ Zego room logout successful:",
+                roomId
+            );
+
+        } catch (e) {
+
+            console.warn(
+                "⚠️ logoutRoom failed:",
+                e
+            );
+        }
+    }
+
+    // =====================================================
+    // STEP 12 — CLEAR REMAINING STREAM REFERENCES
+    // =====================================================
+
+    publishStream = null;
+    canvasStream = null;
+    customZegoStream = null;
+
+    originalPublishingStopped = false;
+
+    // =====================================================
+    // STEP 13 — RESET MEDIA STATE
+    // =====================================================
+
+    isMicOn = false;
+    isCamOn = false;
+    isBeautyOn = false;
+    isBgMode = "none";
+
+    currentZoom = 1.0;
+
+    // =====================================================
+    // STEP 14 — CLEAR LOCAL VIDEO ELEMENT
+    // =====================================================
+
+    const localContainer =
+        document.getElementById(
+            "local-video-container"
+        );
+
+    if (localContainer) {
+        localContainer.innerHTML = "";
+    }
+
+    // =====================================================
+    // STEP 15 — CLEAR REMOTE VIDEO ELEMENT
+    // =====================================================
+
+    const remoteContainer =
+        document.getElementById(
+            "remote-video-container"
+        );
+
+    if (remoteContainer) {
+        remoteContainer.innerHTML = "";
+    }
+
+    // =====================================================
+    // STEP 16 — RESET UI
+    // =====================================================
+
+    const videoWrapper =
+        document.getElementById(
+            "custom-video-wrapper"
+        );
+
+    const preJoinScreen =
+        document.getElementById(
+            "preJoinScreen"
+        );
+
+    if (videoWrapper) {
+        videoWrapper.style.display = "none";
+    }
+
+    if (preJoinScreen) {
+        preJoinScreen.style.display = "flex";
+    }
+
+    // =====================================================
+    // STEP 17 — RESET MIC/CAMERA BUTTON
+    // =====================================================
+
+    try {
+        refreshMicCamButtonUI();
+    } catch (e) {
+        console.warn(
+            "⚠️ Button UI refresh failed:",
+            e
+        );
+    }
+
+    // =====================================================
+    // STEP 18 — RESET BEAUTY BUTTON
+    // =====================================================
+
+    const beautyBtn =
+        document.getElementById(
+            "btn-beauty"
+        );
+
+    if (beautyBtn) {
+
+        beautyBtn.style.background = "";
+        beautyBtn.style.color = "";
+        beautyBtn.style.boxShadow = "none";
+
+        beautyBtn.innerHTML =
+            '<i class="fas fa-wand-magic-sparkles"></i>';
+    }
+
+    // =====================================================
+    // STEP 19 — RESET BACKGROUND BUTTON
+    // =====================================================
+
+    const bgBtn =
+        document.getElementById(
+            "btn-bg"
+        );
+
+    if (bgBtn) {
+
+        bgBtn.style.background = "";
+        bgBtn.style.color = "";
+        bgBtn.style.boxShadow = "none";
+
+        bgBtn.innerHTML =
+            '<i class="fas fa-image"></i>';
+    }
+
+    // =====================================================
+    // STEP 20 — REMOVE BACKGROUND POPOVER
+    // =====================================================
+
+    const popover =
+        document.getElementById(
+            "bg-picker-popover"
+        );
+
+    if (popover) {
+        popover.remove();
+    }
+
+    // =====================================================
+    // STEP 21 — REMOVE ZOOM UI
+    // =====================================================
+
+    const zoomControlBar =
+        document.getElementById(
+            "zoom-control-bar"
+        );
+
+    if (zoomControlBar) {
+        zoomControlBar.remove();
+    }
+
+    // =====================================================
+    // STEP 22 — FINAL STATE VERIFICATION
+    // =====================================================
+
+    console.log(
+        "🧹 Zego cleanup state:",
+        {
+            zg: zg,
+            localStream: localStream,
+            publishStream: publishStream,
+            publishStreamId: publishStreamId,
+            performanceMonitor:
+                performanceMonitorInterval
+        }
+    );
+
+    console.log(
+        "✅ Successfully left the meeting."
+    );
+
+    // =====================================================
+    // STEP 23 — SAFETY UI CHECK
+    // =====================================================
+
+    setTimeout(() => {
+
+        const wrapper =
+            document.getElementById(
+                "custom-video-wrapper"
+            );
+
+        if (
+            wrapper &&
+            wrapper.style.display !== "none"
+        ) {
+
+            console.warn(
+                "⚠️ UI cleanup failed, forcing page reload."
+            );
+
+            location.reload();
+        }
+
+    }, 500);
 }
