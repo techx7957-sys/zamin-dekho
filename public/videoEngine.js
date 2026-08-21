@@ -557,136 +557,700 @@ function createZoomSliderUI() {
 // =========================================
 // 4. ENGINE START FUNCTION
 // =========================================
-window.startCustomZegoEngine = async function (appId, token, roomID, userID, userName) {
+window.startCustomZegoEngine = async function (
+    appId,
+    token,
+    roomID,
+    userID,
+    userName
+) {
     try {
+
         console.log("🚀 Starting Ultra Premium Video Engine v3.2...");
 
-        document.getElementById('remote-video-container').innerHTML = '';
+        // =====================================================
+        // 0. BASIC VALIDATION
+        // =====================================================
+
+        if (!appId || !token || !roomID || !userID) {
+            throw new Error(
+                "Invalid Zego connection parameters."
+            );
+        }
+
+        // =====================================================
+        // 1. CLEAR REMOTE VIEW
+        // =====================================================
+
+        const remoteContainer =
+            document.getElementById(
+                "remote-video-container"
+            );
+
+        if (remoteContainer) {
+            remoteContainer.innerHTML = "";
+        }
+
+        // =====================================================
+        // 2. LOAD ZEGO SDK
+        // =====================================================
 
         const ZegoRaw = await ensureZegoLoaded();
-        const ZegoClass = ZegoRaw.ZegoExpressEngine ? 
-                         (ZegoRaw.ZegoExpressEngine.default || ZegoRaw.ZegoExpressEngine) : 
-                         ZegoRaw;
 
-        if (!ZegoClass) throw new Error("System Error: Zego Engine initialization failed.");
+        const ZegoClass =
+            ZegoRaw?.ZegoExpressEngine
+                ? (
+                    ZegoRaw.ZegoExpressEngine.default ||
+                    ZegoRaw.ZegoExpressEngine
+                )
+                : ZegoRaw;
+
+        if (!ZegoClass) {
+            throw new Error(
+                "System Error: Zego Engine initialization failed."
+            );
+        }
+
+        // =====================================================
+        // 3. CREATE ZEGO ENGINE
+        // =====================================================
 
         const serverUrl = "";
-        zg = new ZegoClass(appId, serverUrl);
+
+        zg = new ZegoClass(
+            appId,
+            serverUrl
+        );
+
         window.meetingRoomId = roomID;
 
-        // 2. Remote Stream Event Listener
-        zg.on('roomStreamUpdate', async (roomID, updateType, streamList) => {
-            const remoteView = document.getElementById('remote-video-container');
-            const waitingText = document.getElementById('waiting-text');
+        console.log("✅ Zego engine instance created.");
 
-            if (updateType === 'ADD') {
-                console.log("🎥 Remote Stream Added:", streamList[0].streamID);
+        // =====================================================
+        // 🔥 3A. ROOM STATE LIFECYCLE DEBUG
+        // =====================================================
+        // IMPORTANT:
+        // Register immediately after engine creation so we don't
+        // miss CONNECTING / CONNECTED / DISCONNECTED events.
 
-                if (waitingText) waitingText.remove();
+        zg.on(
+            "roomStateUpdate",
+            (
+                callbackRoomID,
+                state,
+                errorCode,
+                extendedData
+            ) => {
 
-                const remoteVideo = document.createElement('video');
-                remoteVideo.id = "remote-" + streamList[0].streamID;
-                remoteVideo.autoplay = true;
-                remoteVideo.playsInline = true;
-                remoteVideo.muted = false; 
+                console.log(
+                    "🔎 ZEGO roomStateUpdate:",
+                    {
+                        roomID: callbackRoomID,
+                        state,
+                        errorCode,
+                        extendedData
+                    }
+                );
 
-                remoteVideo.style.cssText = `
-                    position: absolute; inset: 0; width: 100%; height: 100%;
-                    max-width: 100%; max-height: 100%; object-fit: cover;
-                    object-position: center center; transform: none;
-                    transform-origin: center center; opacity: 0;
-                    transition: opacity 0.6s ease-in-out;
-                `;
-                remoteView.style.position = "relative";
-                remoteView.style.overflow = "hidden";
-                remoteView.appendChild(remoteVideo);
+                // -------------------------------------------------
+                // DISCONNECTED
+                // -------------------------------------------------
 
-                try {
-                    await zg.startPlayingStream(streamList[0].streamID, { video: remoteVideo, audio: remoteVideo });
-                } catch (e) {
-                    console.error("Zego startPlayingStream failed, trying direct srcObject.", e);
-                    if (streamList[0].stream) {
-                        remoteVideo.srcObject = streamList[0].stream;
-                        await remoteVideo.play();
+                if (state === "DISCONNECTED") {
+
+                    console.error(
+                        "🔴 ZEGO ROOM DISCONNECTED:",
+                        {
+                            roomID: callbackRoomID,
+                            errorCode,
+                            extendedData
+                        }
+                    );
+
+                    // Stop background performance monitor.
+                    if (
+                        typeof stopPerformanceMonitor ===
+                        "function"
+                    ) {
+                        stopPerformanceMonitor();
                     }
                 }
-                setTimeout(() => remoteVideo.style.opacity = "1", 200);
 
-            } else if (updateType === 'DELETE') {
-                console.log("❌ Remote Stream Removed:", streamList[0].streamID);
-                const videoToRemove = document.getElementById("remote-" + streamList[0].streamID);
-                if (videoToRemove) videoToRemove.remove();
+                // -------------------------------------------------
+                // CONNECTED
+                // -------------------------------------------------
 
-                if (remoteView.childElementCount === 0) {
-                    remoteView.innerHTML = `
-                        <div class="text-center" id="waiting-text" style="animation: fadeIn 0.5s ease-out;">
-                            <i class="fas fa-user-slash mb-3" style="font-size: 50px; color: rgba(255,255,255,0.1);"></i>
-                            <p class="text-white-50 small fw-bold">User left the room. Waiting for others...</p>
-                        </div>
-                    `;
+                if (state === "CONNECTED") {
+
+                    console.log(
+                        "🟢 ZEGO ROOM CONNECTED:",
+                        callbackRoomID
+                    );
                 }
             }
-        });
+        );
 
-        // 3. Login
-        await zg.loginRoom(roomID, token, { userID, userName });
-        console.log("✅ Room Login Success");
+        // =====================================================
+        // 🔥 3B. PUBLISHER STATE LIFECYCLE DEBUG
+        // =====================================================
 
-        // 4. Create Local Stream - Adaptive Profile applied
-        const initProfile = RESOLUTION_PROFILES[currentResProfile];
-        localStream = await zg.createStream({
-            camera: {
-                video: true,
-                audio: true,
-                videoQuality: 4,
-                width: initProfile.width,      
-                height: initProfile.height,
-                frameRate: initProfile.fps,
-                bitrate: initProfile.bitrate,
-                audioBitrate: 64,
-                audioMode: "Speech",
-                ans: true,
-                aec: true,
-                aecMode: "AGGRESSIVE",
-                agc: true
+        zg.on(
+            "publisherStateUpdate",
+            (
+                streamID,
+                state,
+                errorCode,
+                extendedData
+            ) => {
+
+                console.log(
+                    "🔎 ZEGO publisherStateUpdate:",
+                    {
+                        streamID,
+                        state,
+                        errorCode,
+                        extendedData
+                    }
+                );
+
+                if (errorCode && errorCode !== 0) {
+
+                    console.error(
+                        "🔴 ZEGO PUBLISHER ERROR:",
+                        {
+                            streamID,
+                            state,
+                            errorCode,
+                            extendedData
+                        }
+                    );
+                }
             }
-        });
+        );
 
-        enableAEC(zg);
-        enableANS(zg);
-        enableAGC(zg);
+        // =====================================================
+        // 4. REMOTE STREAM EVENT LISTENER
+        // =====================================================
 
-        // 5. Setup Local Preview
-        const localView = document.getElementById('local-video-container');
+        zg.on(
+            "roomStreamUpdate",
+            async (
+                callbackRoomID,
+                updateType,
+                streamList,
+                extendedData
+            ) => {
+
+                console.log(
+                    "🔎 ZEGO roomStreamUpdate:",
+                    {
+                        roomID: callbackRoomID,
+                        updateType,
+                        streamList,
+                        extendedData
+                    }
+                );
+
+                const remoteView =
+                    document.getElementById(
+                        "remote-video-container"
+                    );
+
+                if (!remoteView) {
+                    console.warn(
+                        "⚠️ Remote video container not found."
+                    );
+                    return;
+                }
+
+                if (
+                    !Array.isArray(streamList) ||
+                    streamList.length === 0
+                ) {
+                    return;
+                }
+
+                // =================================================
+                // ADD
+                // =================================================
+
+                if (updateType === "ADD") {
+
+                    for (const streamInfo of streamList) {
+
+                        if (!streamInfo?.streamID) {
+                            continue;
+                        }
+
+                        console.log(
+                            "🎥 Remote Stream Added:",
+                            streamInfo.streamID
+                        );
+
+                        const waitingText =
+                            document.getElementById(
+                                "waiting-text"
+                            );
+
+                        if (waitingText) {
+                            waitingText.remove();
+                        }
+
+                        const existingVideo =
+                            document.getElementById(
+                                "remote-" +
+                                streamInfo.streamID
+                            );
+
+                        if (existingVideo) {
+                            console.log(
+                                "ℹ️ Remote video already exists:",
+                                streamInfo.streamID
+                            );
+                            continue;
+                        }
+
+                        const remoteVideo =
+                            document.createElement("video");
+
+                        remoteVideo.id =
+                            "remote-" +
+                            streamInfo.streamID;
+
+                        remoteVideo.autoplay = true;
+                        remoteVideo.playsInline = true;
+                        remoteVideo.muted = false;
+
+                        remoteVideo.style.cssText = `
+                            position: absolute;
+                            inset: 0;
+                            width: 100%;
+                            height: 100%;
+                            max-width: 100%;
+                            max-height: 100%;
+                            object-fit: cover;
+                            object-position: center center;
+                            transform: none;
+                            transform-origin: center center;
+                            opacity: 0;
+                            transition: opacity 0.6s ease-in-out;
+                        `;
+
+                        remoteView.style.position =
+                            "relative";
+
+                        remoteView.style.overflow =
+                            "hidden";
+
+                        remoteView.appendChild(
+                            remoteVideo
+                        );
+
+                        // =========================================
+                        // START PLAYING REMOTE STREAM
+                        // =========================================
+
+                        try {
+
+                            if (!zg) {
+                                console.warn(
+                                    "⚠️ Zego engine unavailable; remote play skipped."
+                                );
+                                return;
+                            }
+
+                            await zg.startPlayingStream(
+                                streamInfo.streamID,
+                                {
+                                    video: remoteVideo,
+                                    audio: remoteVideo
+                                }
+                            );
+
+                            console.log(
+                                "▶️ Remote stream playback started:",
+                                streamInfo.streamID
+                            );
+
+                        } catch (e) {
+
+                            console.error(
+                                "❌ Zego startPlayingStream failed:",
+                                e
+                            );
+
+                            // Direct MediaStream fallback
+                            if (
+                                streamInfo.stream &&
+                                remoteVideo
+                            ) {
+
+                                try {
+
+                                    remoteVideo.srcObject =
+                                        streamInfo.stream;
+
+                                    await remoteVideo.play();
+
+                                    console.log(
+                                        "▶️ Direct srcObject fallback succeeded:",
+                                        streamInfo.streamID
+                                    );
+
+                                } catch (fallbackError) {
+
+                                    console.error(
+                                        "❌ Direct srcObject fallback failed:",
+                                        fallbackError
+                                    );
+                                }
+                            }
+                        }
+
+                        setTimeout(() => {
+
+                            if (
+                                remoteVideo &&
+                                remoteVideo.isConnected
+                            ) {
+                                remoteVideo.style.opacity =
+                                    "1";
+                            }
+
+                        }, 200);
+                    }
+                }
+
+                // =================================================
+                // DELETE
+                // =================================================
+
+                else if (updateType === "DELETE") {
+
+                    for (const streamInfo of streamList) {
+
+                        if (!streamInfo?.streamID) {
+                            continue;
+                        }
+
+                        console.log(
+                            "❌ Remote Stream Removed:",
+                            streamInfo.streamID
+                        );
+
+                        const videoToRemove =
+                            document.getElementById(
+                                "remote-" +
+                                streamInfo.streamID
+                            );
+
+                        if (videoToRemove) {
+                            videoToRemove.remove();
+                        }
+                    }
+
+                    if (
+                        remoteView.childElementCount ===
+                        0
+                    ) {
+
+                        remoteView.innerHTML = `
+                            <div
+                                class="text-center"
+                                id="waiting-text"
+                                style="animation: fadeIn 0.5s ease-out;"
+                            >
+                                <i
+                                    class="fas fa-user-slash mb-3"
+                                    style="
+                                        font-size: 50px;
+                                        color: rgba(255,255,255,0.1);
+                                    "
+                                ></i>
+
+                                <p
+                                    class="text-white-50 small fw-bold"
+                                >
+                                    User left the room.
+                                    Waiting for others...
+                                </p>
+                            </div>
+                        `;
+                    }
+                }
+            }
+        );
+
+        // =====================================================
+        // 5. LOGIN ROOM
+        // =====================================================
+
+        console.log(
+            "🔐 Logging into ZEGO room:",
+            roomID
+        );
+
+        await zg.loginRoom(
+            roomID,
+            token,
+            {
+                userID,
+                userName
+            }
+        );
+
+        console.log(
+            "✅ Room Login Success"
+        );
+
+        // =====================================================
+        // 6. CREATE LOCAL STREAM
+        // =====================================================
+
+        const initProfile =
+            RESOLUTION_PROFILES[
+                currentResProfile
+            ];
+
+        if (!initProfile) {
+            throw new Error(
+                "Invalid resolution profile: " +
+                currentResProfile
+            );
+        }
+
+        console.log(
+            "📷 Creating local stream:",
+            {
+                profile: currentResProfile,
+                width: initProfile.width,
+                height: initProfile.height,
+                fps: initProfile.fps,
+                bitrate: initProfile.bitrate
+            }
+        );
+
+        try {
+
+            localStream =
+                await zg.createStream({
+
+                    camera: {
+
+                        video: true,
+                        audio: true,
+
+                        videoQuality: 4,
+
+                        width:
+                            initProfile.width,
+
+                        height:
+                            initProfile.height,
+
+                        frameRate:
+                            initProfile.fps,
+
+                        bitrate:
+                            initProfile.bitrate,
+
+                        audioBitrate: 64,
+
+                        audioMode: "Speech",
+
+                        ans: true,
+                        aec: true,
+
+                        aecMode:
+                            "AGGRESSIVE",
+
+                        agc: true
+                    }
+                });
+
+        } catch (e) {
+
+            console.error(
+                "❌ Zego createStream failed:",
+                e
+            );
+
+            throw e;
+        }
+
+        if (!localStream) {
+
+            throw new Error(
+                "Zego createStream returned an empty local stream."
+            );
+        }
+
+        console.log(
+            "✅ Local stream created:",
+            localStream
+        );
+
+        console.log(
+            "🎚️ Local tracks:",
+            localStream
+                .getTracks()
+                .map(track => ({
+                    kind: track.kind,
+                    id: track.id,
+                    readyState:
+                        track.readyState,
+                    enabled:
+                        track.enabled,
+                    muted:
+                        track.muted
+                }))
+        );
+
+        // =====================================================
+        // 7. AUDIO PROCESSING
+        // =====================================================
+
+        try {
+            enableAEC(zg);
+        } catch (e) {
+            console.warn(
+                "⚠️ AEC setup failed:",
+                e
+            );
+        }
+
+        try {
+            enableANS(zg);
+        } catch (e) {
+            console.warn(
+                "⚠️ ANS setup failed:",
+                e
+            );
+        }
+
+        try {
+            enableAGC(zg);
+        } catch (e) {
+            console.warn(
+                "⚠️ AGC setup failed:",
+                e
+            );
+        }
+
+        // =====================================================
+        // 8. LOCAL PREVIEW
+        // =====================================================
+
+        const localView =
+            document.getElementById(
+                "local-video-container"
+            );
+
+        if (!localView) {
+            throw new Error(
+                "Local video container not found."
+            );
+        }
+
         localView.innerHTML = "";
-        const localVideoPreview = document.createElement('video');
-        localVideoPreview.id = "my-local-video";
-        localVideoPreview.autoplay = true;
-        localVideoPreview.muted = true;
-        localVideoPreview.playsInline = true;
+
+        const localVideoPreview =
+            document.createElement("video");
+
+        localVideoPreview.id =
+            "my-local-video";
+
+        localVideoPreview.autoplay =
+            true;
+
+        localVideoPreview.muted =
+            true;
+
+        localVideoPreview.playsInline =
+            true;
 
         localVideoPreview.style.cssText = `
-            position: absolute; inset: 0; width: 100%; height: 100%;
-            max-width: 100%; max-height: 100%; object-fit: cover;
-            object-position: center center; transform: scaleX(-1);
-            transform-origin: center center; transition: opacity 0.3s ease;
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+            object-position: center center;
+            transform: scaleX(-1);
+            transform-origin: center center;
+            transition: opacity 0.3s ease;
             display: block;
         `;
-        localView.style.position = "relative";
-        localView.style.overflow = "hidden";
-        localView.appendChild(localVideoPreview);
-        localVideoPreview.srcObject = localStream;
 
-        // 6. Detect Capabilities & Initial Setup
-        const videoTrack = localStream.getVideoTracks()[0];
-        detectCameraCapabilities(videoTrack);
-        await switchOutputProfile(currentResProfile); // applies camera constraints + canvas resize
-        createZoomSliderUI(); // Inject Slider
-        setupNetworkQualityCallback(); // 🔥 PATCH 5
+        localView.style.position =
+            "relative";
 
-        // 7. Publish
-        publishStreamId = "stream_" + userID + "_" + Date.now();
-        publishStream = localStream;
+        localView.style.overflow =
+            "hidden";
+
+        localView.appendChild(
+            localVideoPreview
+        );
+
+        localVideoPreview.srcObject =
+            localStream;
+
+        // =====================================================
+        // 9. CAMERA CAPABILITY / OUTPUT PROFILE
+        // =====================================================
+
+        const videoTrack =
+            localStream.getVideoTracks()[0];
+
+        if (!videoTrack) {
+            throw new Error(
+                "No video track was created."
+            );
+        }
+
+        detectCameraCapabilities(
+            videoTrack
+        );
+
+        await switchOutputProfile(
+            currentResProfile
+        );
+
+        createZoomSliderUI();
+
+        setupNetworkQualityCallback();
+
+        // =====================================================
+        // 10. PUBLISH
+        // =====================================================
+
+        publishStreamId =
+            "stream_" +
+            userID +
+            "_" +
+            Date.now();
+
+        publishStream =
+            localStream;
+
+        console.log(
+            "📡 Starting publish:",
+            publishStreamId
+        );
+
+        // Final pre-publish validation
+        if (
+            !zg ||
+            !localStream ||
+            !publishStream
+        ) {
+            throw new Error(
+                "ZEGO publish validation failed: engine or local stream unavailable."
+            );
+        }
+
         try {
 
             await zg.startPublishingStream(
@@ -709,88 +1273,182 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
             throw e;
         }
 
-        isMicOn = false; 
-        isCamOn = false; 
+        // =====================================================
+        // 11. INITIAL MEDIA STATE
+        // =====================================================
 
-        await new Promise(resolve => setTimeout(resolve, 300)); 
-        if (zg && publishStreamId && localStream) { 
+        isMicOn = false;
+        isCamOn = false;
 
-            try { 
-
-                await zg.mutePublishStreamAudio( 
-                    publishStreamId, 
-                    true 
-                ); 
-
-                console.log("🔇 Initial microphone mute applied."); 
-
-            } catch (e) { 
-
-                console.warn( 
-                    "⚠️ Initial audio mute skipped/failed:", 
-                    e 
-                ); 
-            }  
-            if (zg && publishStreamId && localStream) { 
-
-                try { 
-
-                    await zg.mutePublishStreamVideo( 
-                        publishStreamId, 
-                        true 
-                    ); 
-
-                    console.log("📷 Initial camera mute applied."); 
-
-                } catch (e) { 
-
-                    console.warn( 
-                        "⚠️ Initial video mute skipped/failed:", 
-                        e 
-                    ); 
-                } 
-            } 
-
-        } else { 
-
-            console.warn( 
-                "⚠️ Initial mute skipped: Zego session/stream is no longer active.", 
-                { 
-                    zgExists: !!zg, 
-                    localStreamExists: !!localStream, 
-                    publishStreamId 
-                } 
-            ); 
-        } 
-
-        console.log( 
-            "📡 Stream published. Mic OFF + Camera OFF." 
+        await new Promise(
+            resolve =>
+                setTimeout(resolve, 300)
         );
 
+        // -----------------------------------------------------
+        // Audio mute
+        // -----------------------------------------------------
+
+        if (
+            zg &&
+            localStream &&
+            publishStreamId
+        ) {
+
+            try {
+
+                await zg.mutePublishStreamAudio(
+                    publishStreamId,
+                    true
+                );
+
+                console.log(
+                    "🔇 Initial microphone mute applied."
+                );
+
+            } catch (e) {
+
+                console.warn(
+                    "⚠️ Initial audio mute failed:",
+                    e
+                );
+            }
+        }
+
+        // -----------------------------------------------------
+        // Video mute
+        // -----------------------------------------------------
+
+        if (
+            zg &&
+            localStream &&
+            publishStreamId
+        ) {
+
+            try {
+
+                await zg.mutePublishStreamVideo(
+                    publishStreamId,
+                    true
+                );
+
+                console.log(
+                    "📷 Initial camera mute applied."
+                );
+
+            } catch (e) {
+
+                console.warn(
+                    "⚠️ Initial video mute failed:",
+                    e
+                );
+            }
+        }
+
+        console.log(
+            "📡 Stream published. Mic OFF + Camera OFF."
+        );
+
+        // =====================================================
+        // 12. CONTROLS
+        // =====================================================
+
         setupControls();
+
         refreshMicCamButtonUI();
 
-        ensureMediaPipeLoaded().then(initAIModels).catch(e => {
-            console.warn("AI models failed to preload, will retry on button press.", e);
-        });
+        // =====================================================
+        // 13. PRELOAD AI
+        // =====================================================
 
-        // 🔥 Start performance/network monitor (with hysteresis)
+        ensureMediaPipeLoaded()
+            .then(initAIModels)
+            .catch(e => {
+
+                console.warn(
+                    "⚠️ AI models failed to preload. Will retry on button press.",
+                    e
+                );
+            });
+
+        // =====================================================
+        // 14. PERFORMANCE MONITOR
+        // =====================================================
+
         startPerformanceMonitor();
 
+        console.log(
+            "🎉 Ultra Premium Video Engine started successfully."
+        );
+
     } catch (error) {
-        console.error("❌ Engine Crash:", error);
-        let displayMessage = error.message;
-        if (error.message.includes("NotAllowedError") || error.code === 110304) {
-            displayMessage = "Camera/Mic access blocked by browser. Please allow permissions in site settings or open this page via HTTPS/localhost.";
+
+        console.error(
+            "❌ Engine Crash:",
+            error
+        );
+
+        let displayMessage =
+            error?.message ||
+            "Unknown video engine error.";
+
+        if (
+            error?.message?.includes(
+                "NotAllowedError"
+            ) ||
+            error?.code === 110304
+        ) {
+
+            displayMessage =
+                "Camera/Mic access blocked by browser. Please allow permissions in site settings or open this page via HTTPS/localhost.";
         }
-        document.getElementById('custom-video-wrapper').innerHTML = `
-            <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
-                <i class="fas fa-exclamation-triangle text-danger mb-3" style="font-size: 3.5rem;"></i>
-                <h3 class='fw-bold mb-2'>System Error</h3>
-                <p class='text-white-50 max-w-md mx-auto mb-4 text-center' style="font-size: 15px;">${displayMessage}</p>
-                <button class='btn btn-primary px-4 rounded-pill fw-bold shadow' onclick='location.reload()'>Reload Video</button>
-            </div>
-        `;
+
+        const wrapper =
+            document.getElementById(
+                "custom-video-wrapper"
+            );
+
+        if (wrapper) {
+
+            wrapper.innerHTML = `
+                <div
+                    class="text-white mt-5 pt-5
+                           d-flex flex-column
+                           align-items-center
+                           justify-content-center h-100"
+                >
+
+                    <i
+                        class="fas fa-exclamation-triangle
+                               text-danger mb-3"
+                        style="font-size: 3.5rem;"
+                    ></i>
+
+                    <h3 class="fw-bold mb-2">
+                        System Error
+                    </h3>
+
+                    <p
+                        class="text-white-50
+                               max-w-md mx-auto
+                               mb-4 text-center"
+                        style="font-size: 15px;"
+                    >
+                        ${displayMessage}
+                    </p>
+
+                    <button
+                        class="btn btn-primary
+                               px-4 rounded-pill
+                               fw-bold shadow"
+                        onclick="location.reload()"
+                    >
+                        Reload Video
+                    </button>
+
+                </div>
+            `;
+        }
     }
 };
 
