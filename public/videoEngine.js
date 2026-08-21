@@ -687,14 +687,85 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         // 7. Publish
         publishStreamId = "stream_" + userID + "_" + Date.now();
         publishStream = localStream;
-        await zg.startPublishingStream(publishStreamId, publishStream);
+        try {
 
-        isMicOn = false;
-        isCamOn = false;
-        await new Promise(r => setTimeout(r, 300)); 
-        await zg.mutePublishStreamAudio(publishStreamId, true);
-        await zg.mutePublishStreamVideo(publishStreamId, true);
-        console.log("📡 Stream published. Mic OFF + Camera OFF.");
+            await zg.startPublishingStream(
+                publishStreamId,
+                publishStream
+            );
+
+            console.log(
+                "📡 Publishing started:",
+                publishStreamId
+            );
+
+        } catch (e) {
+
+            console.error(
+                "❌ startPublishingStream failed:",
+                e
+            );
+
+            throw e;
+        }
+
+        isMicOn = false; 
+        isCamOn = false; 
+
+        await new Promise(resolve => setTimeout(resolve, 300)); 
+        if (zg && publishStreamId && localStream) { 
+
+            try { 
+
+                await zg.mutePublishStreamAudio( 
+                    publishStreamId, 
+                    true 
+                ); 
+
+                console.log("🔇 Initial microphone mute applied."); 
+
+            } catch (e) { 
+
+                console.warn( 
+                    "⚠️ Initial audio mute skipped/failed:", 
+                    e 
+                ); 
+            }  
+            if (zg && publishStreamId && localStream) { 
+
+                try { 
+
+                    await zg.mutePublishStreamVideo( 
+                        publishStreamId, 
+                        true 
+                    ); 
+
+                    console.log("📷 Initial camera mute applied."); 
+
+                } catch (e) { 
+
+                    console.warn( 
+                        "⚠️ Initial video mute skipped/failed:", 
+                        e 
+                    ); 
+                } 
+            } 
+
+        } else { 
+
+            console.warn( 
+                "⚠️ Initial mute skipped: Zego session/stream is no longer active.", 
+                { 
+                    zgExists: !!zg, 
+                    localStreamExists: !!localStream, 
+                    publishStreamId 
+                } 
+            ); 
+        } 
+
+        console.log( 
+            "📡 Stream published. Mic OFF + Camera OFF." 
+        );
 
         setupControls();
         refreshMicCamButtonUI();
