@@ -1,5 +1,5 @@
 // =========================================================================
-// 🔥 ZAMIN DEKHO - ULTRA PREMIUM VIDEO ENGINE v2.1 (WEBGL2 + AI POWERED) 🔥
+// 🔥 ZAMIN DEKHO - ULTRA PREMIUM VIDEO ENGINE v3.2 (WEBGL2 + AI POWERED)
 // =========================================================================
 
 // =========================================
@@ -10,9 +10,9 @@ let localStream = null;   // Raw camera+mic stream from Zego
 let publishStream = null; // Final stream actually published (may be canvas-based)
 let publishStreamId = "";
 
-let canvasStream = null;          // 🔥 FIXED: Globally declared (was missing)
-let customZegoStream = null;      // 🔥 FIXED: Globally declared
-let originalPublishingStopped = false; // 🔥 FIXED: Globally declared
+let canvasStream = null;          // Globally declared
+let customZegoStream = null;      // Globally declared
+let originalPublishingStopped = false; 
 
 // Mic and camera start OFF by default.
 let isMicOn = false;
@@ -24,7 +24,7 @@ let bgImageEl = null;  // <img> element for custom background
 // ---- AI models (lazy loaded) ----
 let faceMesh = null;
 let selfieSegmentation = null;
-let aiCamera = null; // MediaPipe camera_utils helper (only for AI, not for render)
+let aiCamera = null; 
 
 // ---- Canvas pipeline ----
 let rawVideoEl = null;      // hidden <video> playing the raw camera track
@@ -32,27 +32,63 @@ let outCanvas = null;       // canvas we actually publish (WebGL)
 let pipelineRunning = false;
 let lastFaceLandmarks = null;
 let lastSegResults = null;
-let previousMaskData = null; // For temporal smoothing (CPU side blend)
+let previousMaskData = null; // For temporal smoothing
 
-// 🔥 NEW: Segmentation throttling
+// 🔥 Segmentation throttling
 let segmentationBusy = false;
 let segmentationFrameCounter = 0;
 const SEGMENTATION_INTERVAL = 3;  // Process AI roughly every 3 frames
 
 // ============================================================
-// 🔥 ADAPTIVE VIDEO RESOLUTION ENGINE
+// 🔥 ADAPTIVE VIDEO RESOLUTION ENGINE & PROFILES
 // ============================================================
-const CANVAS_W = 1280;
-const CANVAS_H = 720;
-const TARGET_FPS = 30;
+// Dynamic canvas dimensions (will change based on profile)
+let CANVAS_W = 1280;
+let CANVAS_H = 720;
+const TARGET_FPS = 30; // base capture FPS, actual rendering follows camera FPS
 
 let canvasDisplayWidth = CANVAS_W;
 let canvasDisplayHeight = CANVAS_H;
 let currentDevicePixelRatio = window.devicePixelRatio || 1;
-
 let SOURCE_VIDEO_W = 1280;
 let SOURCE_VIDEO_H = 720;
-const TARGET_ASPECT_RATIO = CANVAS_W / CANVAS_H;
+const TARGET_ASPECT_RATIO = () => CANVAS_W / CANVAS_H; // dynamic
+
+// 🔥 Resolution Profiles
+const RESOLUTION_PROFILES = {
+    LOW:      { width: 640,  height: 480,  fps: 24, bitrate: 800  },
+    BALANCED: { width: 1280, height: 720,  fps: 30, bitrate: 2500 },
+    HIGH:     { width: 1920, height: 1080, fps: 30, bitrate: 4000 }
+};
+let currentResProfile = 'BALANCED';
+let networkQuality = 1.0; // 0.0 to 1.0
+
+// 🔥 Camera Capabilities & Zoom
+let cameraCapabilities = null;
+let cameraSettings = null;
+let hasHardwareZoom = false;
+let currentZoom = 1.0;
+let minZoom = 1.0;
+let maxZoom = 1.0;
+let zoomSliderElement = null;
+
+// 🔥 PATCH 1: Zoom state (exclusive modes)
+let zoomMode = "digital"; // "hardware" | "digital"
+let requestedZoom = 1.0;
+let hardwareZoomApplied = 1.0;
+let digitalZoom = 1.0;
+
+// 🔥 Auto Framing
+let autoFrameEnabled = false;
+let autoFrameTargetX = 0.0;
+let autoFrameTargetY = 0.0;
+let autoFrameCurrentX = 0.0;
+let autoFrameCurrentY = 0.0;
+
+// 🔥 Performance monitor
+let frameRateCounter = 0;
+let lastFPSCheckTime = 0;
+let currentFPS = 30;
 
 // 🔥 WebGL2 ENGINE VARIABLES
 let gpu = null;
@@ -64,7 +100,7 @@ let maskRefineFramebuffer = null;
 
 let videoTexture = null;
 let maskTexture = null;
-let prevMaskTexture = null; // For temporal smoothing
+let prevMaskTexture = null; 
 let bgImageTexture = null;
 
 let blurTexA = null;
@@ -73,27 +109,39 @@ let blurTexB = null;
 let framebufferA = null;
 let framebufferB = null;
 
+// 🔥 PATCH 2: Beauty intermediate texture
+let beautyTexture = null;
+let beautyFramebuffer = null;
+
+// 🔥 PATCH 3: Face mask texture
+let faceMaskTexture = null;
+let faceMaskCanvas = null; // CPU-side canvas to draw landmarks
+
 let gpuProgram = null;
 let blurProgram = null;
 let compositeProgram = null;
 let imageCompositeProgram = null;
+let beautyProgram = null; // Beauty Program
 
 let gpuPositionBuffer = null;
 let gpuTexCoordBuffer = null;
 
-// 🔥 CACHED ATTRIBUTES (remove per-frame getAttribLocation)
+// 🔥 CACHED ATTRIBUTES & UNIFORMS
 let gpuAttribs = {};
 let blurAttribs = {};
 let compositeAttribs = {};
 let imageCompositeAttribs = {};
 let maskRefineAttribs = {};
+let beautyAttribs = {};
 
-// 🔥 UNIFORMS
 let gpuUniforms = {};
 let blurUniforms = {};
 let compositeUniforms = {};
 let imageCompositeUniforms = {};
 let maskRefineUniforms = {};
+let beautyUniforms = {};
+
+let u_uvTransformLoc = {}; // Shared UV Transform cache
 
 // GPU‑side mask refinement settings
 const MASK_EDGE_SOFTNESS = 0.12;
@@ -101,10 +149,10 @@ const MASK_FEATHER = 1.8;
 const MASK_THRESHOLD_LOW = 0.18;
 const MASK_THRESHOLD_HIGH = 0.72;
 
-// 🔥 NEW: Callback IDs (separated properly)
-let videoFrameCallbackId = null;   // For requestVideoFrameCallback
-let animationFrameId = null;       // For requestAnimationFrame
-let fallbackTimeoutId = null;      // For setTimeout fallback
+// Callback IDs
+let videoFrameCallbackId = null;   
+let animationFrameId = null;       
+let fallbackTimeoutId = null;      
 
 // =========================================
 // 2. SELF-HEALING SCRIPT LOADER
@@ -159,9 +207,7 @@ function enableAEC(zegoInstance) {
             zegoInstance.enableAEC(true);
             console.log("✅ AEC (Echo Cancellation) active");
         }
-    } catch (e) {
-        console.warn("AEC toggle not supported by this SDK build.", e);
-    }
+    } catch (e) { console.warn("AEC toggle not supported by this SDK build.", e); }
 }
 function enableANS(zegoInstance) {
     try {
@@ -169,9 +215,7 @@ function enableANS(zegoInstance) {
             zegoInstance.enableANS(true);
             console.log("✅ ANS (Noise Suppression) active");
         }
-    } catch (e) {
-        console.warn("ANS toggle not supported by this SDK build.", e);
-    }
+    } catch (e) { console.warn("ANS toggle not supported by this SDK build.", e); }
 }
 function enableAGC(zegoInstance) {
     try {
@@ -179,9 +223,335 @@ function enableAGC(zegoInstance) {
             zegoInstance.enableAGC(true);
             console.log("✅ AGC (Auto Gain Control) active");
         }
+    } catch (e) { console.warn("AGC toggle not supported by this SDK build.", e); }
+}
+
+// ============================================================
+// 🔥 NEW: DYNAMIC BITRATE UPDATE FOR ZEGO (PATCH #7)
+// ============================================================
+// 🔥 PATCH: Real bitrate adaptation using ZEGO v3.12.0 APIs
+function updateZegoBitrate(bitrate) {
+    if (!zg) return;
+    try {
+        // Try multiple possible API methods
+        if (typeof zg.setPublishConfig === 'function') {
+            // setPublishConfig expects an object with bitrate (in kbps)
+            zg.setPublishConfig({ bitrate: bitrate });
+            console.log(`✅ Zego publish bitrate updated to ${bitrate} kbps via setPublishConfig`);
+        } else if (typeof zg.setVideoBitrate === 'function') {
+            zg.setVideoBitrate(bitrate);
+            console.log(`✅ Zego video bitrate updated to ${bitrate} kbps via setVideoBitrate`);
+        } else if (typeof zg.setVideoConfig === 'function') {
+            zg.setVideoConfig({ bitrate: bitrate });
+            console.log(`✅ Zego video config bitrate updated to ${bitrate} kbps via setVideoConfig`);
+        } else {
+            console.warn("⚠️ Zego SDK does not support dynamic bitrate update. Bitrate will remain at initial setting.");
+        }
     } catch (e) {
-        console.warn("AGC toggle not supported by this SDK build.", e);
+        console.warn("Failed to update Zego bitrate:", e);
     }
+}
+
+// ============================================================
+// 🔥 PATCH 4: ADAPTIVE OUTPUT PROFILE & CAMERA CAPABILITIES
+// ============================================================
+function detectCameraCapabilities(track) {
+    if (!track) return false;
+    try {
+        cameraCapabilities = track.getCapabilities();
+        cameraSettings = track.getSettings();
+        console.log("🔍 Camera Capabilities Detected:", cameraCapabilities);
+        console.log("🔍 Current Camera Settings:", cameraSettings);
+
+        // Detect Hardware Zoom
+        if (cameraCapabilities.zoom) {
+            hasHardwareZoom = true;
+            minZoom = cameraCapabilities.zoom.min || 1.0;
+            maxZoom = cameraCapabilities.zoom.max || 4.0;
+            currentZoom = cameraSettings.zoom || 1.0;
+            console.log(`🔬 Hardware Zoom Supported: ${minZoom}x - ${maxZoom}x`);
+        } else {
+            hasHardwareZoom = false;
+            minZoom = 1.0;
+            maxZoom = 4.0; // Max software digital zoom
+            console.log("🔬 Hardware Zoom NOT Supported, using Digital WebGL fallback.");
+        }
+        return true;
+    } catch (e) {
+        console.warn("Could not get camera capabilities (might not be supported by browser/device).", e);
+        hasHardwareZoom = false;
+        minZoom = 1.0;
+        maxZoom = 2.0;
+        return false;
+    }
+}
+
+// 🔥 PATCH 4: New switchOutputProfile() - dynamic canvas + render targets + bitrate
+async function switchOutputProfile(profileName) {
+    const profile = RESOLUTION_PROFILES[profileName];
+    if (!profile) return;
+    currentResProfile = profileName;
+    console.log(`📷 Switching Output Profile to: ${profileName} (${profile.width}x${profile.height})`);
+
+    // Update canvas dimensions
+    CANVAS_W = profile.width;
+    CANVAS_H = profile.height;
+    if (outCanvas) {
+        outCanvas.width = CANVAS_W;
+        outCanvas.height = CANVAS_H;
+    }
+    if (rawVideoEl) {
+        rawVideoEl.width = CANVAS_W;
+        rawVideoEl.height = CANVAS_H;
+    }
+
+    // Recreate render targets
+    if (gpuReady) {
+        destroyRenderTargets();
+        createRenderTargets(CANVAS_W, CANVAS_H);
+    }
+
+    // Apply camera constraints
+    try {
+        const videoTracks = localStream.getVideoTracks();
+        if (videoTracks.length > 0) {
+            // Clamp with camera capabilities
+            const desiredWidth = Math.min(profile.width, cameraCapabilities?.width?.max ?? profile.width);
+            const desiredHeight = Math.min(profile.height, cameraCapabilities?.height?.max ?? profile.height);
+            const desiredFps = Math.min(profile.fps, cameraCapabilities?.frameRate?.max ?? profile.fps);
+            await videoTracks[0].applyConstraints({
+                width: { ideal: desiredWidth, max: desiredWidth },
+                height: { ideal: desiredHeight, max: desiredHeight },
+                frameRate: { ideal: desiredFps, max: desiredFps }
+            });
+        }
+    } catch (e) {
+        console.error("❌ Failed to apply resolution constraints:", e);
+    }
+
+    // 🔥 PATCH: Update Zego bitrate to match new profile
+    updateZegoBitrate(profile.bitrate);
+}
+
+// 🔥 PATCH 5: Unified Quality Controller (FPS + Network)
+let badFpsSamples = 0, goodFpsSamples = 0;
+let badNetSamples = 0, goodNetSamples = 0;
+
+function evaluateQuality() {
+    // FPS → level
+    let fpsLevel;
+    if (currentFPS < 18) fpsLevel = 0; // LOW
+    else if (currentFPS < 24) fpsLevel = 1; // BALANCED
+    else fpsLevel = 2; // HIGH
+
+    // Network → level
+    let netLevel;
+    if (networkQuality < 0.4) netLevel = 0;
+    else if (networkQuality < 0.7) netLevel = 1;
+    else netLevel = 2;
+
+    // Final target = min of both
+    const targetLevel = Math.min(fpsLevel, netLevel);
+    const targetProfile = targetLevel === 0 ? 'LOW' : targetLevel === 1 ? 'BALANCED' : 'HIGH';
+
+    // Hysteresis
+    if (targetProfile !== currentResProfile) {
+        const isDowngrade = targetProfile === 'LOW' || (targetProfile === 'BALANCED' && currentResProfile === 'HIGH');
+        if (isDowngrade) {
+            badFpsSamples++;
+            badNetSamples++;
+            if (badFpsSamples >= 3 || badNetSamples >= 3) {
+                switchOutputProfile(targetProfile);
+                badFpsSamples = goodFpsSamples = badNetSamples = goodNetSamples = 0;
+            }
+        } else {
+            // Upgrade slowly
+            goodFpsSamples++;
+            goodNetSamples++;
+            if (goodFpsSamples >= 8 && goodNetSamples >= 8) {
+                switchOutputProfile(targetProfile);
+                badFpsSamples = goodFpsSamples = badNetSamples = goodNetSamples = 0;
+            }
+        }
+    } else {
+        // Reset samples when stable
+        badFpsSamples = goodFpsSamples = badNetSamples = goodNetSamples = 0;
+    }
+}
+
+// 🔥 PATCH 5: Official network quality callback (if SDK supports)
+function setupNetworkQualityCallback() {
+    if (zg && typeof zg.onNetworkQuality === 'function') {
+        zg.onNetworkQuality = (userID, upstreamQuality, downstreamQuality) => {
+            if (userID !== "") return; // only local
+            // Convert Zego quality (0-5) to 0-1
+            const qualityMap = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
+            const q = qualityMap[upstreamQuality] ?? 0.5;
+            networkQuality = q;
+        };
+        console.log("✅ Zego onNetworkQuality callback set.");
+    } else {
+        console.warn("Zego SDK does not support onNetworkQuality, using polling fallback.");
+    }
+}
+
+// ============================================================
+// 🔥 PATCH 1: ZOOM & AUTO FRAME MANAGER (updated)
+// ============================================================
+async function setZoom(value) {
+    requestedZoom = Math.max(minZoom, Math.min(maxZoom, value));
+    if (requestedZoom === currentZoom) return;
+
+    if (hasHardwareZoom) {
+        try {
+            const track = localStream?.getVideoTracks()?.[0];
+            await track.applyConstraints({
+                advanced: [{ zoom: requestedZoom }]
+            });
+            zoomMode = "hardware";
+            hardwareZoomApplied = requestedZoom;
+            digitalZoom = 1.0;
+        } catch (e) {
+            console.warn("Hardware zoom unavailable:", e);
+            zoomMode = "digital";
+            digitalZoom = requestedZoom;
+        }
+    } else {
+        zoomMode = "digital";
+        digitalZoom = requestedZoom;
+    }
+
+    currentZoom = requestedZoom; // update for UI
+    if (zoomSliderElement) zoomSliderElement.value = currentZoom;
+    refreshZoomUILabel(currentZoom);
+}
+
+function setAutoFrame(enabled) {
+    autoFrameEnabled = !!enabled;
+    if (!autoFrameEnabled) {
+        autoFrameTargetX = 0;
+        autoFrameTargetY = 0;
+        autoFrameCurrentX = 0;
+        autoFrameCurrentY = 0;
+    }
+}
+
+function updateAutoFrame() {
+    if (!autoFrameEnabled || !lastFaceLandmarks || !isCamOn) {
+        // Ease back to 0
+        autoFrameCurrentX += (0 - autoFrameCurrentX) * 0.12;
+        autoFrameCurrentY += (0 - autoFrameCurrentY) * 0.12;
+        return;
+    }
+
+    // Compute bounding box from landmarks
+    let minX = 1, maxX = 0, minY = 1, maxY = 0;
+    for (let lm of lastFaceLandmarks) {
+        if (lm.x < minX) minX = lm.x;
+        if (lm.x > maxX) maxX = lm.x;
+        if (lm.y < minY) minY = lm.y;
+        if (lm.y > maxY) maxY = lm.y;
+    }
+
+    // Face center in raw camera space
+    const faceCenterX = (minX + maxX) / 2.0;
+    const faceCenterY = (minY + maxY) / 2.0;
+
+    // Convert to output space (respect aspect ratio + zoom)
+    // The shader first crops to output aspect, then applies zoom.
+    // We need to apply the same transformation to the face center.
+    const sourceAspect = SOURCE_VIDEO_W / SOURCE_VIDEO_H;
+    const outputAspect = CANVAS_W / CANVAS_H;
+    let xOffset = 0, yOffset = 0;
+    if (sourceAspect > outputAspect) {
+        // Source is wider → crop horizontally
+        const visibleWidth = outputAspect / sourceAspect;
+        xOffset = (1.0 - visibleWidth) * 0.5;
+    } else {
+        // Source is taller → crop vertically
+        const visibleHeight = sourceAspect / outputAspect;
+        yOffset = (1.0 - visibleHeight) * 0.5;
+    }
+    // Apply zoom scale (inverse)
+    const invZoom = 1.0 / (zoomMode === "hardware" ? 1.0 : digitalZoom);
+    // Transform face center to cropped, zoomed space
+    const transformedX = (faceCenterX - xOffset) * invZoom;
+    const transformedY = (faceCenterY - yOffset) * invZoom;
+
+    // Target offset for auto-framing: keep face near center
+    const targetX = 0.5 - transformedX;
+    const targetY = 0.5 - transformedY;
+
+    // Smooth tracking
+    const smoothFactor = 0.08;
+    autoFrameCurrentX += (targetX - autoFrameCurrentX) * smoothFactor;
+    autoFrameCurrentY += (targetY - autoFrameCurrentY) * smoothFactor;
+}
+
+// ============================================================
+// 🔥 REFRESH ZOOM UI
+// ============================================================
+function refreshZoomUILabel(zoomVal) {
+    const zoomLabel = document.getElementById('zoom-level-label');
+    if (zoomLabel) {
+        zoomLabel.innerText = `${zoomVal.toFixed(1)}x`;
+    }
+}
+
+function createZoomSliderUI() {
+    const wrapper = document.getElementById('custom-video-wrapper');
+    if (!wrapper) return;
+
+    // Avoid duplicate injection
+    if (document.getElementById('zoom-control-bar')) return;
+
+    const zoomContainer = document.createElement('div');
+    zoomContainer.id = 'zoom-control-bar';
+    zoomContainer.style.cssText = `
+        position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+        padding: 10px 20px; border-radius: 30px; display: flex; align-items: center; gap: 15px;
+        z-index: 25; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    `;
+    // Add Auto Frame toggle
+    zoomContainer.innerHTML = `
+        <span style="color:white; font-weight:600; font-size:14px;">Zoom</span>
+        <button id="zoom-out-btn" style="background:rgba(255,255,255,0.2); border:none; color:white; border-radius:50%; width:28px; height:28px; font-weight:bold; cursor:pointer;">−</button>
+        <input type="range" id="zoom-slider" min="${minZoom}" max="${maxZoom}" step="0.1" value="${currentZoom}" style="width:150px; cursor:pointer;">
+        <button id="zoom-in-btn" style="background:rgba(255,255,255,0.2); border:none; color:white; border-radius:50%; width:28px; height:28px; font-weight:bold; cursor:pointer;">+</button>
+        <span id="zoom-level-label" style="color:white; font-size:14px; font-weight:bold; min-width:40px;">${currentZoom.toFixed(1)}x</span>
+        <button id="auto-frame-toggle" style="background:rgba(255,255,255,0.2); border:none; color:white; border-radius:20px; padding:5px 12px; font-size:12px; font-weight:bold; cursor:pointer;">Auto Frame</button>
+    `;
+    wrapper.appendChild(zoomContainer);
+
+    // Attach events
+    zoomSliderElement = document.getElementById('zoom-slider');
+    const zoomOutBtn = document.getElementById('zoom-out-btn');
+    const zoomInBtn = document.getElementById('zoom-in-btn');
+    const autoFrameToggle = document.getElementById('auto-frame-toggle');
+
+    zoomSliderElement.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        setZoom(val);
+    });
+
+    zoomOutBtn.addEventListener('click', () => {
+        let val = currentZoom - 0.1;
+        if (val < minZoom) val = minZoom;
+        setZoom(val);
+    });
+
+    zoomInBtn.addEventListener('click', () => {
+        let val = currentZoom + 0.1;
+        if (val > maxZoom) val = maxZoom;
+        setZoom(val);
+    });
+
+    autoFrameToggle.addEventListener('click', () => {
+        setAutoFrame(!autoFrameEnabled);
+        autoFrameToggle.style.background = autoFrameEnabled ? "#38bdf8" : "rgba(255,255,255,0.2)";
+        autoFrameToggle.style.color = autoFrameEnabled ? "#000" : "white";
+    });
 }
 
 // =========================================
@@ -189,7 +559,7 @@ function enableAGC(zegoInstance) {
 // =========================================
 window.startCustomZegoEngine = async function (appId, token, roomID, userID, userName) {
     try {
-        console.log("🚀 Starting Ultra Premium Video Engine v2.1...");
+        console.log("🚀 Starting Ultra Premium Video Engine v3.2...");
 
         document.getElementById('remote-video-container').innerHTML = '';
 
@@ -218,20 +588,13 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
                 remoteVideo.id = "remote-" + streamList[0].streamID;
                 remoteVideo.autoplay = true;
                 remoteVideo.playsInline = true;
-                remoteVideo.muted = false; // 🔥 FIXED: Remote audio should be heard
+                remoteVideo.muted = false; 
 
                 remoteVideo.style.cssText = `
-                    position: absolute;
-                    inset: 0;
-                    width: 100%;
-                    height: 100%;
-                    max-width: 100%;
-                    max-height: 100%;
-                    object-fit: cover;
-                    object-position: center center;
-                    transform: none;
-                    transform-origin: center center;
-                    opacity: 0;
+                    position: absolute; inset: 0; width: 100%; height: 100%;
+                    max-width: 100%; max-height: 100%; object-fit: cover;
+                    object-position: center center; transform: none;
+                    transform-origin: center center; opacity: 0;
                     transition: opacity 0.6s ease-in-out;
                 `;
                 remoteView.style.position = "relative";
@@ -269,16 +632,17 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         await zg.loginRoom(roomID, token, { userID, userName });
         console.log("✅ Room Login Success");
 
-        // 4. Create Local Stream - 🔥 FIXED: missing }); and misplaced audio enhancers
+        // 4. Create Local Stream - Adaptive Profile applied
+        const initProfile = RESOLUTION_PROFILES[currentResProfile];
         localStream = await zg.createStream({
             camera: {
                 video: true,
                 audio: true,
                 videoQuality: 4,
-                width: 1280,      
-                height: 720,
-                frameRate: 30,
-                bitrate: 3000,
+                width: initProfile.width,      
+                height: initProfile.height,
+                frameRate: initProfile.fps,
+                bitrate: initProfile.bitrate,
                 audioBitrate: 64,
                 audioMode: "Speech",
                 ans: true,
@@ -287,7 +651,7 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
                 agc: true
             }
         });
-        // 🔥 FIXED: Moved audio enhancers OUTSIDE the createStream call
+
         enableAEC(zg);
         enableANS(zg);
         enableAGC(zg);
@@ -302,17 +666,10 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         localVideoPreview.playsInline = true;
 
         localVideoPreview.style.cssText = `
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: cover;
-            object-position: center center;
-            transform: scaleX(-1);
-            transform-origin: center center;
-            transition: opacity 0.3s ease;
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            max-width: 100%; max-height: 100%; object-fit: cover;
+            object-position: center center; transform: scaleX(-1);
+            transform-origin: center center; transition: opacity 0.3s ease;
             display: block;
         `;
         localView.style.position = "relative";
@@ -320,7 +677,14 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         localView.appendChild(localVideoPreview);
         localVideoPreview.srcObject = localStream;
 
-        // 6. Publish
+        // 6. Detect Capabilities & Initial Setup
+        const videoTrack = localStream.getVideoTracks()[0];
+        detectCameraCapabilities(videoTrack);
+        await switchOutputProfile(currentResProfile); // applies camera constraints + canvas resize
+        createZoomSliderUI(); // Inject Slider
+        setupNetworkQualityCallback(); // 🔥 PATCH 5
+
+        // 7. Publish
         publishStreamId = "stream_" + userID + "_" + Date.now();
         publishStream = localStream;
         await zg.startPublishingStream(publishStreamId, publishStream);
@@ -338,6 +702,9 @@ window.startCustomZegoEngine = async function (appId, token, roomID, userID, use
         ensureMediaPipeLoaded().then(initAIModels).catch(e => {
             console.warn("AI models failed to preload, will retry on button press.", e);
         });
+
+        // 🔥 Start performance/network monitor (with hysteresis)
+        startPerformanceMonitor();
 
     } catch (error) {
         console.error("❌ Engine Crash:", error);
@@ -389,7 +756,7 @@ function initAIModels() {
 }
 
 // ============================================================
-// 🔥 WEBGL SHADERS
+// 🔥 WEBGL SHADERS (UPDATED WITH UV TRANSFORM & FACE MASK)
 // ============================================================
 const VERTEX_SHADER = `#version 300 es
 in vec2 a_position;
@@ -397,6 +764,7 @@ in vec2 a_texCoord;
 out vec2 v_texCoord;
 uniform vec2 u_sourceSize;
 uniform vec2 u_outputSize;
+uniform vec4 u_uvTransform; // x: offsetX, y: offsetY, z: scaleX, w: scaleY
 
 void main() {
     gl_Position = vec4(a_position, 0.0, 1.0);
@@ -412,7 +780,10 @@ void main() {
         float yOffset = (1.0 - visibleHeight) * 0.5;
         uv.y = yOffset + uv.y * visibleHeight;
     }
-    v_texCoord = uv;
+
+    // 🔥 Apply Zoom (scale) and Auto Framing (offset)
+    v_texCoord = (uv * u_uvTransform.zw) + u_uvTransform.xy;
+    v_texCoord = clamp(v_texCoord, 0.001, 0.999);
 }
 `;
 
@@ -468,15 +839,14 @@ precision highp float;
 uniform sampler2D u_video;
 uniform sampler2D u_background;
 uniform sampler2D u_mask;
-uniform vec2 u_bgSize;       // 🔥 NEW: Background aspect ratio
+uniform vec2 u_bgSize;       
 in vec2 v_texCoord;
 out vec4 outColor;
 
 void main() {
-    // 🔥 FIXED: Background image now uses "cover" aspect ratio
     vec2 bgUv = v_texCoord;
     float bgAspect = u_bgSize.x / max(u_bgSize.y, 1.0);
-    float outAspect = 1280.0 / 720.0; // CANVAS_W/H
+    float outAspect = 1280.0 / 720.0;
     if (bgAspect > outAspect) {
         float visibleWidth = outAspect / bgAspect;
         float xOffset = (1.0 - visibleWidth) * 0.5;
@@ -488,7 +858,7 @@ void main() {
     }
 
     vec4 video = texture(u_video, v_texCoord);
-    vec4 bg = texture(u_background, bgUv); // use bgUv
+    vec4 bg = texture(u_background, bgUv);
     float mask = texture(u_mask, v_texCoord).r;
     mask = smoothstep(0.20, 0.80, mask);
     outColor = mix(bg, video, mask);
@@ -498,12 +868,12 @@ void main() {
 const MASK_REFINE_FRAGMENT_SHADER = `#version 300 es
 precision highp float;
 uniform sampler2D u_mask;
-uniform sampler2D u_prevMask;   // 🔥 NEW: Temporal smoothing
+uniform sampler2D u_prevMask;   
 uniform vec2 u_texelSize;
 uniform float u_low;
 uniform float u_high;
 uniform float u_feather;
-uniform float u_edgeSoftness;   // 🔥 NEW: Using MASK_EDGE_SOFTNESS
+uniform float u_edgeSoftness;   
 in vec2 v_texCoord;
 out vec4 outColor;
 
@@ -526,13 +896,10 @@ void main() {
     float smoothMask = c * 0.30 + tc * 0.10 + bc * 0.10 + ml * 0.10 + mr * 0.10
                      + tl * 0.075 + tr * 0.075 + bl * 0.075 + br * 0.075;
 
-    // 🔥 Temporal smoothing (mix with previous mask)
     float prev = sampleMask(u_prevMask, v_texCoord);
-    float temporalMix = mix(smoothMask, prev, 0.35); // 0.35 = keep 35% prev
+    float temporalMix = mix(smoothMask, prev, 0.35);
 
     float refined = smoothstep(u_low, u_high, temporalMix);
-
-    // Edge feather using MASK_EDGE_SOFTNESS
     float edge = smoothstep(0.0, u_edgeSoftness, abs(temporalMix - 0.5) * 2.0);
     refined = mix(refined, smoothstep(0.10, 0.90, temporalMix), 0.35 * edge);
 
@@ -540,8 +907,72 @@ void main() {
 }
 `;
 
+// 🔥 PATCH 3: BEAUTY AI FRAGMENT SHADER (now with face mask)
+const BEAUTY_FRAGMENT_SHADER = `#version 300 es
+precision highp float;
+uniform sampler2D u_video;
+uniform sampler2D u_faceMask; // 🔥 face mask texture
+uniform float u_intensity;
+in vec2 v_texCoord;
+out vec4 outColor;
+
+void main() {
+    vec3 color = texture(u_video, v_texCoord).rgb;
+
+    // Simple skin tone detection
+    vec3 hsv;
+    float cmax = max(max(color.r, color.g), color.b);
+    float cmin = min(min(color.r, color.g), color.b);
+    float diff = cmax - cmin;
+
+    if (cmax == cmin) hsv.x = 0.0;
+    else if (cmax == color.r) hsv.x = mod(60.0 * ((color.g - color.b) / diff) + 360.0, 360.0);
+    else if (cmax == color.g) hsv.x = mod(60.0 * ((color.b - color.r) / diff) + 120.0, 360.0);
+    else if (cmax == color.b) hsv.x = mod(60.0 * ((color.r - color.g) / diff) + 240.0, 360.0);
+
+    hsv.y = (cmax == 0.0) ? 0.0 : (diff / cmax);
+    hsv.z = cmax;
+
+    // Skin color range
+    bool isSkin = hsv.x > 350.0 || (hsv.x >= 0.0 && hsv.x < 50.0);
+    isSkin = isSkin && hsv.y > 0.05 && hsv.y < 0.6;
+    isSkin = isSkin && hsv.z > 0.3 && hsv.z < 0.9;
+
+    float skinMask = isSkin ? 1.0 : 0.0;
+
+    // 🔥 Multiply by face mask
+    float faceMask = texture(u_faceMask, v_texCoord).r;
+    float beautyMask = skinMask * faceMask;
+
+    // If not (skin AND face) return original
+    if (beautyMask < 0.5) {
+        outColor = vec4(color, 1.0);
+        return;
+    }
+
+    // Quick 3x3 box blur around the pixel
+    vec2 px = vec2(1.0) / vec2(textureSize(u_video, 0));
+    vec3 blurSum = color * 4.0;
+    blurSum += texture(u_video, v_texCoord + px * vec2(-1.0, -1.0)).rgb;
+    blurSum += texture(u_video, v_texCoord + px * vec2( 1.0, -1.0)).rgb;
+    blurSum += texture(u_video, v_texCoord + px * vec2(-1.0,  1.0)).rgb;
+    blurSum += texture(u_video, v_texCoord + px * vec2( 1.0,  1.0)).rgb;
+    blurSum += texture(u_video, v_texCoord + px * vec2( 0.0, -1.0)).rgb;
+    blurSum += texture(u_video, v_texCoord + px * vec2( 0.0,  1.0)).rgb;
+    blurSum += texture(u_video, v_texCoord + px * vec2(-1.0,  0.0)).rgb;
+    blurSum += texture(u_video, v_texCoord + px * vec2( 1.0,  0.0)).rgb;
+    blurSum /= 12.0;
+
+    // Skin toning / natural glow
+    vec3 finalColor = mix(color, blurSum, u_intensity * 0.8);
+    finalColor = mix(finalColor, finalColor * 1.05, 0.15 * u_intensity);
+
+    outColor = vec4(finalColor, 1.0);
+}
+`;
+
 // ------------------------------------------------------------
-// HELPER FUNCTIONS (Shader creation, etc.)
+// HELPER FUNCTIONS
 // ------------------------------------------------------------
 function createShader(gl, type, source) {
     const shader = gl.createShader(type);
@@ -595,8 +1026,46 @@ function createRenderTarget(gl, width = CANVAS_W, height = CANVAS_H) {
     return { texture, framebuffer };
 }
 
+// 🔥 PATCH 4: Destroy render targets helper
+function destroyRenderTargets() {
+    const gl = gpu;
+    if (!gl) return;
+    // Delete old textures and framebuffers
+    const targets = [
+        { texture: blurTexA, fb: framebufferA },
+        { texture: blurTexB, fb: framebufferB },
+        { texture: maskRefinedTexture, fb: maskRefineFramebuffer },
+        { texture: beautyTexture, fb: beautyFramebuffer }
+    ];
+    targets.forEach(t => {
+        if (t.texture) gl.deleteTexture(t.texture);
+        if (t.fb) gl.deleteFramebuffer(t.fb);
+    });
+    blurTexA = blurTexB = maskRefinedTexture = beautyTexture = null;
+    framebufferA = framebufferB = maskRefineFramebuffer = beautyFramebuffer = null;
+}
+
+// 🔥 PATCH 4: Create render targets helper (used after resize)
+function createRenderTargets(width, height) {
+    const gl = gpu;
+    const targetA = createRenderTarget(gl, width, height);
+    const targetB = createRenderTarget(gl, width, height);
+    blurTexA = targetA.texture;
+    blurTexB = targetB.texture;
+    framebufferA = targetA.framebuffer;
+    framebufferB = targetB.framebuffer;
+
+    const maskTarget = createRenderTarget(gl, width, height);
+    maskRefinedTexture = maskTarget.texture;
+    maskRefineFramebuffer = maskTarget.framebuffer;
+
+    const beautyTarget = createRenderTarget(gl, width, height);
+    beautyTexture = beautyTarget.texture;
+    beautyFramebuffer = beautyTarget.framebuffer;
+}
+
 // ============================================================
-// 🔥 GPU ENGINE INIT (with cached attribs & pixelStore once)
+// 🔥 GPU ENGINE INIT
 // ============================================================
 function initializeGPUBlurEngine() {
     if (gpuReady) return true;
@@ -622,8 +1091,6 @@ function initializeGPUBlurEngine() {
     if (!gpu) { console.error('WebGL2 is not available.'); return false; }
 
     const gl = gpu;
-
-    // 🔥 FIXED: Set pixelStorei ONLY ONCE here
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
     // Programs
@@ -632,8 +1099,9 @@ function initializeGPUBlurEngine() {
     compositeProgram = createProgram(gl, VERTEX_SHADER, COMPOSITE_FRAGMENT_SHADER);
     imageCompositeProgram = createProgram(gl, VERTEX_SHADER, IMAGE_COMPOSITE_FRAGMENT_SHADER);
     maskRefineProgram = createProgram(gl, VERTEX_SHADER, MASK_REFINE_FRAGMENT_SHADER);
+    beautyProgram = createProgram(gl, VERTEX_SHADER, BEAUTY_FRAGMENT_SHADER);
 
-    if (!gpuProgram || !blurProgram || !compositeProgram || !imageCompositeProgram || !maskRefineProgram) {
+    if (!gpuProgram || !blurProgram || !compositeProgram || !imageCompositeProgram || !maskRefineProgram || !beautyProgram) {
         console.error("❌ GPU shader initialization failed.");
         return false;
     }
@@ -650,57 +1118,66 @@ function initializeGPUBlurEngine() {
     // Textures
     videoTexture = createGPUTexture(gl);
     maskTexture = createGPUTexture(gl);
-    prevMaskTexture = createGPUTexture(gl); // For temporal smoothing
+    prevMaskTexture = createGPUTexture(gl);
     bgImageTexture = createGPUTexture(gl);
 
-    // Render targets
-    const targetA = createRenderTarget(gl, CANVAS_W, CANVAS_H);
-    const targetB = createRenderTarget(gl, CANVAS_W, CANVAS_H);
-    blurTexA = targetA.texture;
-    blurTexB = targetB.texture;
-    framebufferA = targetA.framebuffer;
-    framebufferB = targetB.framebuffer;
+    // 🔥 PATCH 3: Face mask texture
+    faceMaskTexture = createGPUTexture(gl);
+    faceMaskCanvas = document.createElement('canvas');
+    faceMaskCanvas.width = CANVAS_W;
+    faceMaskCanvas.height = CANVAS_H;
 
-    const maskTarget = createRenderTarget(gl, CANVAS_W, CANVAS_H);
-    maskRefinedTexture = maskTarget.texture;
-    maskRefineFramebuffer = maskTarget.framebuffer;
+    // Render targets (using current CANVAS_W/H)
+    createRenderTargets(CANVAS_W, CANVAS_H);
 
-    // Initial viewport (will be set per pass)
+    // Mask raw texture
+    maskRawTexture = createGPUTexture(gl); // will upload segmentation mask source
+
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
 
-    // Cache Uniforms
-    gpuUniforms = {
-        video: gl.getUniformLocation(gpuProgram, "u_video"),
-        sourceSize: gl.getUniformLocation(gpuProgram, "u_sourceSize"),
-        outputSize: gl.getUniformLocation(gpuProgram, "u_outputSize")
+    // 🔥 Cache Uniforms
+    const cacheUniforms = (prog, uniformsObj, shaderType) => {
+        if (shaderType === 'gpu') {
+            uniformsObj.video = gl.getUniformLocation(prog, "u_video");
+            uniformsObj.sourceSize = gl.getUniformLocation(prog, "u_sourceSize");
+            uniformsObj.outputSize = gl.getUniformLocation(prog, "u_outputSize");
+        } else if (shaderType === 'beauty') {
+            uniformsObj.video = gl.getUniformLocation(prog, "u_video");
+            uniformsObj.faceMask = gl.getUniformLocation(prog, "u_faceMask");
+            uniformsObj.intensity = gl.getUniformLocation(prog, "u_intensity");
+        } else if (shaderType === 'blur') {
+            uniformsObj.texture = gl.getUniformLocation(prog, "u_texture");
+            uniformsObj.texelSize = gl.getUniformLocation(prog, "u_texelSize");
+            uniformsObj.direction = gl.getUniformLocation(prog, "u_direction");
+            uniformsObj.strength = gl.getUniformLocation(prog, "u_strength");
+        } else if (shaderType === 'composite') {
+            uniformsObj.original = gl.getUniformLocation(prog, "u_original");
+            uniformsObj.blurred = gl.getUniformLocation(prog, "u_blurred");
+            uniformsObj.mask = gl.getUniformLocation(prog, "u_mask");
+        } else if (shaderType === 'imageComposite') {
+            uniformsObj.video = gl.getUniformLocation(prog, "u_video");
+            uniformsObj.background = gl.getUniformLocation(prog, "u_background");
+            uniformsObj.mask = gl.getUniformLocation(prog, "u_mask");
+            uniformsObj.bgSize = gl.getUniformLocation(prog, "u_bgSize");
+        } else if (shaderType === 'maskRefine') {
+            uniformsObj.mask = gl.getUniformLocation(prog, "u_mask");
+            uniformsObj.prevMask = gl.getUniformLocation(prog, "u_prevMask");
+            uniformsObj.texelSize = gl.getUniformLocation(prog, "u_texelSize");
+            uniformsObj.low = gl.getUniformLocation(prog, "u_low");
+            uniformsObj.high = gl.getUniformLocation(prog, "u_high");
+            uniformsObj.feather = gl.getUniformLocation(prog, "u_feather");
+            uniformsObj.edgeSoftness = gl.getUniformLocation(prog, "u_edgeSoftness");
+        }
+        uniformsObj.uvTransform = gl.getUniformLocation(prog, "u_uvTransform");
     };
-    blurUniforms = {
-        texture: gl.getUniformLocation(blurProgram, "u_texture"),
-        texelSize: gl.getUniformLocation(blurProgram, "u_texelSize"),
-        direction: gl.getUniformLocation(blurProgram, "u_direction"),
-        strength: gl.getUniformLocation(blurProgram, "u_strength")
-    };
-    compositeUniforms = {
-        original: gl.getUniformLocation(compositeProgram, "u_original"),
-        blurred: gl.getUniformLocation(compositeProgram, "u_blurred"),
-        mask: gl.getUniformLocation(compositeProgram, "u_mask")
-    };
-    imageCompositeUniforms = {
-        video: gl.getUniformLocation(imageCompositeProgram, "u_video"),
-        background: gl.getUniformLocation(imageCompositeProgram, "u_background"),
-        mask: gl.getUniformLocation(imageCompositeProgram, "u_mask"),
-        bgSize: gl.getUniformLocation(imageCompositeProgram, "u_bgSize") // 🔥 NEW
-    };
-    maskRefineUniforms = {
-        mask: gl.getUniformLocation(maskRefineProgram, "u_mask"),
-        prevMask: gl.getUniformLocation(maskRefineProgram, "u_prevMask"), // 🔥 NEW
-        texelSize: gl.getUniformLocation(maskRefineProgram, "u_texelSize"),
-        low: gl.getUniformLocation(maskRefineProgram, "u_low"),
-        high: gl.getUniformLocation(maskRefineProgram, "u_high"),
-        feather: gl.getUniformLocation(maskRefineProgram, "u_feather"),
-        edgeSoftness: gl.getUniformLocation(maskRefineProgram, "u_edgeSoftness") // 🔥 NEW
-    };
+
+    cacheUniforms(gpuProgram, gpuUniforms, 'gpu');
+    cacheUniforms(blurProgram, blurUniforms, 'blur');
+    cacheUniforms(compositeProgram, compositeUniforms, 'composite');
+    cacheUniforms(imageCompositeProgram, imageCompositeUniforms, 'imageComposite');
+    cacheUniforms(maskRefineProgram, maskRefineUniforms, 'maskRefine');
+    cacheUniforms(beautyProgram, beautyUniforms, 'beauty');
 
     // 🔥 Cache Attributes
     const cacheAttribs = (prog, obj) => {
@@ -712,14 +1189,15 @@ function initializeGPUBlurEngine() {
     cacheAttribs(compositeProgram, compositeAttribs);
     cacheAttribs(imageCompositeProgram, imageCompositeAttribs);
     cacheAttribs(maskRefineProgram, maskRefineAttribs);
+    cacheAttribs(beautyProgram, beautyAttribs);
 
     gpuReady = true;
-    console.log('🚀 GPU Background Blur Engine initialized');
+    console.log('🚀 GPU Background Blur & Beauty Engine initialized (v3.2)');
     return true;
 }
 
 // ------------------------------------------------------------
-// TEXTURE UPLOAD FUNCTIONS (removed pixelStorei)
+// TEXTURE UPLOAD FUNCTIONS
 // ------------------------------------------------------------
 function uploadVideoTexture(video) {
     const gl = gpu;
@@ -734,10 +1212,12 @@ function uploadMaskTexture(maskSource) {
     return maskRawTexture;
 }
 
-function uploadPrevMaskTexture(maskSource) {
+function uploadPrevMaskTexture(maskSourceTexture) {
     const gl = gpu;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, maskRefineFramebuffer);
     gl.bindTexture(gl.TEXTURE_2D, prevMaskTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, maskSource);
+    gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, CANVAS_W, CANVAS_H, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
 function uploadBGImageTexture(image) {
@@ -746,8 +1226,41 @@ function uploadBGImageTexture(image) {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 }
 
-// 🔥 FIXED: Cached attribute bindings
-function bindGeometry(program, attribsCache) {
+// 🔥 PATCH 3: Update face mask texture from landmarks
+function updateFaceMaskTexture() {
+    if (!lastFaceLandmarks || !faceMaskCanvas) return;
+
+    const ctx = faceMaskCanvas.getContext('2d');
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    ctx.fillStyle = 'white';
+
+    // Create a simple ellipse covering face bounding box
+    let minX = 1, maxX = 0, minY = 1, maxY = 0;
+    for (let lm of lastFaceLandmarks) {
+        if (lm.x < minX) minX = lm.x;
+        if (lm.x > maxX) maxX = lm.x;
+        if (lm.y < minY) minY = lm.y;
+        if (lm.y > maxY) maxY = lm.y;
+    }
+
+    // Convert normalized coords to canvas pixels (flip Y)
+    const cx = (minX + maxX) / 2 * CANVAS_W;
+    const cy = (1 - (minY + maxY) / 2) * CANVAS_H;
+    const rx = (maxX - minX) / 2 * CANVAS_W * 1.2; // padding
+    const ry = (maxY - minY) / 2 * CANVAS_H * 1.4;
+
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // Upload to GPU
+    const gl = gpu;
+    gl.bindTexture(gl.TEXTURE_2D, faceMaskTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, faceMaskCanvas);
+}
+
+// 🔥 NEW: Enhanced bindGeometry with UV Transform (PATCH 1)
+function bindGeometry(program, attribsCache, uniformsCache) {
     const gl = gpu;
     const posLoc = attribsCache.position;
     const texLoc = attribsCache.texCoord;
@@ -763,28 +1276,33 @@ function bindGeometry(program, attribsCache) {
         gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, 0, 0);
     }
 
-    // Aspect-ratio uniforms (cached in uniform maps)
+    // Aspect-ratio uniforms
     const sourceWidth = rawVideoEl?.videoWidth > 0 ? rawVideoEl.videoWidth : CANVAS_W;
     const sourceHeight = rawVideoEl?.videoHeight > 0 ? rawVideoEl.videoHeight : CANVAS_H;
 
-    if (program === gpuProgram) {
-        if (gpuUniforms.sourceSize) gl.uniform2f(gpuUniforms.sourceSize, sourceWidth, sourceHeight);
-        if (gpuUniforms.outputSize) gl.uniform2f(gpuUniforms.outputSize, CANVAS_W, CANVAS_H);
-    } else if (program === blurProgram) {
-        // blur doesn't use sourceSize/outputSize
-    } else if (program === compositeProgram) {
-        // composite doesn't use sourceSize/outputSize
+    if (program === gpuProgram || program === beautyProgram) {
+        if (uniformsCache.sourceSize) gl.uniform2f(uniformsCache.sourceSize, sourceWidth, sourceHeight);
+        if (uniformsCache.outputSize) gl.uniform2f(uniformsCache.outputSize, CANVAS_W, CANVAS_H);
     } else if (program === imageCompositeProgram) {
-        if (imageCompositeUniforms.bgSize && bgImageEl) {
-            gl.uniform2f(imageCompositeUniforms.bgSize, bgImageEl.naturalWidth || bgImageEl.width, bgImageEl.naturalHeight || bgImageEl.height);
+        if (uniformsCache.bgSize && bgImageEl) {
+            gl.uniform2f(uniformsCache.bgSize, bgImageEl.naturalWidth || bgImageEl.width, bgImageEl.naturalHeight || bgImageEl.height);
         }
-    } else if (program === maskRefineProgram) {
-        // no sourceSize/outputSize
+    }
+
+    // 🔥 APPLY ZOOM & AUTO FRAME (UV Transform) - PATCH 1
+    if (uniformsCache.uvTransform) {
+        const effectiveDigitalZoom = (zoomMode === "hardware") ? 1.0 : digitalZoom;
+        let scaleX = 1.0 / effectiveDigitalZoom;
+        let scaleY = 1.0 / effectiveDigitalZoom;
+        let offsetX = autoFrameCurrentX;
+        let offsetY = autoFrameCurrentY;
+
+        gl.uniform4f(uniformsCache.uvTransform, offsetX, offsetY, scaleX, scaleY);
     }
 }
 
 // ============================================================
-// GPU MASK REFINEMENT PASS (with temporal smoothing)
+// GPU MASK REFINEMENT, BLUR & COMPOSITE
 // ============================================================
 function refineMaskGPU() {
     if (!gpuReady || !maskRawTexture || !maskRefinedTexture || !maskRefineFramebuffer) {
@@ -795,12 +1313,11 @@ function refineMaskGPU() {
     const maskWidth = maskSource?.width > 0 ? maskSource.width : CANVAS_W;
     const maskHeight = maskSource?.height > 0 ? maskSource.height : CANVAS_H;
 
-    // 🔥 FIXED: Use CANVAS_W/H for FBO viewport
     gl.bindFramebuffer(gl.FRAMEBUFFER, maskRefineFramebuffer);
     gl.viewport(0, 0, CANVAS_W, CANVAS_H);
 
     gl.useProgram(maskRefineProgram);
-    bindGeometry(maskRefineProgram, maskRefineAttribs);
+    bindGeometry(maskRefineProgram, maskRefineAttribs, maskRefineUniforms);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, maskRawTexture);
@@ -814,27 +1331,22 @@ function refineMaskGPU() {
     gl.uniform1f(maskRefineUniforms.low, MASK_THRESHOLD_LOW);
     gl.uniform1f(maskRefineUniforms.high, MASK_THRESHOLD_HIGH);
     gl.uniform1f(maskRefineUniforms.feather, MASK_FEATHER);
-    gl.uniform1f(maskRefineUniforms.edgeSoftness, MASK_EDGE_SOFTNESS); // 🔥 FIXED: using softness
+    gl.uniform1f(maskRefineUniforms.edgeSoftness, MASK_EDGE_SOFTNESS);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-    // Save current mask as prev for next frame
-    uploadPrevMaskTexture(maskRefinedTexture); // (we'll re-use refined as prev)
-
+    uploadPrevMaskTexture(maskRefinedTexture);
     maskTexture = maskRefinedTexture;
     return maskRefinedTexture;
 }
 
-// ------------------------------------------------------------
-// BLUR PASS (4-pass optimized)
-// ------------------------------------------------------------
 function runBlurPass(inputTexture, outputFramebuffer, direction, strength) {
     const gl = gpu;
     gl.bindFramebuffer(gl.FRAMEBUFFER, outputFramebuffer);
-    gl.viewport(0, 0, CANVAS_W, CANVAS_H); // 🔥 FIXED: FBO viewport uses processing dims
+    gl.viewport(0, 0, CANVAS_W, CANVAS_H);
     gl.useProgram(blurProgram);
-    bindGeometry(blurProgram, blurAttribs);
+    bindGeometry(blurProgram, blurAttribs, blurUniforms);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, inputTexture);
@@ -848,7 +1360,6 @@ function runBlurPass(inputTexture, outputFramebuffer, direction, strength) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
-// 🔥 OPTIMIZED: 4-pass blur (instead of 6)
 function runHeavyBlur() {
     runBlurPass(videoTexture, framebufferA, 'horizontal', 7.0);
     runBlurPass(blurTexA, framebufferB, 'vertical', 7.0);
@@ -858,14 +1369,44 @@ function runHeavyBlur() {
 }
 
 // ------------------------------------------------------------
-// FINAL COMPOSITES
+// MAIN RENDER FUNCTIONS (PATCH 2: intermediate textures)
 // ------------------------------------------------------------
+function renderBeautyGPU() {
+    if (!gpuReady || !rawVideoEl || rawVideoEl.readyState < 2 || !isBeautyOn) {
+        renderRawGPU();
+        return;
+    }
+    uploadVideoTexture(rawVideoEl);
+    updateFaceMaskTexture(); // 🔥 PATCH 3: update face mask
+
+    const gl = gpu;
+    // 🔥 Render to beautyFramebuffer instead of screen
+    gl.bindFramebuffer(gl.FRAMEBUFFER, beautyFramebuffer);
+    gl.viewport(0, 0, CANVAS_W, CANVAS_H);
+    gl.useProgram(beautyProgram);
+    bindGeometry(beautyProgram, beautyAttribs, beautyUniforms);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+    gl.uniform1i(beautyUniforms.video, 0);
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, faceMaskTexture);
+    gl.uniform1i(beautyUniforms.faceMask, 1);
+
+    gl.uniform1f(beautyUniforms.intensity, 0.6);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return beautyTexture; // return as currentTexture
+}
+
 function compositeFrame(blurredTexture) {
     const gl = gpu;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight); // Screen
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.useProgram(compositeProgram);
-    bindGeometry(compositeProgram, compositeAttribs);
+    bindGeometry(compositeProgram, compositeAttribs, compositeUniforms);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, videoTexture);
@@ -885,9 +1426,9 @@ function compositeFrame(blurredTexture) {
 function compositeImageFrame() {
     const gl = gpu;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight); // Screen
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.useProgram(imageCompositeProgram);
-    bindGeometry(imageCompositeProgram, imageCompositeAttribs);
+    bindGeometry(imageCompositeProgram, imageCompositeAttribs, imageCompositeUniforms);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, videoTexture);
@@ -904,21 +1445,67 @@ function compositeImageFrame() {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
 
-// ------------------------------------------------------------
-// MAIN GPU FRAME FUNCTIONS
-// ------------------------------------------------------------
-function renderGPUFrame() {
-    if (!gpuReady || !rawVideoEl || rawVideoEl.readyState < 2) return;
+// 🔥 PATCH 2: Unified renderFrame (chain)
+function renderFrame() {
+    if (!gpuReady && !initializeGPUBlurEngine()) return;
+    if (!rawVideoEl || rawVideoEl.readyState < 2) return;
+
+    if (!isCamOn) {
+        renderBlackGPU();
+        return;
+    }
+
+    // 🔥 PATCH 2: Chain pipeline
+    let currentTexture = videoTexture;
+
+    // 1. Upload raw video
     uploadVideoTexture(rawVideoEl);
 
-    if (lastSegResults?.segmentationMask) {
+    // 2. Beauty pass
+    if (isBeautyOn) {
+        currentTexture = renderBeautyGPU(); // returns beautyTexture
+    }
+
+    // 3. Background pass
+    if (isBgMode !== "none" && lastSegResults?.segmentationMask) {
         uploadMaskTexture(lastSegResults.segmentationMask);
         refineMaskGPU();
-        const blurred = runHeavyBlur();
-        compositeFrame(blurred);
+
+        if (isBgMode === "blur") {
+            // Blur the currentTexture (beauty or raw)
+            runBlurPass(currentTexture, framebufferA, 'horizontal', 7.0);
+            runBlurPass(blurTexA, framebufferB, 'vertical', 7.0);
+            runBlurPass(blurTexB, framebufferA, 'horizontal', 5.0);
+            runBlurPass(blurTexA, framebufferB, 'vertical', 5.0);
+            const blurred = blurTexB;
+            // Now composite using currentTexture as original
+            compositeFrame(blurred);
+        } else if (isBgMode === "image") {
+            compositeImageFrame();
+        }
     } else {
-        renderRawGPU();
+        // No background: draw currentTexture directly to screen
+        // Need a simple texture draw program (gpuProgram)
+        if (isBeautyOn) {
+            // We already rendered to beautyFramebuffer, so draw that texture to screen
+            drawTextureToScreen(currentTexture);
+        } else {
+            renderRawGPU();
+        }
     }
+}
+
+// Helper to draw any texture to screen using gpuProgram
+function drawTextureToScreen(texture) {
+    const gl = gpu;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    gl.useProgram(gpuProgram);
+    bindGeometry(gpuProgram, gpuAttribs, gpuUniforms);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.uniform1i(gpuUniforms.video, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
 
 function renderRawGPU() {
@@ -928,28 +1515,11 @@ function renderRawGPU() {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
     gl.useProgram(gpuProgram);
-    bindGeometry(gpuProgram, gpuAttribs);
+    bindGeometry(gpuProgram, gpuAttribs, gpuUniforms);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, videoTexture);
     gl.uniform1i(gpuUniforms.video, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
-}
-
-function renderImageBackgroundGPU() {
-    if (!gpuReady || !rawVideoEl || !bgImageEl || !bgImageEl.complete || bgImageEl.naturalWidth === 0) {
-        renderRawGPU();
-        return;
-    }
-    uploadVideoTexture(rawVideoEl);
-    uploadBGImageTexture(bgImageEl);
-
-    if (lastSegResults?.segmentationMask) {
-        uploadMaskTexture(lastSegResults.segmentationMask);
-        refineMaskGPU();
-        compositeImageFrame();
-    } else {
-        renderRawGPU();
-    }
 }
 
 function renderBlackGPU() {
@@ -962,7 +1532,7 @@ function renderBlackGPU() {
 }
 
 // =========================================
-// 6. CANVAS PIPELINE & RENDER LOOP (NEW ARCHITECTURE)
+// 6. CANVAS PIPELINE & RENDER LOOP
 // =========================================
 function ensurePipelineElements() {
     if (!rawVideoEl) {
@@ -1001,7 +1571,6 @@ function ensurePipelineElements() {
     return true;
 }
 
-// 🔥 NEW: Independent segmentation runner
 async function runSegmentationAsync() {
     if (segmentationBusy || !selfieSegmentation || !rawVideoEl || !isCamOn) return;
     segmentationBusy = true;
@@ -1014,7 +1583,19 @@ async function runSegmentationAsync() {
     }
 }
 
-// 🔥 NEW: Main video processing loop (decoupled from AI)
+// 🔥 FaceMesh sending (throttled every 2 frames)
+let faceMeshFrameCounter = 0;
+async function runFaceMeshAsync() {
+    if (!faceMesh || !rawVideoEl || !isCamOn) return;
+    faceMeshFrameCounter++;
+    if (faceMeshFrameCounter % 2 !== 0) return;
+    try {
+        await faceMesh.send({ image: rawVideoEl });
+    } catch (e) {
+        console.warn("FaceMesh error:", e);
+    }
+}
+
 async function processVideoFrame() {
     if (!pipelineRunning || !rawVideoEl) return;
 
@@ -1029,23 +1610,27 @@ async function processVideoFrame() {
         return;
     }
 
-    // Throttled segmentation
+    // 🔥 Auto Frame update
+    runFaceMeshAsync(); // asynchronous
+    if (lastFaceLandmarks) {
+        updateAutoFrame();
+    }
+
     if (isBgMode !== "none" && !segmentationBusy) {
         if (segmentationFrameCounter % SEGMENTATION_INTERVAL === 0) {
-            runSegmentationAsync(); // don't await
+            runSegmentationAsync();
         }
         segmentationFrameCounter++;
     }
 
     renderFrame();
+    frameRateCounter++;
     scheduleNextVideoFrame();
 }
 
-// 🔥 NEW: Schedule next frame with proper API selection
 function scheduleNextVideoFrame() {
     if (!pipelineRunning) return;
 
-    // Clear any old pending calls
     if (videoFrameCallbackId && rawVideoEl && typeof rawVideoEl.cancelVideoFrameCallback === 'function') {
         rawVideoEl.cancelVideoFrameCallback(videoFrameCallbackId);
         videoFrameCallbackId = null;
@@ -1068,9 +1653,6 @@ function scheduleNextVideoFrame() {
     }
 }
 
-/**
- * Starts the AI pipeline (without coupling to render)
- */
 async function startAIPipeline() {
     if (pipelineRunning) {
         console.log("ℹ️ AI pipeline already running.");
@@ -1108,7 +1690,6 @@ async function startAIPipeline() {
         pipelineRunning = true;
         await switchPublishToCanvas();
 
-        // Start the render loop
         scheduleNextVideoFrame();
 
     } catch (e) {
@@ -1125,44 +1706,8 @@ async function startAIPipeline() {
     }
 }
 
-/**
- * Renders a single frame to the WebGL canvas.
- */
-function renderFrame() {
-    if (!gpuReady && !initializeGPUBlurEngine()) return;
-    if (!rawVideoEl || rawVideoEl.readyState < 2) return;
-
-    if (!isCamOn) {
-        renderBlackGPU();
-        return;
-    }
-
-    if (isBgMode === "blur" && lastSegResults?.segmentationMask) {
-        renderGPUFrame();
-        return;
-    }
-
-    if (isBgMode === "image") {
-        renderImageBackgroundGPU();
-        return;
-    }
-
-    renderRawGPU();
-}
-
-// ------------------------------------------------------------
-// BEAUTY (Placeholder for Phase 1)
-// ------------------------------------------------------------
-function applyBeautySmoothing() {
-    // Phase 1: Beauty disabled.
-}
-
-function applyFallbackBeautyFilter() {
-    // Phase 1: Beauty disabled.
-}
-
 // ============================================================
-// 🔥 CORRECTED: switchPublishToCanvas (per GPT recommendation)
+// 🔥 CORRECTED: switchPublishToCanvas
 // ============================================================
 async function switchPublishToCanvas() {
     if (!zg || !localStream || !outCanvas) {
@@ -1170,29 +1715,22 @@ async function switchPublishToCanvas() {
         return;
     }
 
-    // 🔥 REMOVED: duplicate global declarations (let zg; let localStream = null; etc.)
     let canvasCaptureStream = null;
-    // customZegoStream is global, so we don't redeclare
 
     try {
         console.log("🔄 Switching Zego publish source → GPU canvas");
 
-        // 1. Create browser MediaStream from canvas
         canvasCaptureStream = outCanvas.captureStream(TARGET_FPS);
         if (!canvasCaptureStream) throw new Error("Canvas captureStream() is not supported.");
 
-        // Assign to global
         canvasStream = canvasCaptureStream;
 
-        // 2. Add ORIGINAL audio track
         const audioTrack = localStream.getAudioTracks()[0];
         if (audioTrack) canvasStream.addTrack(audioTrack);
 
-        // 3. Verify video track
         const canvasVideoTrack = canvasStream.getVideoTracks()[0];
         if (!canvasVideoTrack) throw new Error("GPU canvas did not produce a video track.");
 
-        // 4. Stop old publishing
         if (publishStreamId) {
             try {
                 await zg.stopPublishingStream(publishStreamId);
@@ -1200,7 +1738,6 @@ async function switchPublishToCanvas() {
             } catch (e) { console.warn("Previous publish stop warning:", e); }
         }
 
-        // 5. Destroy previous custom stream (if any)
         if (customZegoStream) {
             try {
                 zg.destroyStream(customZegoStream);
@@ -1208,7 +1745,6 @@ async function switchPublishToCanvas() {
             customZegoStream = null;
         }
 
-        // 6. Create custom Zego stream (using global customZegoStream)
         customZegoStream = await zg.createZegoStream({
             custom: {
                 video: { source: canvasStream },
@@ -1218,15 +1754,13 @@ async function switchPublishToCanvas() {
 
         if (!customZegoStream) throw new Error("Zego custom stream creation failed.");
 
-        // 7. Publish custom stream
         publishStream = customZegoStream;
         await zg.startPublishingStream(publishStreamId, customZegoStream);
         await new Promise(r => setTimeout(r, 300));
-        // 8. Restore mic/camera states
+
         await zg.mutePublishStreamAudio(publishStreamId, !isMicOn);
         await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
 
-        // 🔥 FIXED: Update local preview to show processed video
         const localVideoPreview = document.getElementById('my-local-video');
         if (localVideoPreview) {
             localVideoPreview.srcObject = canvasStream;
@@ -1237,13 +1771,13 @@ async function switchPublishToCanvas() {
             microphone: isMicOn,
             fps: TARGET_FPS,
             width: CANVAS_W,
-            height: CANVAS_H
+            height: CANVAS_H,
+            zoom: currentZoom,
+            beauty: isBeautyOn
         });
 
     } catch (e) {
         console.error("❌ GPU canvas publish failed:", e);
-
-        // Fallback
         publishStream = localStream;
         try {
             await zg.startPublishingStream(publishStreamId, localStream);
@@ -1258,21 +1792,16 @@ async function switchPublishToCanvas() {
     }
 }
 
-// ============================================================
-// 🔥 CORRECTED: stopAIPipelineIfIdle (fixed if-block & cleanup order)
-// ============================================================
 async function stopAIPipelineIfIdle() {
     if (isBeautyOn || isBgMode !== "none") return;
 
     console.log("🛑 Stopping AI/GPU pipeline...");
 
-    // 1. Stop MediaPipe Camera helper (if any, though now unused for render)
     if (aiCamera) {
         try { aiCamera.stop(); } catch (e) {}
         aiCamera = null;
     }
 
-    // 2. Cancel all timing callbacks properly
     if (videoFrameCallbackId && rawVideoEl && typeof rawVideoEl.cancelVideoFrameCallback === 'function') {
         rawVideoEl.cancelVideoFrameCallback(videoFrameCallbackId);
         videoFrameCallbackId = null;
@@ -1292,7 +1821,6 @@ async function stopAIPipelineIfIdle() {
     lastSegResults = null;
     lastFaceLandmarks = null;
 
-    // 3. Stop publishing custom stream, destroy it, then restore original
     if (zg && publishStream && publishStream !== localStream) {
         try {
             console.log("🔄 Restoring Zego publish source → original camera");
@@ -1314,7 +1842,6 @@ async function stopAIPipelineIfIdle() {
         }
     }
 
-    // 4. Stop hidden video
     if (rawVideoEl) {
         try { rawVideoEl.pause(); } catch (e) {}
         try { rawVideoEl.srcObject = null; } catch (e) {}
@@ -1328,7 +1855,6 @@ async function stopAIPipelineIfIdle() {
         bgImageEl = null;
     }
 
-    // 🔥 Reset local preview back to original stream
     const localVideoPreview = document.getElementById('my-local-video');
     if (localVideoPreview && localStream) {
         localVideoPreview.srcObject = localStream;
@@ -1379,7 +1905,7 @@ function setupControls() {
         try {
             if (!localStream || !zg) return;
             const nextState = !isCamOn;
-            await zg.mutePublishStreamvideo(publishStreamId, !nextState);
+            await zg.mutePublishStreamVideo(publishStreamId, !nextState);
             isCamOn = nextState;
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
@@ -1483,7 +2009,6 @@ function openBackgroundPicker(anchorBtn) {
         const url = URL.createObjectURL(file);
         bgImageEl = new Image();
         bgImageEl.src = url;
-        // 🔥 FIXED: Added reject for loading errors
         await new Promise((resolve, reject) => {
             bgImageEl.onload = resolve;
             bgImageEl.onerror = () => reject(new Error("Failed to load background image"));
@@ -1509,7 +2034,35 @@ function openBackgroundPicker(anchorBtn) {
 }
 
 // =========================================
-// 9. LEAVE ROOM & CLEANUP
+// 9. PERFORMANCE MONITOR (UPDATED)
+// =========================================
+function startPerformanceMonitor() {
+    setInterval(() => {
+        // FPS calculation
+        const now = performance.now();
+        if (lastFPSCheckTime > 0) {
+            const elapsed = (now - lastFPSCheckTime) / 1000;
+            currentFPS = frameRateCounter / elapsed;
+            frameRateCounter = 0;
+        }
+        lastFPSCheckTime = now;
+
+        // 🔥 PATCH 4/5: Unified quality evaluation
+        evaluateQuality();
+
+        // If network quality callback is not supported, use polling fallback
+        if (!zg?.onNetworkQuality && zg?.getNetworkQuality) {
+            try {
+                const quality = zg.getNetworkQuality();
+                // Convert to 0-1 if it's a number, else assume 0.5
+                networkQuality = typeof quality === 'number' ? Math.min(1, Math.max(0, quality)) : 0.5;
+            } catch (e) { }
+        }
+    }, 2000);
+}
+
+// =========================================
+// 10. LEAVE ROOM & CLEANUP
 // =========================================
 async function leaveRoom() {
     try {
@@ -1517,7 +2070,6 @@ async function leaveRoom() {
 
         if (aiCamera) { try { aiCamera.stop(); } catch (e) {} aiCamera = null; }
 
-        // Cancel all timing correctly
         if (videoFrameCallbackId && rawVideoEl && typeof rawVideoEl.cancelVideoFrameCallback === 'function') {
             rawVideoEl.cancelVideoFrameCallback(videoFrameCallbackId);
             videoFrameCallbackId = null;
@@ -1550,6 +2102,7 @@ async function leaveRoom() {
         isCamOn = false;
         isBeautyOn = false;
         isBgMode = "none";
+        currentZoom = 1.0;
         publishStream = null;
         canvasStream = null;
         customZegoStream = null;
@@ -1564,6 +2117,9 @@ async function leaveRoom() {
 
         const popover = document.getElementById('bg-picker-popover');
         if (popover) popover.remove();
+
+        const zoomControlBar = document.getElementById('zoom-control-bar');
+        if (zoomControlBar) zoomControlBar.remove();
 
         console.log("✅ Successfully left the meeting.");
         setTimeout(() => {
