@@ -729,6 +729,28 @@ window.startCustomZegoEngine = async function (
         );
 
         // =====================================================
+        // 🔥 3C. PUBLISH QUALITY DEBUG
+        // =====================================================
+
+        zg.on(
+            "publishQualityUpdate",
+            (streamID, quality) => {
+
+                console.log(
+                    "📊 ZEGO publishQualityUpdate:",
+                    {
+                        streamID,
+                        quality
+                    }
+                );
+            }
+        );
+
+        console.log(
+            "🧪 ZEGO DEBUG LISTENERS REGISTERED."
+        );
+
+        // =====================================================
         // 4. REMOTE STREAM EVENT LISTENER
         // =====================================================
 
@@ -1001,6 +1023,21 @@ window.startCustomZegoEngine = async function (
 
         console.log(
             "✅ Room Login Success"
+        );
+
+        // =====================================================
+        // 🔥 5A. LOGIN VALIDATION
+        // =====================================================
+
+        console.log(
+            "🧪 AFTER LOGIN:",
+            {
+                zgExists: !!zg,
+                roomID: window.meetingRoomId,
+                userID,
+                roomIDMatches:
+                    window.meetingRoomId === roomID
+            }
         );
 
         // =====================================================
