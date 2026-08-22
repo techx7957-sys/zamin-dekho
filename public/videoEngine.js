@@ -231,24 +231,39 @@ function enableAGC(zegoInstance) {
 // ============================================================
 // 🔥 PATCH: Real bitrate adaptation using ZEGO v3.12.0 APIs
 function updateZegoBitrate(bitrate) {
-    if (!zg) return;
+    if (!zg || !publishStreamId) return;
+
     try {
-        // Try multiple possible API methods
-        if (typeof zg.setPublishConfig === 'function') {
-            // setPublishConfig expects an object with bitrate (in kbps)
-            zg.setPublishConfig({ bitrate: bitrate });
-            console.log(`✅ Zego publish bitrate updated to ${bitrate} kbps via setPublishConfig`);
-        } else if (typeof zg.setVideoBitrate === 'function') {
-            zg.setVideoBitrate(bitrate);
-            console.log(`✅ Zego video bitrate updated to ${bitrate} kbps via setVideoBitrate`);
-        } else if (typeof zg.setVideoConfig === 'function') {
-            zg.setVideoConfig({ bitrate: bitrate });
-            console.log(`✅ Zego video config bitrate updated to ${bitrate} kbps via setVideoConfig`);
-        } else {
-            console.warn("⚠️ Zego SDK does not support dynamic bitrate update. Bitrate will remain at initial setting.");
+        const numericBitrate = Number(bitrate);
+
+        if (
+            !Number.isFinite(numericBitrate) ||
+            numericBitrate <= 0
+        ) {
+            console.warn("⚠️ Invalid bitrate:", bitrate);
+            return;
         }
+
+        if (typeof zg.setVideoConfig === "function") {
+            zg.setVideoConfig(
+                { bitrate: numericBitrate },
+                publishStreamId
+            );
+
+            console.log(
+                `✅ Zego video bitrate updated to ${numericBitrate} kbps`
+            );
+        } else {
+            console.warn(
+                "⚠️ Zego SDK does not support setVideoConfig()."
+            );
+        }
+
     } catch (e) {
-        console.warn("Failed to update Zego bitrate:", e);
+        console.warn(
+            "Failed to update Zego bitrate:",
+            e
+        );
     }
 }
 
