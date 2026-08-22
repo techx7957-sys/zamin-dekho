@@ -230,40 +230,136 @@ function enableAGC(zegoInstance) {
 // 🔥 NEW: DYNAMIC BITRATE UPDATE FOR ZEGO (PATCH #7)
 // ============================================================
 // 🔥 PATCH: Real bitrate adaptation using ZEGO v3.12.0 APIs
-function updateZegoBitrate(bitrate) {
-    if (!zg || !publishStreamId) return;
+async function updateZegoBitrate(bitrate) {
+    if (!zg) {
+        console.warn(
+            "⏭️ Bitrate update skipped: ZEGO engine is not running."
+        );
+        return false;
+    }
 
-    try {
-        const numericBitrate = Number(bitrate);
+    if (!publishStreamId) {
+        console.warn(
+            "⏭️ Bitrate update skipped: publishStreamId is empty."
+        );
+        return false;
+    }
 
-        if (
-            !Number.isFinite(numericBitrate) ||
-            numericBitrate <= 0
-        ) {
-            console.warn("⚠️ Invalid bitrate:", bitrate);
-            return;
+    const numericBitrate = Number(bitrate);
+
+    if (
+        !Number.isFinite(numericBitrate) ||
+        numericBitrate <= 0
+    ) {
+        console.warn(
+            "⚠️ Invalid bitrate:",
+            bitrate
+        );
+        return false;
+    }
+    if (
+        typeof zg.setVideoConfig !== "function"
+    ) {
+        console.error(
+            "❌ ZEGO setVideoConfig() is unavailable."
+        );
+        return false;
+    }
+    const publisher =
+        zg?.zegoWebRTC
+            ?.streamCenter
+            ?.publisherList
+            ?.[publishStreamId];
+
+    if (!publisher) {
+        console.warn(
+            "⏭️ Bitrate update skipped: publisher not found.",
+            {
+                streamId: publishStreamId
+            }
+        );
+
+        return false;
+    }
+    console.log(
+        "🧬 ZEGO bitrate update target:",
+        {
+            streamId: publishStreamId,
+            publisherState: publisher?.state,
+            hasPreviewer: !!publisher?.previewer,
+            hasZegoPeer: !!publisher?.zegoPeer,
+            globalLocalStream: !!localStream
         }
+    );
+    const videoConfig = {
+        maxBitrate: Math.round(numericBitrate)
+    };
+    try {
 
-        if (typeof zg.setVideoConfig === "function") {
-            zg.setVideoConfig(
-                { bitrate: numericBitrate },
+        console.log(
+            "📡 Applying ZEGO video bitrate:",
+            {
+                streamId: publishStreamId,
+                maxBitrate: videoConfig.maxBitrate,
+                unit: "kbps"
+            }
+        );
+
+        const result =
+            await zg.setVideoConfig(
+                videoConfig,
                 publishStreamId
             );
+        console.log(
+            "✅ ZEGO video bitrate updated successfully:",
+            {
+                streamId: publishStreamId,
+                maxBitrate: videoConfig.maxBitrate,
+                result
+            }
+        );
+        const videoInfo =
+            publisher
+                ?.previewer
+                ?.videoInfo;
+
+        if (videoInfo) {
 
             console.log(
-                `✅ Zego video bitrate updated to ${numericBitrate} kbps`
+                "🔎 ZEGO publisher videoInfo after bitrate update:",
+                {
+                    width: videoInfo.width,
+                    height: videoInfo.height,
+                    frameRate: videoInfo.frameRate,
+                    bitRate: videoInfo.bitRate,
+                    requestedMaxBitrate:
+                        videoConfig.maxBitrate
+                }
             );
+
         } else {
+
             console.warn(
-                "⚠️ Zego SDK does not support setVideoConfig()."
+                "⚠️ ZEGO publisher videoInfo unavailable after bitrate update."
             );
+
         }
 
-    } catch (e) {
-        console.warn(
-            "Failed to update Zego bitrate:",
-            e
+        return true;
+
+    } catch (error) {
+
+        console.error(
+            "❌ ZEGO setVideoConfig() failed:",
+            {
+                streamId: publishStreamId,
+                maxBitrate: videoConfig.maxBitrate,
+                publisherState: publisher?.state,
+                error
+            }
         );
+
+        return false;
     }
 }
 
@@ -345,8 +441,15 @@ async function switchOutputProfile(profileName) {
     }
 
     // 🔥 PATCH: Update Zego bitrate to match new profile
-    updateZegoBitrate(profile.bitrate);
-}
+    await zg.setVideoConfig(
+        {
+            width: profile.width,
+            height: profile.height,
+            frameRate: profile.fps,
+            maxBitrate: profile.bitrate
+        },
+        publishStreamId
+    );
 
 // 🔥 PATCH 5: Unified Quality Controller (FPS + Network)
 let badFpsSamples = 0, goodFpsSamples = 0;
