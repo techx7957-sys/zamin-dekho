@@ -399,57 +399,370 @@ function detectCameraCapabilities(track) {
 
 // 🔥 PATCH 4: New switchOutputProfile() - dynamic canvas + render targets + bitrate
 async function switchOutputProfile(profileName) {
-    const profile = RESOLUTION_PROFILES[profileName];
-    if (!profile) return;
-    currentResProfile = profileName;
-    console.log(`📷 Switching Output Profile to: ${profileName} (${profile.width}x${profile.height})`);
+    const profile =
+        RESOLUTION_PROFILES?.[profileName];
 
-    // Update canvas dimensions
-    CANVAS_W = profile.width;
-    CANVAS_H = profile.height;
-    if (outCanvas) {
-        outCanvas.width = CANVAS_W;
-        outCanvas.height = CANVAS_H;
-    }
-    if (rawVideoEl) {
-        rawVideoEl.width = CANVAS_W;
-        rawVideoEl.height = CANVAS_H;
+    if (!profile) {
+        console.warn(
+            "⚠️ Invalid resolution profile:",
+            profileName
+        );
+        return false;
     }
 
-    // Recreate render targets
-    if (gpuReady) {
-        destroyRenderTargets();
-        createRenderTargets(CANVAS_W, CANVAS_H);
+    if (!localStream) {
+        console.warn(
+            "⏭️ Profile switch skipped: localStream unavailable."
+        );
+        return false;
     }
+   const previousProfile =
+        currentResProfile;
 
-    // Apply camera constraints
-    try {
-        const videoTracks = localStream.getVideoTracks();
-        if (videoTracks.length > 0) {
-            // Clamp with camera capabilities
-            const desiredWidth = Math.min(profile.width, cameraCapabilities?.width?.max ?? profile.width);
-            const desiredHeight = Math.min(profile.height, cameraCapabilities?.height?.max ?? profile.height);
-            const desiredFps = Math.min(profile.fps, cameraCapabilities?.frameRate?.max ?? profile.fps);
-            await videoTracks[0].applyConstraints({
-                width: { ideal: desiredWidth, max: desiredWidth },
-                height: { ideal: desiredHeight, max: desiredHeight },
-                frameRate: { ideal: desiredFps, max: desiredFps }
-            });
-        }
-    } catch (e) {
-        console.error("❌ Failed to apply resolution constraints:", e);
-    }
-
-    // 🔥 PATCH: Update Zego bitrate to match new profile
-    await zg.setVideoConfig(
+    console.log(
+        "📷 Switching Output Profile:",
         {
-            width: profile.width,
-            height: profile.height,
-            frameRate: profile.fps,
-            maxBitrate: profile.bitrate
-        },
-        publishStreamId
+            from: previousProfile,
+            to: profileName,
+            requestedWidth: profile.width,
+            requestedHeight: profile.height,
+            requestedFPS: profile.fps,
+            requestedBitrate: profile.bitrate
+        }
     );
+   const videoTracks =
+        localStream.getVideoTracks();
+
+    if (!videoTracks.length) {
+        console.warn(
+            "⚠️ Profile switch skipped: no video track."
+        );
+        return false;
+    }
+
+    const videoTrack =
+        videoTracks[0];
+    let capabilities = null;
+
+    try {
+
+        capabilities =
+            videoTrack.getCapabilities?.() || null;
+
+    } catch (e) {
+
+        console.warn(
+            "⚠️ Could not read video capabilities:",
+            e
+        );
+    }
+    const maxWidth =
+        capabilities?.width?.max ??
+        cameraCapabilities?.width?.max ??
+        profile.width;
+
+    const maxHeight =
+        capabilities?.height?.max ??
+        cameraCapabilities?.height?.max ??
+        profile.height;
+
+    const maxFPS =
+        capabilities?.frameRate?.max ??
+        cameraCapabilities?.frameRate?.max ??
+        profile.fps;
+
+
+    const targetWidth =
+        Math.min(
+            Math.max(1, profile.width),
+            maxWidth
+        );
+
+    const targetHeight =
+        Math.min(
+            Math.max(1, profile.height),
+            maxHeight
+        );
+
+    const targetFPS =
+        Math.min(
+            Math.max(1, profile.fps),
+            maxFPS
+        );
+
+
+    console.log(
+        "🎯 Camera target:",
+        {
+            width: targetWidth,
+            height: targetHeight,
+            fps: targetFPS,
+            cameraMaxWidth: maxWidth,
+            cameraMaxHeight: maxHeight,
+            cameraMaxFPS: maxFPS
+        }
+    );
+   try {
+
+        await videoTrack.applyConstraints({
+
+            width: {
+                ideal: targetWidth,
+                max: targetWidth
+            },
+
+            height: {
+                ideal: targetHeight,
+                max: targetHeight
+            },
+
+            frameRate: {
+                ideal: targetFPS,
+                max: targetFPS
+            }
+
+        });
+
+        console.log(
+            "✅ Camera constraints applied."
+        );
+
+    } catch (e) {
+
+        console.error(
+            "❌ Failed to apply camera constraints:",
+            e
+        );
+        return false;
+    }
+    let actualSettings = {};
+
+    try {
+
+        actualSettings =
+            videoTrack.getSettings?.() || {};
+
+        console.log(
+            "📊 Actual camera settings:",
+            {
+                width: actualSettings.width,
+                height: actualSettings.height,
+                frameRate: actualSettings.frameRate
+            }
+        );
+
+    } catch (e) {
+
+        console.warn(
+            "⚠️ Could not read actual camera settings:",
+            e
+        );
+    }
+    CANVAS_W =
+        actualSettings.width ||
+        targetWidth;
+
+    CANVAS_H =
+        actualSettings.height ||
+        targetHeight;
+
+
+    if (outCanvas) {
+
+        outCanvas.width =
+            CANVAS_W;
+
+        outCanvas.height =
+            CANVAS_H;
+    }
+
+
+    if (rawVideoEl) {
+
+        rawVideoEl.width =
+            CANVAS_W;
+
+        rawVideoEl.height =
+            CANVAS_H;
+    }
+    if (gpuReady) {
+
+        try {
+
+            destroyRenderTargets();
+
+            createRenderTargets(
+                CANVAS_W,
+                CANVAS_H
+            );
+
+            console.log(
+                "✅ GPU render targets recreated:",
+                `${CANVAS_W}x${CANVAS_H}`
+            );
+
+        } catch (e) {
+
+            console.error(
+                "❌ GPU render target recreation failed:",
+                e
+            );
+
+            // Camera is already changed, so continue.
+        }
+    }
+    if (
+        typeof updateZegoBitrate ===
+        "function"
+    ) {
+
+        try {
+
+            const bitrateUpdated =
+                await updateZegoBitrate(
+                    profile.bitrate
+                );
+
+            if (!bitrateUpdated) {
+
+                console.warn(
+                    "⚠️ ZEGO bitrate update failed:",
+                    {
+                        profile: profileName,
+                        bitrate: profile.bitrate
+                    }
+                );
+
+            } else {
+
+                console.log(
+                    "✅ ZEGO bitrate synchronized:",
+                    `${profile.bitrate} kbps`
+                );
+            }
+
+        } catch (e) {
+
+            console.error(
+                "❌ ZEGO bitrate update threw an error:",
+                e
+            );
+        }
+
+    } else {
+
+        console.warn(
+            "⚠️ updateZegoBitrate() is not available."
+        );
+    }
+    currentResProfile =
+        profileName;
+ if (
+        Number.isFinite(
+            Number(actualSettings.frameRate)
+        )
+    ) {
+
+        currentFPS =
+            Number(
+                actualSettings.frameRate
+            );
+    }
+    const publisher =
+        zg?.zegoWebRTC
+            ?.streamCenter
+            ?.publisherList
+            ?.[publishStreamId];
+
+    const internalVideoInfo =
+        publisher
+            ?.previewer
+            ?.videoInfo;
+
+
+    console.log(
+        "🎯 PROFILE SWITCH COMPLETE:",
+        {
+            profile: currentResProfile,
+
+            requested: {
+                width: profile.width,
+                height: profile.height,
+                fps: profile.fps,
+                bitrate: profile.bitrate
+            },
+
+            actualCamera: {
+                width:
+                    actualSettings.width,
+                height:
+                    actualSettings.height,
+                fps:
+                    actualSettings.frameRate
+            },
+
+            canvas: {
+                width: CANVAS_W,
+                height: CANVAS_H
+            },
+
+            zegoPublisher: {
+                state:
+                    publisher?.state,
+
+                hasPeer:
+                    !!publisher?.zegoPeer,
+
+                videoInfo:
+                    internalVideoInfo
+                        ? {
+                            width:
+                                internalVideoInfo.width,
+
+                            height:
+                                internalVideoInfo.height,
+
+                            frameRate:
+                                internalVideoInfo.frameRate,
+
+                            bitRate:
+                                internalVideoInfo.bitRate
+                        }
+                        : null
+            }
+        }
+    );
+
+
+    return true;
+}
+
+    // =====================================================
+    // 🔥 UPDATE ZEGO PUBLISH BITRATE
+    // =====================================================
+
+    try {
+
+        const bitrateUpdated =
+            await updateZegoBitrate(profile.bitrate);
+
+        if (!bitrateUpdated) {
+            console.warn(
+                "⚠️ ZEGO bitrate update did not complete successfully.",
+                {
+                    profile: profileName,
+                    bitrate: profile.bitrate
+                }
+            );
+        }
+
+    } catch (e) {
+
+        console.error(
+            "❌ Unexpected bitrate update error:",
+            e
+        );
+    }
 
 // 🔥 PATCH 5: Unified Quality Controller (FPS + Network)
 let badFpsSamples = 0, goodFpsSamples = 0;
