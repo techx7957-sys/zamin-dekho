@@ -232,17 +232,14 @@ function enableAGC(zegoInstance) {
 // ============================================================
 // 🔥 PATCH: Real bitrate adaptation using ZEGO v3.12.0 APIs
 async function updateZegoBitrate(bitrate) {
+
     if (!zg) {
-        console.warn(
-            "⏭️ Bitrate update skipped: ZEGO engine is not running."
-        );
+        console.warn("⏭️ Bitrate skipped: ZEGO engine not ready.");
         return false;
     }
 
     if (!publishStreamId) {
-        console.warn(
-            "⏭️ Bitrate update skipped: publishStreamId is empty."
-        );
+        console.warn("⏭️ Bitrate skipped: publishStreamId missing.");
         return false;
     }
 
@@ -252,20 +249,17 @@ async function updateZegoBitrate(bitrate) {
         !Number.isFinite(numericBitrate) ||
         numericBitrate <= 0
     ) {
+        console.warn("⚠️ Invalid bitrate:", bitrate);
+        return false;
+    }
+
+    if (typeof zg.setVideoConfig !== "function") {
         console.warn(
-            "⚠️ Invalid bitrate:",
-            bitrate
+            "⚠️ ZEGO setVideoConfig() unavailable."
         );
         return false;
     }
-    if (
-        typeof zg.setVideoConfig !== "function"
-    ) {
-        console.error(
-            "❌ ZEGO setVideoConfig() is unavailable."
-        );
-        return false;
-    }
+
     const publisher =
         zg?.zegoWebRTC
             ?.streamCenter
@@ -274,77 +268,94 @@ async function updateZegoBitrate(bitrate) {
 
     if (!publisher) {
         console.warn(
-            "⏭️ Bitrate update skipped: publisher not found.",
+            "⏭️ Bitrate skipped: publisher not registered.",
+            publishStreamId
+        );
+        return false;
+    }
+
+    const internalLocalStream =
+        publisher?.do?.localStream;
+
+    if (!internalLocalStream) {
+
+        console.warn(
+            "⏳ Bitrate deferred: ZEGO internal localStream is not ready.",
             {
-                streamId: publishStreamId
+                streamId: publishStreamId,
+                publisherState: publisher?.state,
+                hasPublisherDo: !!publisher?.do,
+                hasPreviewer: !!publisher?.previewer,
+                hasPeer: !!publisher?.zegoPeer,
+                globalLocalStream: !!localStream
             }
         );
 
         return false;
     }
-    console.log(
-        "🧬 ZEGO bitrate update target:",
-        {
-            streamId: publishStreamId,
-            publisherState: publisher?.state,
-            hasPreviewer: !!publisher?.previewer,
-            hasZegoPeer: !!publisher?.zegoPeer,
-            globalLocalStream: !!localStream
-        }
-    );
+
+    const tracks =
+        internalLocalStream
+            ?.getTracks?.() || [];
+
+    const videoTrack =
+        internalLocalStream
+            ?.getVideoTracks?.()[0];
+
+    if (!videoTrack) {
+
+        console.warn(
+            "⏭️ Bitrate deferred: ZEGO internal video track unavailable.",
+            {
+                streamId: publishStreamId,
+                trackCount: tracks.length
+            }
+        );
+
+        return false;
+    }
+
+    if (videoTrack.readyState !== "live") {
+
+        console.warn(
+            "⏭️ Bitrate deferred: internal video track is not live.",
+            {
+                readyState: videoTrack.readyState
+            }
+        );
+
+        return false;
+    }
+
     const videoConfig = {
         maxBitrate: Math.round(numericBitrate)
     };
+
+    console.log(
+        "📡 Applying ZEGO bitrate:",
+        {
+            streamId: publishStreamId,
+            maxBitrate: videoConfig.maxBitrate,
+            publisherState: publisher.state,
+            internalStream: true,
+            videoTrackReady: videoTrack.readyState
+        }
+    );
+
     try {
 
-        console.log(
-            "📡 Applying ZEGO video bitrate:",
-            {
-                streamId: publishStreamId,
-                maxBitrate: videoConfig.maxBitrate,
-                unit: "kbps"
-            }
+        await zg.setVideoConfig(
+            videoConfig,
+            publishStreamId
         );
 
-        const result =
-            await zg.setVideoConfig(
-                videoConfig,
-                publishStreamId
-            );
         console.log(
-            "✅ ZEGO video bitrate updated successfully:",
+            "✅ ZEGO bitrate applied:",
             {
                 streamId: publishStreamId,
-                maxBitrate: videoConfig.maxBitrate,
-                result
+                bitrate: videoConfig.maxBitrate
             }
         );
-        const videoInfo =
-            publisher
-                ?.previewer
-                ?.videoInfo;
-
-        if (videoInfo) {
-
-            console.log(
-                "🔎 ZEGO publisher videoInfo after bitrate update:",
-                {
-                    width: videoInfo.width,
-                    height: videoInfo.height,
-                    frameRate: videoInfo.frameRate,
-                    bitRate: videoInfo.bitRate,
-                    requestedMaxBitrate:
-                        videoConfig.maxBitrate
-                }
-            );
-
-        } else {
-
-            console.warn(
-                "⚠️ ZEGO publisher videoInfo unavailable after bitrate update."
-            );
-
-        }
 
         return true;
 
@@ -354,8 +365,9 @@ async function updateZegoBitrate(bitrate) {
             "❌ ZEGO setVideoConfig() failed:",
             {
                 streamId: publishStreamId,
-                maxBitrate: videoConfig.maxBitrate,
+                bitrate: videoConfig.maxBitrate,
                 publisherState: publisher?.state,
+                internalLocalStream: !!publisher?.do?.localStream,
                 error
             }
         );
@@ -400,6 +412,19 @@ function detectCameraCapabilities(track) {
 
 // 🔥 PATCH 4: New switchOutputProfile() - dynamic canvas + render targets + bitrate
 async function switchOutputProfile(profileName) {
+    
+    if (profileSwitchInProgress) {
+        console.warn(
+            "⏳ Profile switch already running:",
+            profileName
+        );
+        return false;
+    }
+
+    profileSwitchInProgress = true;
+
+    try {
+        
     const profile =
         RESOLUTION_PROFILES?.[profileName];
 
@@ -746,14 +771,31 @@ async function switchOutputProfile(profileName) {
     );
 
 
-    return true;
-}
+            return true;
+
+        } catch (e) {
+
+            console.error(
+                "❌ Profile switch failed:",
+                profileName,
+                e
+            );
+
+            return false;
+
+        } finally {
+
+            profileSwitchInProgress = false;
+        }
+    }
 
 // 🔥 PATCH 5: Unified Quality Controller (FPS + Network)
 let badFpsSamples = 0, goodFpsSamples = 0;
 let badNetSamples = 0, goodNetSamples = 0;
 
 let qualityEvaluationRunning = false;
+let profileSwitchInProgress = false;
+let lastQualityEvaluation = 0;
 let lastNetworkQualityUpdate = 0;
 let networkQualitySource = "default";
 
@@ -782,31 +824,55 @@ async function evaluateQuality() {
         return;
     }
 
+    if (profileSwitchInProgress) {
+        return;
+    }
+
+    if (
+        !Number.isFinite(currentFPS) ||
+        currentFPS <= 0
+    ) {
+        return;
+    }
+
+    if (
+        !Number.isFinite(networkQuality) ||
+        networkQuality < 0
+    ) {
+        return;
+    }
+
     qualityEvaluationRunning = true;
 
     try {
 
         let fpsLevel;
 
-        if (!Number.isFinite(currentFPS)) {
-            fpsLevel = 1;
-        } else if (currentFPS < 18) {
+        if (currentFPS < 18) {
+
             fpsLevel = 0; // LOW
+
         } else if (currentFPS < 24) {
+
             fpsLevel = 1; // BALANCED
+
         } else {
+
             fpsLevel = 2; // HIGH
         }
 
         let netLevel;
 
-        if (!Number.isFinite(networkQuality)) {
-            netLevel = 1;
-        } else if (networkQuality < 0.4) {
+        if (networkQuality < 0.4) {
+
             netLevel = 0; // LOW
+
         } else if (networkQuality < 0.7) {
+
             netLevel = 1; // BALANCED
+
         } else {
+
             netLevel = 2; // HIGH
         }
 
@@ -815,6 +881,7 @@ async function evaluateQuality() {
                 fpsLevel,
                 netLevel
             );
+
 
         const targetProfile =
             targetLevel === 0
@@ -834,56 +901,92 @@ async function evaluateQuality() {
 
             badFpsSamples = 0;
             goodFpsSamples = 0;
+
             badNetSamples = 0;
             goodNetSamples = 0;
 
             return;
         }
-  
+
         if (targetLevel < currentLevel) {
 
             if (fpsLevel < currentLevel) {
+
                 badFpsSamples++;
+
             } else {
+
                 badFpsSamples = 0;
             }
 
             if (netLevel < currentLevel) {
+
                 badNetSamples++;
+
             } else {
+
                 badNetSamples = 0;
             }
+
+            goodFpsSamples = 0;
+            goodNetSamples = 0;
 
             const shouldDowngrade =
                 badFpsSamples >= 3 ||
                 badNetSamples >= 3;
 
 
-            if (shouldDowngrade) {
+            if (!shouldDowngrade) {
+                return;
+            }
 
-                console.warn(
-                    "📉 Adaptive quality downgrade:",
-                    {
-                        from: currentResProfile,
-                        to: targetProfile,
-                        currentFPS,
-                        networkQuality,
-                        fpsLevel,
-                        netLevel,
-                        badFpsSamples,
-                        badNetSamples
-                    }
-                );
+            if (profileSwitchInProgress) {
+                return;
+            }
+
+
+            console.warn(
+                "📉 Adaptive quality downgrade:",
+                {
+                    from: currentResProfile,
+                    to: targetProfile,
+
+                    currentFPS,
+                    networkQuality,
+
+                    fpsLevel,
+                    netLevel,
+
+                    badFpsSamples,
+                    badNetSamples
+                }
+            );
+
+            profileSwitchInProgress = true;
+
+            try {
 
                 await switchOutputProfile(
                     targetProfile
                 );
 
-                badFpsSamples = 0;
-                goodFpsSamples = 0;
-                badNetSamples = 0;
-                goodNetSamples = 0;
+            } catch (error) {
+
+                console.error(
+                    "❌ Adaptive downgrade failed:",
+                    error
+                );
+
+            } finally {
+
+                profileSwitchInProgress = false;
             }
+
+            badFpsSamples = 0;
+            goodFpsSamples = 0;
+
+            badNetSamples = 0;
+            goodNetSamples = 0;
 
             return;
         }
@@ -891,48 +994,82 @@ async function evaluateQuality() {
         if (targetLevel > currentLevel) {
 
             if (fpsLevel > currentLevel) {
+
                 goodFpsSamples++;
+
             } else {
+
                 goodFpsSamples = 0;
             }
 
             if (netLevel > currentLevel) {
+
                 goodNetSamples++;
+
             } else {
+
                 goodNetSamples = 0;
             }
+
+            badFpsSamples = 0;
+            badNetSamples = 0;
 
             const shouldUpgrade =
                 goodFpsSamples >= 8 &&
                 goodNetSamples >= 8;
 
 
-            if (shouldUpgrade) {
+            if (!shouldUpgrade) {
+                return;
+            }
 
-                console.log(
-                    "📈 Adaptive quality upgrade:",
-                    {
-                        from: currentResProfile,
-                        to: targetProfile,
-                        currentFPS,
-                        networkQuality,
-                        fpsLevel,
-                        netLevel,
-                        goodFpsSamples,
-                        goodNetSamples
-                    }
-                );
+            if (profileSwitchInProgress) {
+                return;
+            }
+
+
+            console.log(
+                "📈 Adaptive quality upgrade:",
+                {
+                    from: currentResProfile,
+                    to: targetProfile,
+
+                    currentFPS,
+                    networkQuality,
+
+                    fpsLevel,
+                    netLevel,
+
+                    goodFpsSamples,
+                    goodNetSamples
+                }
+            );
+
+            profileSwitchInProgress = true;
+
+            try {
 
                 await switchOutputProfile(
                     targetProfile
                 );
 
+            } catch (error) {
 
-                badFpsSamples = 0;
-                goodFpsSamples = 0;
-                badNetSamples = 0;
-                goodNetSamples = 0;
+                console.error(
+                    "❌ Adaptive upgrade failed:",
+                    error
+                );
+
+            } finally {
+
+                profileSwitchInProgress = false;
             }
+
+            badFpsSamples = 0;
+            goodFpsSamples = 0;
+
+            badNetSamples = 0;
+            goodNetSamples = 0;
         }
 
     } catch (error) {
@@ -946,95 +1083,6 @@ async function evaluateQuality() {
 
         qualityEvaluationRunning = false;
     }
-}
-
-function setupNetworkQualityCallback() {
-
-    if (!zg) {
-        console.warn(
-            "⚠️ Network quality setup skipped: ZEGO engine missing."
-        );
-
-        return false;
-    }
-
-    if (
-        typeof zg.onNetworkQuality ===
-        "function"
-    ) {
-
-        console.log(
-            "ℹ️ ZEGO exposes onNetworkQuality."
-        );
-
-        try {
-
-            zg.onNetworkQuality(
-                (userID, upstreamQuality, downstreamQuality) => {
-
-                    // Local publisher only.
-                    if (
-                        userID &&
-                        typeof myShortId !== "undefined" &&
-                        userID !== myShortId
-                    ) {
-                        return;
-                    }
-
-
-                    const quality =
-                        normalizeZegoNetworkQuality(
-                            upstreamQuality
-                        );
-
-
-                    networkQuality =
-                        quality;
-
-                    lastNetworkQualityUpdate =
-                        Date.now();
-
-                    networkQualitySource =
-                        "zego-event";
-
-
-                    console.log(
-                        "📶 ZEGO network quality:",
-                        {
-                            userID,
-                            upstreamQuality,
-                            downstreamQuality,
-                            normalized: quality
-                        }
-                    );
-                }
-            );
-
-            console.log(
-                "✅ ZEGO network quality callback registered."
-            );
-
-            return true;
-
-        } catch (error) {
-
-            console.warn(
-                "⚠️ ZEGO network quality callback registration failed:",
-                error
-            );
-        }
-    }
-
-
-    console.warn(
-        "⚠️ ZEGO SDK does not expose a usable network-quality callback."
-    );
-
-    console.log(
-        "ℹ️ Adaptive quality will use the existing networkQuality value."
-    );
-
-    return false;
 }
 
 // ============================================================
@@ -1893,10 +1941,6 @@ window.startCustomZegoEngine = async function (
             videoTrack
         );
 
-        await switchOutputProfile(
-            currentResProfile
-        );
-
         createZoomSliderUI();
 
         setupNetworkQualityCallback();
@@ -1942,6 +1986,26 @@ window.startCustomZegoEngine = async function (
                 publishStreamId
             );
 
+            await new Promise(resolve =>
+                setTimeout(resolve, 500)
+            );
+
+            const initialProfile =
+                RESOLUTION_PROFILES[currentResProfile];
+
+            if (initialProfile) {
+
+                const applied =
+                    await updateZegoBitrate(
+                        initialProfile.bitrate
+                    );
+
+                if (!applied) {
+                    console.warn(
+                        "⚠️ Initial bitrate not applied yet; lifecycle not ready."
+                    );
+                }
+            }
             // Publisher now exists → apply profile bitrate.
             await updateZegoBitrate(
                 initProfile.bitrate
