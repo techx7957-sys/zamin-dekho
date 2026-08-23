@@ -819,19 +819,7 @@ function normalizeZegoNetworkQuality(value) {
 }
 
 async function evaluateQuality() {
-
-    if (qualityEvaluationRunning) {
-        return;
-    }
-
-    if (profileSwitchInProgress) {
-        return;
-    }
-
-    if (
-        !Number.isFinite(currentFPS) ||
-        currentFPS <= 0
-    ) {
+    if (!Number.isFinite(currentFPS) || currentFPS <= 0) {
         return;
     }
 
@@ -842,37 +830,35 @@ async function evaluateQuality() {
         return;
     }
 
+    if (qualityEvaluationRunning) {
+        return;
+    }
+
     qualityEvaluationRunning = true;
 
     try {
 
         let fpsLevel;
 
-        if (currentFPS < 18) {
-
+        if (!Number.isFinite(currentFPS)) {
+            fpsLevel = 1;
+        } else if (currentFPS < 18) {
             fpsLevel = 0; // LOW
-
         } else if (currentFPS < 24) {
-
             fpsLevel = 1; // BALANCED
-
         } else {
-
             fpsLevel = 2; // HIGH
         }
 
         let netLevel;
 
-        if (networkQuality < 0.4) {
-
+        if (!Number.isFinite(networkQuality)) {
+            netLevel = 1;
+        } else if (networkQuality < 0.4) {
             netLevel = 0; // LOW
-
         } else if (networkQuality < 0.7) {
-
             netLevel = 1; // BALANCED
-
         } else {
-
             netLevel = 2; // HIGH
         }
 
@@ -881,7 +867,6 @@ async function evaluateQuality() {
                 fpsLevel,
                 netLevel
             );
-
 
         const targetProfile =
             targetLevel === 0
@@ -901,92 +886,56 @@ async function evaluateQuality() {
 
             badFpsSamples = 0;
             goodFpsSamples = 0;
-
             badNetSamples = 0;
             goodNetSamples = 0;
 
             return;
         }
-
+  
         if (targetLevel < currentLevel) {
 
             if (fpsLevel < currentLevel) {
-
                 badFpsSamples++;
-
             } else {
-
                 badFpsSamples = 0;
             }
 
             if (netLevel < currentLevel) {
-
                 badNetSamples++;
-
             } else {
-
                 badNetSamples = 0;
             }
-
-            goodFpsSamples = 0;
-            goodNetSamples = 0;
 
             const shouldDowngrade =
                 badFpsSamples >= 3 ||
                 badNetSamples >= 3;
 
 
-            if (!shouldDowngrade) {
-                return;
-            }
+            if (shouldDowngrade) {
 
-            if (profileSwitchInProgress) {
-                return;
-            }
-
-
-            console.warn(
-                "📉 Adaptive quality downgrade:",
-                {
-                    from: currentResProfile,
-                    to: targetProfile,
-
-                    currentFPS,
-                    networkQuality,
-
-                    fpsLevel,
-                    netLevel,
-
-                    badFpsSamples,
-                    badNetSamples
-                }
-            );
-
-            profileSwitchInProgress = true;
-
-            try {
+                console.warn(
+                    "📉 Adaptive quality downgrade:",
+                    {
+                        from: currentResProfile,
+                        to: targetProfile,
+                        currentFPS,
+                        networkQuality,
+                        fpsLevel,
+                        netLevel,
+                        badFpsSamples,
+                        badNetSamples
+                    }
+                );
 
                 await switchOutputProfile(
                     targetProfile
                 );
 
-            } catch (error) {
-
-                console.error(
-                    "❌ Adaptive downgrade failed:",
-                    error
-                );
-
-            } finally {
-
-                profileSwitchInProgress = false;
+                badFpsSamples = 0;
+                goodFpsSamples = 0;
+                badNetSamples = 0;
+                goodNetSamples = 0;
             }
-
-            badFpsSamples = 0;
-            goodFpsSamples = 0;
-
-            badNetSamples = 0;
-            goodNetSamples = 0;
 
             return;
         }
@@ -994,82 +943,48 @@ async function evaluateQuality() {
         if (targetLevel > currentLevel) {
 
             if (fpsLevel > currentLevel) {
-
                 goodFpsSamples++;
-
             } else {
-
                 goodFpsSamples = 0;
             }
 
             if (netLevel > currentLevel) {
-
                 goodNetSamples++;
-
             } else {
-
                 goodNetSamples = 0;
             }
-
-            badFpsSamples = 0;
-            badNetSamples = 0;
 
             const shouldUpgrade =
                 goodFpsSamples >= 8 &&
                 goodNetSamples >= 8;
 
 
-            if (!shouldUpgrade) {
-                return;
-            }
+            if (shouldUpgrade) {
 
-            if (profileSwitchInProgress) {
-                return;
-            }
-
-
-            console.log(
-                "📈 Adaptive quality upgrade:",
-                {
-                    from: currentResProfile,
-                    to: targetProfile,
-
-                    currentFPS,
-                    networkQuality,
-
-                    fpsLevel,
-                    netLevel,
-
-                    goodFpsSamples,
-                    goodNetSamples
-                }
-            );
-
-            profileSwitchInProgress = true;
-
-            try {
+                console.log(
+                    "📈 Adaptive quality upgrade:",
+                    {
+                        from: currentResProfile,
+                        to: targetProfile,
+                        currentFPS,
+                        networkQuality,
+                        fpsLevel,
+                        netLevel,
+                        goodFpsSamples,
+                        goodNetSamples
+                    }
+                );
 
                 await switchOutputProfile(
                     targetProfile
                 );
 
-            } catch (error) {
 
-                console.error(
-                    "❌ Adaptive upgrade failed:",
-                    error
-                );
-
-            } finally {
-
-                profileSwitchInProgress = false;
+                badFpsSamples = 0;
+                goodFpsSamples = 0;
+                badNetSamples = 0;
+                goodNetSamples = 0;
             }
-
-            badFpsSamples = 0;
-            goodFpsSamples = 0;
-
-            badNetSamples = 0;
-            goodNetSamples = 0;
         }
 
     } catch (error) {
@@ -1083,6 +998,95 @@ async function evaluateQuality() {
 
         qualityEvaluationRunning = false;
     }
+}
+
+function setupNetworkQualityCallback() {
+
+    if (!zg) {
+        console.warn(
+            "⚠️ Network quality setup skipped: ZEGO engine missing."
+        );
+
+        return false;
+    }
+
+    if (
+        typeof zg.onNetworkQuality ===
+        "function"
+    ) {
+
+        console.log(
+            "ℹ️ ZEGO exposes onNetworkQuality."
+        );
+
+        try {
+
+            zg.onNetworkQuality(
+                (userID, upstreamQuality, downstreamQuality) => {
+
+                    // Local publisher only.
+                    if (
+                        userID &&
+                        typeof myShortId !== "undefined" &&
+                        userID !== myShortId
+                    ) {
+                        return;
+                    }
+
+
+                    const quality =
+                        normalizeZegoNetworkQuality(
+                            upstreamQuality
+                        );
+
+
+                    networkQuality =
+                        quality;
+
+                    lastNetworkQualityUpdate =
+                        Date.now();
+
+                    networkQualitySource =
+                        "zego-event";
+
+
+                    console.log(
+                        "📶 ZEGO network quality:",
+                        {
+                            userID,
+                            upstreamQuality,
+                            downstreamQuality,
+                            normalized: quality
+                        }
+                    );
+                }
+            );
+
+            console.log(
+                "✅ ZEGO network quality callback registered."
+            );
+
+            return true;
+
+        } catch (error) {
+
+            console.warn(
+                "⚠️ ZEGO network quality callback registration failed:",
+                error
+            );
+        }
+    }
+
+
+    console.warn(
+        "⚠️ ZEGO SDK does not expose a usable network-quality callback."
+    );
+
+    console.log(
+        "ℹ️ Adaptive quality will use the existing networkQuality value."
+    );
+
+    return false;
 }
 
 // ============================================================
