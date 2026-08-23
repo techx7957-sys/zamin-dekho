@@ -122,6 +122,7 @@ let blurProgram = null;
 let compositeProgram = null;
 let imageCompositeProgram = null;
 let beautyProgram = null; // Beauty Program
+let maskRefineProgram = null; // Mask refinement program
 
 let gpuPositionBuffer = null;
 let gpuTexCoordBuffer = null;
@@ -611,7 +612,15 @@ async function switchOutputProfile(profileName) {
             // Camera is already changed, so continue.
         }
     }
+    const publisherReady = !!(
+        zg?.zegoWebRTC
+            ?.streamCenter
+            ?.publisherList
+            ?.[publishStreamId]
+    );
+
     if (
+        publisherReady &&
         typeof updateZegoBitrate ===
         "function"
     ) {
@@ -649,12 +658,15 @@ async function switchOutputProfile(profileName) {
             );
         }
 
-    } else {
-
-        console.warn(
-            "⚠️ updateZegoBitrate() is not available."
-        );
-    }
+        } else if (!publisherReady) {
+            console.log(
+                "ℹ️ ZEGO publisher not ready yet; bitrate will be applied after publish."
+            );
+        } else {
+            console.warn(
+                "⚠️ updateZegoBitrate() is not available."
+            );
+        }
     currentResProfile =
         profileName;
  if (
@@ -737,93 +749,292 @@ async function switchOutputProfile(profileName) {
     return true;
 }
 
-    // =====================================================
-    // 🔥 UPDATE ZEGO PUBLISH BITRATE
-    // =====================================================
-
-    try {
-
-        const bitrateUpdated =
-            await updateZegoBitrate(profile.bitrate);
-
-        if (!bitrateUpdated) {
-            console.warn(
-                "⚠️ ZEGO bitrate update did not complete successfully.",
-                {
-                    profile: profileName,
-                    bitrate: profile.bitrate
-                }
-            );
-        }
-
-    } catch (e) {
-
-        console.error(
-            "❌ Unexpected bitrate update error:",
-            e
-        );
-    }
-
 // 🔥 PATCH 5: Unified Quality Controller (FPS + Network)
 let badFpsSamples = 0, goodFpsSamples = 0;
 let badNetSamples = 0, goodNetSamples = 0;
 
-function evaluateQuality() {
-    // FPS → level
-    let fpsLevel;
-    if (currentFPS < 18) fpsLevel = 0; // LOW
-    else if (currentFPS < 24) fpsLevel = 1; // BALANCED
-    else fpsLevel = 2; // HIGH
+let qualityEvaluationRunning = false;
+let lastNetworkQualityUpdate = 0;
+let networkQualitySource = "default";
 
-    // Network → level
-    let netLevel;
-    if (networkQuality < 0.4) netLevel = 0;
-    else if (networkQuality < 0.7) netLevel = 1;
-    else netLevel = 2;
+function normalizeZegoNetworkQuality(value) {
+    const n = Number(value);
 
-    // Final target = min of both
-    const targetLevel = Math.min(fpsLevel, netLevel);
-    const targetProfile = targetLevel === 0 ? 'LOW' : targetLevel === 1 ? 'BALANCED' : 'HIGH';
+    if (!Number.isFinite(n)) {
+        return 0.5;
+    }
 
-    // Hysteresis
-    if (targetProfile !== currentResProfile) {
-        const isDowngrade = targetProfile === 'LOW' || (targetProfile === 'BALANCED' && currentResProfile === 'HIGH');
-        if (isDowngrade) {
-            badFpsSamples++;
-            badNetSamples++;
-            if (badFpsSamples >= 3 || badNetSamples >= 3) {
-                switchOutputProfile(targetProfile);
-                badFpsSamples = goodFpsSamples = badNetSamples = goodNetSamples = 0;
-            }
+    const qualityMap = {
+        0: 0.5,
+        1: 1.0,
+        2: 0.8,
+        3: 0.6,
+        4: 0.4,
+        5: 0.2
+    };
+
+    return qualityMap[n] ?? 0.5;
+}
+
+async function evaluateQuality() {
+
+    if (qualityEvaluationRunning) {
+        return;
+    }
+
+    qualityEvaluationRunning = true;
+
+    try {
+
+        let fpsLevel;
+
+        if (!Number.isFinite(currentFPS)) {
+            fpsLevel = 1;
+        } else if (currentFPS < 18) {
+            fpsLevel = 0; // LOW
+        } else if (currentFPS < 24) {
+            fpsLevel = 1; // BALANCED
         } else {
-            // Upgrade slowly
-            goodFpsSamples++;
-            goodNetSamples++;
-            if (goodFpsSamples >= 8 && goodNetSamples >= 8) {
-                switchOutputProfile(targetProfile);
-                badFpsSamples = goodFpsSamples = badNetSamples = goodNetSamples = 0;
+            fpsLevel = 2; // HIGH
+        }
+
+        let netLevel;
+
+        if (!Number.isFinite(networkQuality)) {
+            netLevel = 1;
+        } else if (networkQuality < 0.4) {
+            netLevel = 0; // LOW
+        } else if (networkQuality < 0.7) {
+            netLevel = 1; // BALANCED
+        } else {
+            netLevel = 2; // HIGH
+        }
+
+        const targetLevel =
+            Math.min(
+                fpsLevel,
+                netLevel
+            );
+
+        const targetProfile =
+            targetLevel === 0
+                ? "LOW"
+                : targetLevel === 1
+                    ? "BALANCED"
+                    : "HIGH";
+
+        const currentLevel =
+            currentResProfile === "LOW"
+                ? 0
+                : currentResProfile === "BALANCED"
+                    ? 1
+                    : 2;
+
+        if (targetLevel === currentLevel) {
+
+            badFpsSamples = 0;
+            goodFpsSamples = 0;
+            badNetSamples = 0;
+            goodNetSamples = 0;
+
+            return;
+        }
+  
+        if (targetLevel < currentLevel) {
+
+            if (fpsLevel < currentLevel) {
+                badFpsSamples++;
+            } else {
+                badFpsSamples = 0;
+            }
+
+            if (netLevel < currentLevel) {
+                badNetSamples++;
+            } else {
+                badNetSamples = 0;
+            }
+
+            const shouldDowngrade =
+                badFpsSamples >= 3 ||
+                badNetSamples >= 3;
+
+
+            if (shouldDowngrade) {
+
+                console.warn(
+                    "📉 Adaptive quality downgrade:",
+                    {
+                        from: currentResProfile,
+                        to: targetProfile,
+                        currentFPS,
+                        networkQuality,
+                        fpsLevel,
+                        netLevel,
+                        badFpsSamples,
+                        badNetSamples
+                    }
+                );
+
+                await switchOutputProfile(
+                    targetProfile
+                );
+
+                badFpsSamples = 0;
+                goodFpsSamples = 0;
+                badNetSamples = 0;
+                goodNetSamples = 0;
+            }
+
+            return;
+        }
+
+        if (targetLevel > currentLevel) {
+
+            if (fpsLevel > currentLevel) {
+                goodFpsSamples++;
+            } else {
+                goodFpsSamples = 0;
+            }
+
+            if (netLevel > currentLevel) {
+                goodNetSamples++;
+            } else {
+                goodNetSamples = 0;
+            }
+
+            const shouldUpgrade =
+                goodFpsSamples >= 8 &&
+                goodNetSamples >= 8;
+
+
+            if (shouldUpgrade) {
+
+                console.log(
+                    "📈 Adaptive quality upgrade:",
+                    {
+                        from: currentResProfile,
+                        to: targetProfile,
+                        currentFPS,
+                        networkQuality,
+                        fpsLevel,
+                        netLevel,
+                        goodFpsSamples,
+                        goodNetSamples
+                    }
+                );
+
+                await switchOutputProfile(
+                    targetProfile
+                );
+
+
+                badFpsSamples = 0;
+                goodFpsSamples = 0;
+                badNetSamples = 0;
+                goodNetSamples = 0;
             }
         }
-    } else {
-        // Reset samples when stable
-        badFpsSamples = goodFpsSamples = badNetSamples = goodNetSamples = 0;
+
+    } catch (error) {
+
+        console.error(
+            "❌ evaluateQuality() failed:",
+            error
+        );
+
+    } finally {
+
+        qualityEvaluationRunning = false;
     }
 }
 
-// 🔥 PATCH 5: Official network quality callback (if SDK supports)
 function setupNetworkQualityCallback() {
-    if (zg && typeof zg.onNetworkQuality === 'function') {
-        zg.onNetworkQuality = (userID, upstreamQuality, downstreamQuality) => {
-            if (userID !== "") return; // only local
-            // Convert Zego quality (0-5) to 0-1
-            const qualityMap = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0];
-            const q = qualityMap[upstreamQuality] ?? 0.5;
-            networkQuality = q;
-        };
-        console.log("✅ Zego onNetworkQuality callback set.");
-    } else {
-        console.warn("Zego SDK does not support onNetworkQuality, using polling fallback.");
+
+    if (!zg) {
+        console.warn(
+            "⚠️ Network quality setup skipped: ZEGO engine missing."
+        );
+
+        return false;
     }
+
+    if (
+        typeof zg.onNetworkQuality ===
+        "function"
+    ) {
+
+        console.log(
+            "ℹ️ ZEGO exposes onNetworkQuality."
+        );
+
+        try {
+
+            zg.onNetworkQuality(
+                (userID, upstreamQuality, downstreamQuality) => {
+
+                    // Local publisher only.
+                    if (
+                        userID &&
+                        typeof myShortId !== "undefined" &&
+                        userID !== myShortId
+                    ) {
+                        return;
+                    }
+
+
+                    const quality =
+                        normalizeZegoNetworkQuality(
+                            upstreamQuality
+                        );
+
+
+                    networkQuality =
+                        quality;
+
+                    lastNetworkQualityUpdate =
+                        Date.now();
+
+                    networkQualitySource =
+                        "zego-event";
+
+
+                    console.log(
+                        "📶 ZEGO network quality:",
+                        {
+                            userID,
+                            upstreamQuality,
+                            downstreamQuality,
+                            normalized: quality
+                        }
+                    );
+                }
+            );
+
+            console.log(
+                "✅ ZEGO network quality callback registered."
+            );
+
+            return true;
+
+        } catch (error) {
+
+            console.warn(
+                "⚠️ ZEGO network quality callback registration failed:",
+                error
+            );
+        }
+    }
+
+
+    console.warn(
+        "⚠️ ZEGO SDK does not expose a usable network-quality callback."
+    );
+
+    console.log(
+        "ℹ️ Adaptive quality will use the existing networkQuality value."
+    );
+
+    return false;
 }
 
 // ============================================================
@@ -1731,6 +1942,11 @@ window.startCustomZegoEngine = async function (
                 publishStreamId
             );
 
+            // Publisher now exists → apply profile bitrate.
+            await updateZegoBitrate(
+                initProfile.bitrate
+            );
+
         } catch (e) {
 
             console.error(
@@ -2036,14 +2252,17 @@ precision highp float;
 uniform sampler2D u_video;
 uniform sampler2D u_background;
 uniform sampler2D u_mask;
-uniform vec2 u_bgSize;       
+uniform vec2 u_bgSize;
+uniform vec2 u_outputSize;
 in vec2 v_texCoord;
 out vec4 outColor;
 
 void main() {
     vec2 bgUv = v_texCoord;
     float bgAspect = u_bgSize.x / max(u_bgSize.y, 1.0);
-    float outAspect = 1280.0 / 720.0;
+    float outAspect =
+        u_outputSize.x /
+        max(u_outputSize.y, 1.0);
     if (bgAspect > outAspect) {
         float visibleWidth = outAspect / bgAspect;
         float xOffset = (1.0 - visibleWidth) * 0.5;
@@ -2356,7 +2575,8 @@ function initializeGPUBlurEngine() {
             uniformsObj.video = gl.getUniformLocation(prog, "u_video");
             uniformsObj.background = gl.getUniformLocation(prog, "u_background");
             uniformsObj.mask = gl.getUniformLocation(prog, "u_mask");
-            uniformsObj.bgSize = gl.getUniformLocation(prog, "u_bgSize");
+            uniformsObj.bgSize =  gl.getUniformLocation(prog, "u_bgSize");
+            uniformsObj.outputSize = gl.getUniformLocation(prog, "u_outputSize");
         } else if (shaderType === 'maskRefine') {
             uniformsObj.mask = gl.getUniformLocation(prog, "u_mask");
             uniformsObj.prevMask = gl.getUniformLocation(prog, "u_prevMask");
@@ -2398,7 +2618,10 @@ function initializeGPUBlurEngine() {
 // ------------------------------------------------------------
 function uploadVideoTexture(video) {
     const gl = gpu;
-    gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+    gl.bindTexture(
+        gl.TEXTURE_2D,
+        originalTexture
+    );
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 }
 
@@ -2424,11 +2647,45 @@ function uploadBGImageTexture(image) {
 }
 
 // 🔥 PATCH 3: Update face mask texture from landmarks
-function updateFaceMaskTexture() {
-    if (!lastFaceLandmarks || !faceMaskCanvas) return;
+    function updateFaceMaskTexture() {
+        if (
+            !faceMaskCanvas ||
+            !faceMaskTexture ||
+            !gpu
+        ) return;
 
-    const ctx = faceMaskCanvas.getContext('2d');
-    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+        const ctx =
+            faceMaskCanvas.getContext('2d');
+
+        ctx.clearRect(
+            0,
+            0,
+            CANVAS_W,
+            CANVAS_H
+        );
+
+        if (
+            !lastFaceLandmarks ||
+            !lastFaceLandmarks.length
+        ) {
+            const gl = gpu;
+
+            gl.bindTexture(
+                gl.TEXTURE_2D,
+                faceMaskTexture
+            );
+
+            gl.texImage2D(
+                gl.TEXTURE_2D,
+                0,
+                gl.RGBA,
+                gl.RGBA,
+                gl.UNSIGNED_BYTE,
+                faceMaskCanvas
+            );
+
+            return;
+        }
     ctx.fillStyle = 'white';
 
     // Create a simple ellipse covering face bounding box
@@ -2489,10 +2746,37 @@ function bindGeometry(program, attribsCache, uniformsCache) {
     // 🔥 APPLY ZOOM & AUTO FRAME (UV Transform) - PATCH 1
     if (uniformsCache.uvTransform) {
         const effectiveDigitalZoom = (zoomMode === "hardware") ? 1.0 : digitalZoom;
-        let scaleX = 1.0 / effectiveDigitalZoom;
-        let scaleY = 1.0 / effectiveDigitalZoom;
-        let offsetX = autoFrameCurrentX;
-        let offsetY = autoFrameCurrentY;
+        const scaleX =
+            1.0 / Math.max(
+                1.0,
+                effectiveDigitalZoom
+            );
+
+        const scaleY =
+            1.0 / Math.max(
+                1.0,
+                effectiveDigitalZoom
+            );
+
+        const centerOffsetX =
+            0.5 - (0.5 * scaleX);
+
+        const centerOffsetY =
+            0.5 - (0.5 * scaleY);
+
+        const offsetX =
+            centerOffsetX + autoFrameCurrentX;
+
+        const offsetY =
+            centerOffsetY + autoFrameCurrentY;
+
+        gl.uniform4f(
+            uniformsCache.uvTransform,
+            offsetX,
+            offsetY,
+            scaleX,
+            scaleY
+        );
 
         gl.uniform4f(uniformsCache.uvTransform, offsetX, offsetY, scaleX, scaleY);
     }
@@ -2584,7 +2868,10 @@ function renderBeautyGPU() {
     bindGeometry(beautyProgram, beautyAttribs, beautyUniforms);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+    gl.bindTexture(
+        gl.TEXTURE_2D,
+        originalTexture
+    );
     gl.uniform1i(beautyUniforms.video, 0);
 
     gl.activeTexture(gl.TEXTURE1);
@@ -2598,7 +2885,10 @@ function renderBeautyGPU() {
     return beautyTexture; // return as currentTexture
 }
 
-function compositeFrame(blurredTexture) {
+    function compositeFrame(
+        originalTexture,
+        blurredTexture
+    ) {
     const gl = gpu;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
@@ -2606,7 +2896,10 @@ function compositeFrame(blurredTexture) {
     bindGeometry(compositeProgram, compositeAttribs, compositeUniforms);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+        gl.bindTexture(
+            gl.TEXTURE_2D,
+            originalTexture
+        );
     gl.uniform1i(compositeUniforms.original, 0);
 
     gl.activeTexture(gl.TEXTURE1);
@@ -2620,7 +2913,9 @@ function compositeFrame(blurredTexture) {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
 
-function compositeImageFrame() {
+    function compositeImageFrame(
+        videoTextureInput
+    ) {
     const gl = gpu;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
@@ -2628,7 +2923,10 @@ function compositeImageFrame() {
     bindGeometry(imageCompositeProgram, imageCompositeAttribs, imageCompositeUniforms);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+    gl.bindTexture(
+        gl.TEXTURE_2D,
+        videoTextureInput
+    );
     gl.uniform1i(imageCompositeUniforms.video, 0);
 
     gl.activeTexture(gl.TEXTURE1);
@@ -2675,10 +2973,15 @@ function renderFrame() {
             runBlurPass(blurTexB, framebufferA, 'horizontal', 5.0);
             runBlurPass(blurTexA, framebufferB, 'vertical', 5.0);
             const blurred = blurTexB;
-            // Now composite using currentTexture as original
-            compositeFrame(blurred);
+
+            compositeFrame(
+                currentTexture,
+                blurred
+            );
         } else if (isBgMode === "image") {
-            compositeImageFrame();
+            compositeImageFrame(
+                currentTexture
+            );
         }
     } else {
         // No background: draw currentTexture directly to screen
@@ -2714,7 +3017,10 @@ function renderRawGPU() {
     gl.useProgram(gpuProgram);
     bindGeometry(gpuProgram, gpuAttribs, gpuUniforms);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+    gl.bindTexture(
+        gl.TEXTURE_2D,
+        originalTexture
+    );
     gl.uniform1i(gpuUniforms.video, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
@@ -3090,7 +3396,19 @@ function setupControls() {
         try {
             if (!localStream || !zg) return;
             const nextState = !isMicOn;
-            await zg.mutePublishStreamAudio(publishStreamId, !nextState);
+
+            const audioTrack =
+                localStream.getAudioTracks?.()[0];
+
+            if (audioTrack) {
+                audioTrack.enabled =
+                    nextState;
+            }
+
+            await zg.mutePublishStreamAudio(
+                publishStreamId,
+                !nextState
+            );
             isMicOn = nextState;
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
@@ -3102,7 +3420,19 @@ function setupControls() {
         try {
             if (!localStream || !zg) return;
             const nextState = !isCamOn;
-            await zg.mutePublishStreamVideo(publishStreamId, !nextState);
+
+            const videoTrack =
+                localStream.getVideoTracks?.()[0];
+
+            if (videoTrack) {
+                videoTrack.enabled =
+                    nextState;
+            }
+
+            await zg.mutePublishStreamVideo(
+                publishStreamId,
+                !nextState
+            );
             isCamOn = nextState;
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
@@ -3246,7 +3576,8 @@ function startPerformanceMonitor() {
 
     console.log("📊 Starting performance monitor...");
 
-    performanceMonitorInterval = setInterval(() => {
+    performanceMonitorInterval =
+        setInterval(async () => {
 
         // =====================================================
         // 🔴 CRITICAL LIFECYCLE GUARD
@@ -3290,9 +3621,9 @@ function startPerformanceMonitor() {
 
         // =====================================================
         // UNIFIED QUALITY EVALUATION
-        // =====================================================
+        // ====================================================
         try {
-            evaluateQuality();
+            await evaluateQuality();
         } catch (e) {
             console.warn(
                 "⚠️ Quality evaluation failed:",
@@ -3475,6 +3806,8 @@ async function leaveRoom() {
 
     const engine = zg;
     const stream = localStream;
+    const customStream =
+        customZegoStream;
     const streamId = publishStreamId;
     const roomId = window.meetingRoomId;
 
@@ -3511,6 +3844,27 @@ async function leaveRoom() {
 
             console.warn(
                 "⚠️ stopPublishingStream failed:",
+                e
+            );
+        }
+    }
+
+    // =====================================================
+    //  STOP CUSTOM ZEGO STREAM
+    // =====================================================
+    
+    if (engine && customStream) {
+        try {
+            engine.destroyStream(
+                customStream
+            );
+
+            console.log(
+                "✅ Custom Zego stream destroyed."
+            );
+        } catch (e) {
+            console.warn(
+                "⚠️ Custom destroyStream failed:",
                 e
             );
         }
