@@ -1408,7 +1408,14 @@ window.startCustomZegoEngine = async function (
                     }
                 );
 
-                if (errorCode && errorCode !== 0) {
+                // -----------------------------------------------------
+                // PUBLISH ERROR
+                // -----------------------------------------------------
+
+                if (
+                    errorCode &&
+                    errorCode !== 0
+                ) {
                     console.error(
                         "🔴 ZEGO PUBLISHER ERROR:",
                         {
@@ -1418,19 +1425,59 @@ window.startCustomZegoEngine = async function (
                             extendedData
                         }
                     );
+
+                    publisherLifecycleError = {
+                        errorCode,
+                        extendedData
+                    };
                 }
 
-                if (state === "PUBLISHING") {
-                    resolvePublisherWaiters(true);
+                // -----------------------------------------------------
+                // PUBLISHING
+                // -----------------------------------------------------
+
+                if (
+                    state === "PUBLISHING"
+                ) {
+                    console.log(
+                        "🟢 ZEGO PUBLISHER READY:",
+                        {
+                            streamID,
+                            state
+                        }
+                    );
+
+                    resolvePublisherWaiters(
+                        true
+                    );
                 }
+
+                // -----------------------------------------------------
+                // PUBLISH FAILURE
+                // -----------------------------------------------------
 
                 if (
                     state === "NO_PUBLISH" &&
                     errorCode &&
                     errorCode !== 0
                 ) {
-                    resolvePublisherWaiters(false);
+                    console.error(
+                        "🔴 ZEGO PUBLISH FAILED:",
+                        {
+                            streamID,
+                            state,
+                            errorCode,
+                            extendedData
+                        }
+                    );
+
+                    resolvePublisherWaiters(
+                        false
+                    );
                 }
+
+                }
+                );
 
         // =====================================================
         // 🔥 3C. PUBLISH QUALITY DEBUG
