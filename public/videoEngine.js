@@ -231,151 +231,79 @@ function enableAGC(zegoInstance) {
 // 🔥 NEW: DYNAMIC BITRATE UPDATE FOR ZEGO (PATCH #7)
 // ============================================================
 // 🔥 PATCH: Real bitrate adaptation using ZEGO v3.12.0 APIs
-async function updateZegoBitrate(bitrate) {
+// ============================================================
+        async function updateZegoBitrate(bitrate) {
 
-    if (!zg) {
-        console.warn("⏭️ Bitrate skipped: ZEGO engine not ready.");
-        return false;
-    }
-
-    if (!publishStreamId) {
-        console.warn("⏭️ Bitrate skipped: publishStreamId missing.");
-        return false;
-    }
-
-    const numericBitrate = Number(bitrate);
-
-    if (
-        !Number.isFinite(numericBitrate) ||
-        numericBitrate <= 0
-    ) {
-        console.warn("⚠️ Invalid bitrate:", bitrate);
-        return false;
-    }
-
-    if (typeof zg.setVideoConfig !== "function") {
-        console.warn(
-            "⚠️ ZEGO setVideoConfig() unavailable."
-        );
-        return false;
-    }
-
-    const publisher =
-        zg?.zegoWebRTC
-            ?.streamCenter
-            ?.publisherList
-            ?.[publishStreamId];
-
-    if (!publisher) {
-        console.warn(
-            "⏭️ Bitrate skipped: publisher not registered.",
-            publishStreamId
-        );
-        return false;
-    }
-
-    const internalLocalStream =
-        publisher?.do?.localStream;
-
-    if (!internalLocalStream) {
-
-        console.warn(
-            "⏳ Bitrate deferred: ZEGO internal localStream is not ready.",
-            {
-                streamId: publishStreamId,
-                publisherState: publisher?.state,
-                hasPublisherDo: !!publisher?.do,
-                hasPreviewer: !!publisher?.previewer,
-                hasPeer: !!publisher?.zegoPeer,
-                globalLocalStream: !!localStream
+            if (!zg) {
+                console.warn(
+                    "⏭️ Bitrate skipped: ZEGO engine not ready."
+                );
+                return false;
             }
-        );
 
-        return false;
-    }
+            const numericBitrate =
+                Math.round(Number(bitrate));
 
-    const tracks =
-        internalLocalStream
-            ?.getTracks?.() || [];
-
-    const videoTrack =
-        internalLocalStream
-            ?.getVideoTracks?.()[0];
-
-    if (!videoTrack) {
-
-        console.warn(
-            "⏭️ Bitrate deferred: ZEGO internal video track unavailable.",
-            {
-                streamId: publishStreamId,
-                trackCount: tracks.length
+            if (
+                !Number.isFinite(numericBitrate) ||
+                numericBitrate <= 0
+            ) {
+                console.warn(
+                    "⚠️ Invalid bitrate:",
+                    bitrate
+                );
+                return false;
             }
-        );
 
-        return false;
-    }
-
-    if (videoTrack.readyState !== "live") {
-
-        console.warn(
-            "⏭️ Bitrate deferred: internal video track is not live.",
-            {
-                readyState: videoTrack.readyState
+            if (
+                typeof zg.setVideoConfig !==
+                "function"
+            ) {
+                console.warn(
+                    "⚠️ ZEGO setVideoConfig() unavailable."
+                );
+                return false;
             }
-        );
 
-        return false;
-    }
+            const config = {
+                bitrate: numericBitrate
+            };
 
-    const videoConfig = {
-        maxBitrate: Math.round(numericBitrate)
-    };
+            try {
 
-    console.log(
-        "📡 Applying ZEGO bitrate:",
-        {
-            streamId: publishStreamId,
-            maxBitrate: videoConfig.maxBitrate,
-            publisherState: publisher.state,
-            internalStream: true,
-            videoTrackReady: videoTrack.readyState
+                console.log(
+                    "📡 Applying public ZEGO bitrate:",
+                    {
+                        bitrate: numericBitrate,
+                        publishStreamId:
+                            publishStreamId || null
+                    }
+                );
+
+                await zg.setVideoConfig(config);
+
+                console.log(
+                    "✅ ZEGO bitrate applied:",
+                    {
+                        bitrate: numericBitrate
+                    }
+                );
+
+                return true;
+
+            } catch (error) {
+
+                console.error(
+                    "❌ ZEGO setVideoConfig() failed:",
+                    {
+                        bitrate: numericBitrate,
+                        error
+                    }
+                );
+
+                return false;
+            }
         }
-    );
-
-    try {
-
-        await zg.setVideoConfig(
-            videoConfig,
-            publishStreamId
-        );
-
-        console.log(
-            "✅ ZEGO bitrate applied:",
-            {
-                streamId: publishStreamId,
-                bitrate: videoConfig.maxBitrate
-            }
-        );
-
-        return true;
-
-    } catch (error) {
-
-        console.error(
-            "❌ ZEGO setVideoConfig() failed:",
-            {
-                streamId: publishStreamId,
-                bitrate: videoConfig.maxBitrate,
-                publisherState: publisher?.state,
-                internalLocalStream: !!publisher?.do?.localStream,
-                error
-            }
-        );
-
-        return false;
-    }
-}
-
 // ============================================================
 // 🔥 PATCH 4: ADAPTIVE OUTPUT PROFILE & CAMERA CAPABILITIES
 // ============================================================
@@ -637,15 +565,12 @@ async function switchOutputProfile(profileName) {
             // Camera is already changed, so continue.
         }
     }
-    const publisherReady = !!(
-        zg?.zegoWebRTC
-            ?.streamCenter
-            ?.publisherList
-            ?.[publishStreamId]
-    );
+        const publisherReady =
+            !!zg &&
+            !!publishStreamId;
 
-    if (
-        publisherReady &&
+        if (
+            publisherReady &&
         typeof updateZegoBitrate ===
         "function"
     ) {
@@ -1388,6 +1313,68 @@ window.startCustomZegoEngine = async function (
         // 🔥 3B. PUBLISHER STATE LIFECYCLE DEBUG
         // =====================================================
 
+        // =====================================================
+        // 🔥 PUBLISHER LIFECYCLE STATE MACHINE
+        // =====================================================
+        let publisherLifecycleState = "IDLE";
+        let publisherLifecycleStreamId = "";
+        let publisherLifecycleError = null;
+        let publisherLifecycleWaiters = [];
+
+        function resolvePublisherWaiters(success) {
+            const waiters = publisherLifecycleWaiters.splice(0);
+
+            for (const waiter of waiters) {
+                try {
+                    waiter(success);
+                } catch (e) {}
+            }
+        }
+
+        function waitForPublisherState(
+            streamId,
+            timeoutMs = 8000
+        ) {
+            if (
+                publisherLifecycleStreamId === streamId &&
+                publisherLifecycleState === "PUBLISHING"
+            ) {
+                return Promise.resolve(true);
+            }
+
+            return new Promise(resolve => {
+                const timer = setTimeout(() => {
+                    const index =
+                        publisherLifecycleWaiters.indexOf(waiter);
+
+                    if (index >= 0) {
+                        publisherLifecycleWaiters.splice(
+                            index,
+                            1
+                        );
+                    }
+
+                    console.warn(
+                        "⏳ Publisher state timeout:",
+                        {
+                            streamId,
+                            state: publisherLifecycleState,
+                            error: publisherLifecycleError
+                        }
+                    );
+
+                    resolve(false);
+                }, timeoutMs);
+
+                const waiter = success => {
+                    clearTimeout(timer);
+                    resolve(success);
+                };
+
+                publisherLifecycleWaiters.push(waiter);
+            });
+        }
+
         zg.on(
             "publisherStateUpdate",
             (
@@ -1396,6 +1383,20 @@ window.startCustomZegoEngine = async function (
                 errorCode,
                 extendedData
             ) => {
+
+                publisherLifecycleStreamId =
+                    streamID || "";
+
+                publisherLifecycleState =
+                    state || "UNKNOWN";
+
+                publisherLifecycleError =
+                    errorCode && errorCode !== 0
+                        ? {
+                            errorCode,
+                            extendedData
+                        }
+                        : null;
 
                 console.log(
                     "🔎 ZEGO publisherStateUpdate:",
@@ -1408,7 +1409,6 @@ window.startCustomZegoEngine = async function (
                 );
 
                 if (errorCode && errorCode !== 0) {
-
                     console.error(
                         "🔴 ZEGO PUBLISHER ERROR:",
                         {
@@ -1419,8 +1419,18 @@ window.startCustomZegoEngine = async function (
                         }
                     );
                 }
-            }
-        );
+
+                if (state === "PUBLISHING") {
+                    resolvePublisherWaiters(true);
+                }
+
+                if (
+                    state === "NO_PUBLISH" &&
+                    errorCode &&
+                    errorCode !== 0
+                ) {
+                    resolvePublisherWaiters(false);
+                }
 
         // =====================================================
         // 🔥 3C. PUBLISH QUALITY DEBUG
@@ -1986,19 +1996,33 @@ window.startCustomZegoEngine = async function (
             );
 
             console.log(
-                "📡 Publishing started:",
+                "📡 Publishing requested:",
                 publishStreamId
             );
 
-            await new Promise(resolve =>
-                setTimeout(resolve, 500)
+            const publisherReady =
+                await waitForPublisherState(
+                    publishStreamId,
+                    8000
+                );
+
+            if (!publisherReady) {
+                throw new Error(
+                    "ZEGO publisher did not reach PUBLISHING state."
+                );
+            }
+
+            console.log(
+                "🟢 ZEGO publisher reached PUBLISHING:",
+                publishStreamId
             );
 
             const initialProfile =
-                RESOLUTION_PROFILES[currentResProfile];
+                RESOLUTION_PROFILES[
+                    currentResProfile
+                ];
 
             if (initialProfile) {
-
                 const applied =
                     await updateZegoBitrate(
                         initialProfile.bitrate
@@ -2006,15 +2030,16 @@ window.startCustomZegoEngine = async function (
 
                 if (!applied) {
                     console.warn(
-                        "⚠️ Initial bitrate not applied yet; lifecycle not ready."
+                        "⚠️ Initial bitrate was not applied.",
+                        {
+                            streamId: publishStreamId,
+                            profile: currentResProfile,
+                            bitrate: initialProfile.bitrate
+                        }
                     );
                 }
             }
-            // Publisher now exists → apply profile bitrate.
-            await updateZegoBitrate(
-                initProfile.bitrate
-            );
-
+            
         } catch (e) {
 
             console.error(
@@ -2031,11 +2056,6 @@ window.startCustomZegoEngine = async function (
 
         isMicOn = false;
         isCamOn = false;
-
-        await new Promise(
-            resolve =>
-                setTimeout(resolve, 300)
-        );
 
         // -----------------------------------------------------
         // Audio mute
@@ -2686,10 +2706,7 @@ function initializeGPUBlurEngine() {
 // ------------------------------------------------------------
 function uploadVideoTexture(video) {
     const gl = gpu;
-    gl.bindTexture(
-        gl.TEXTURE_2D,
-        originalTexture
-    );
+    gl.bindTexture(gl.TEXTURE_2D,videoTexture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 }
 
@@ -2700,12 +2717,17 @@ function uploadMaskTexture(maskSource) {
     return maskRawTexture;
 }
 
-function uploadPrevMaskTexture(maskSourceTexture) {
+function copyTextureToTexture(sourceTexture,destinationTexture,width,height) {
     const gl = gpu;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, maskRefineFramebuffer);
-    gl.bindTexture(gl.TEXTURE_2D, prevMaskTexture);
-    gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, CANVAS_W, CANVAS_H, 0);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    const tempFramebuffer =gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER,tempFramebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,sourceTexture,0);
+
+    gl.bindTexture(gl.TEXTURE_2D,destinationTexture);
+    gl.copyTexSubImage2D( gl.TEXTURE_2D,0,0,0,0,0,width,height);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+    gl.deleteFramebuffer(tempFramebuffer);
 }
 
 function uploadBGImageTexture(image) {
@@ -2843,10 +2865,8 @@ function bindGeometry(program, attribsCache, uniformsCache) {
             offsetX,
             offsetY,
             scaleX,
-            scaleY
+            scaleY 
         );
-
-        gl.uniform4f(uniformsCache.uvTransform, offsetX, offsetY, scaleX, scaleY);
     }
 }
 
@@ -2936,10 +2956,7 @@ function renderBeautyGPU() {
     bindGeometry(beautyProgram, beautyAttribs, beautyUniforms);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(
-        gl.TEXTURE_2D,
-        originalTexture
-    );
+    gl.bindTexture(gl.TEXTURE_2D,videoTexture);
     gl.uniform1i(beautyUniforms.video, 0);
 
     gl.activeTexture(gl.TEXTURE1);
@@ -3085,10 +3102,7 @@ function renderRawGPU() {
     gl.useProgram(gpuProgram);
     bindGeometry(gpuProgram, gpuAttribs, gpuUniforms);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(
-        gl.TEXTURE_2D,
-        originalTexture
-    );
+    gl.bindTexture( gl.TEXTURE_2D,videoTexture);
     gl.uniform1i(gpuUniforms.video, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
@@ -3156,14 +3170,27 @@ async function runSegmentationAsync() {
 
 // 🔥 FaceMesh sending (throttled every 2 frames)
 let faceMeshFrameCounter = 0;
+let faceMeshBusy = false;
 async function runFaceMeshAsync() {
-    if (!faceMesh || !rawVideoEl || !isCamOn) return;
+    if (faceMeshBusy ||!faceMesh ||!rawVideoEl ||!isCamOn) {
+        return;
+    }
     faceMeshFrameCounter++;
-    if (faceMeshFrameCounter % 2 !== 0) return;
+    if ( faceMeshFrameCounter % 2 !== 0) {
+        return;
+    }
+    faceMeshBusy = true;
     try {
-        await faceMesh.send({ image: rawVideoEl });
+        await faceMesh.send({
+            image: rawVideoEl
+        });
     } catch (e) {
-        console.warn("FaceMesh error:", e);
+        console.warn(
+            "FaceMesh error:",
+            e
+        );
+    } finally {
+        faceMeshBusy = false;
     }
 }
 
@@ -3291,7 +3318,17 @@ async function switchPublishToCanvas() {
     try {
         console.log("🔄 Switching Zego publish source → GPU canvas");
 
-        canvasCaptureStream = outCanvas.captureStream(TARGET_FPS);
+        const canvasProfile =RESOLUTION_PROFILES[currentResProfile] || RESOLUTION_PROFILES.BALANCED;
+        const captureFPS =
+            Math.max(
+                1,
+                Math.min(
+                    Number(canvasProfile.fps) || 30,
+                    60
+                )
+            );
+
+        canvasCaptureStream =outCanvas.captureStream(captureFPS);
         if (!canvasCaptureStream) throw new Error("Canvas captureStream() is not supported.");
 
         canvasStream = canvasCaptureStream;
@@ -3316,20 +3353,32 @@ async function switchPublishToCanvas() {
             customZegoStream = null;
         }
 
-        customZegoStream = await zg.createZegoStream({
-            custom: {
-                video: { source: canvasStream },
-                audio: { source: canvasStream }
-            }
-        });
+        customZegoStream =await zg.createZegoStream({
+                videoBitrate:canvasProfile.bitrate,
+                custom: {
+                    video: {
+                        source: canvasStream
+                    },
+                    audio: {
+                        source: canvasStream
+                    }
+                }
+            });
 
         if (!customZegoStream) throw new Error("Zego custom stream creation failed.");
 
         publishStream = customZegoStream;
-        await zg.startPublishingStream(publishStreamId, customZegoStream);
-        await new Promise(r => setTimeout(r, 300));
 
-        await zg.mutePublishStreamAudio(publishStreamId, !isMicOn);
+        await zg.startPublishingStream(publishStreamId,customZegoStream);
+        const canvasPublisherReady =await waitForPublisherState(publishStreamId,8000);
+
+        if (!canvasPublisherReady) {
+            throw new Error(
+                "ZEGO canvas publisher did not reach PUBLISHING state."
+            );
+        }
+
+        await zg.mutePublishStreamAudio(publishStreamId,!isMicOn);
         await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
 
         const localVideoPreview = document.getElementById('my-local-video');
@@ -3350,15 +3399,19 @@ async function switchPublishToCanvas() {
     } catch (e) {
         console.error("❌ GPU canvas publish failed:", e);
         publishStream = localStream;
-        try {
-            await zg.startPublishingStream(publishStreamId, localStream);
-            await new Promise(r => setTimeout(r, 300));
-            await zg.mutePublishStreamAudio(publishStreamId, !isMicOn);
+        await zg.startPublishingStream(publishStreamId,localStream);
+        const restorePublisherReady = 
+            await waitForPublisherState(publishStreamId,8000);
+
+        if (!restorePublisherReady) {
+            throw new Error(
+                "ZEGO restored publisher did not reach PUBLISHING state."
+            );
+        }
+
+        await zg.mutePublishStreamAudio((publishStreamId, !isMicOn);
             await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
             console.log("↩️ Reverted to original camera stream.");
-        } catch (fallbackError) {
-            console.error("❌ Raw camera fallback also failed:", fallbackError);
-            throw fallbackError;
         }
     }
 }
@@ -3403,9 +3456,16 @@ async function stopAIPipelineIfIdle() {
                 customZegoStream = null;
             }
             publishStream = localStream;
-            await zg.startPublishingStream(publishStreamId, localStream);
-            await new Promise(r => setTimeout(r, 300));
-            await zg.mutePublishStreamAudio(publishStreamId, !isMicOn);
+            try {await zg.startPublishingStream(publishStreamId,localStream);
+                const fallbackPublisherReady =await waitForPublisherState(publishStreamId,8000);
+
+                if (!fallbackPublisherReady) {
+                    throw new Error(
+                        "ZEGO fallback publisher did not reach PUBLISHING state."
+                    );
+                }
+
+             await zg.mutePublishStreamAudio(publishStreamId,!isMicOn);
             await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
             console.log("✅ Original camera stream restored.");
         } catch (e) {
@@ -3468,15 +3528,16 @@ function setupControls() {
             const audioTrack =
                 localStream.getAudioTracks?.()[0];
 
-            if (audioTrack) {
-                audioTrack.enabled =
-                    nextState;
-            }
-
             await zg.mutePublishStreamAudio(
                 publishStreamId,
                 !nextState
             );
+
+            if (audioTrack) {
+                audioTrack.enabled =
+                    nextState;
+            }
+            
             isMicOn = nextState;
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
@@ -3492,15 +3553,15 @@ function setupControls() {
             const videoTrack =
                 localStream.getVideoTracks?.()[0];
 
-            if (videoTrack) {
-                videoTrack.enabled =
-                    nextState;
-            }
-
             await zg.mutePublishStreamVideo(
                 publishStreamId,
                 !nextState
             );
+
+            if (videoTrack) {
+                videoTrack.enabled = nextState;
+            }
+
             isCamOn = nextState;
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
@@ -3687,53 +3748,61 @@ function startPerformanceMonitor() {
 
         lastFPSCheckTime = now;
 
-        // =====================================================
-        // UNIFIED QUALITY EVALUATION
-        // ====================================================
-        try {
-            await evaluateQuality();
-        } catch (e) {
-            console.warn(
-                "⚠️ Quality evaluation failed:",
-                e
-            );
-        }
+// =====================================================
+// NETWORK QUALITY FALLBACK
+// =====================================================
 
-        // =====================================================
-        // NETWORK QUALITY FALLBACK
-        // =====================================================
-        if (
-            zg &&
-            typeof zg.onNetworkQuality !== "function" &&
-            typeof zg.getNetworkQuality === "function"
-        ) {
+            if (
+                zg &&
+                typeof zg.onNetworkQuality !== "function" &&
+                typeof zg.getNetworkQuality === "function"
+            ) {
 
-            try {
+                try {
 
-                const quality = zg.getNetworkQuality();
+                    const quality =
+                        zg.getNetworkQuality();
 
-                if (typeof quality === "number") {
-                    networkQuality = Math.min(
-                        1,
-                        Math.max(0, quality)
+                    if (typeof quality === "number") {
+                        networkQuality =
+                            Math.min(
+                                1,
+                                Math.max(
+                                    0,
+                                    quality
+                                )
+                            );
+
+                        lastNetworkQualityUpdate =
+                            Date.now();
+
+                        networkQualitySource =
+                            "polling";
+                    } else {
+                        networkQuality = 0.5;
+                    }
+
+                } catch (e) {
+
+                    console.warn(
+                        "⚠️ Network quality polling failed:",
+                        e
                     );
-                } else {
-                    networkQuality = 0.5;
                 }
-
-            } catch (e) {
-
-                console.warn(
-                    "⚠️ Network quality polling failed:",
-                    e
-                );
             }
-        }
 
-    }, 2000);
-}
+ // =====================================================
+ // UNIFIED QUALITY EVALUATION
+ // =====================================================
 
-
+     try {
+      await evaluateQuality();
+      } catch (e) {
+      console.warn(
+        "⚠️ Quality evaluation failed:",
+            e
+        );
+   }
 // =========================================
 // STOP PERFORMANCE MONITOR
 // =========================================
