@@ -12,7 +12,84 @@ let publishStreamId = "";
 
 let canvasStream = null;          // Globally declared
 let customZegoStream = null;      // Globally declared
-let originalPublishingStopped = false; 
+let originalPublishingStopped = false;  // Track original publish state
+
+// =====================================================
+// 🔥 GLOBAL PUBLISHER LIFECYCLE STATE
+// =====================================================
+
+let publisherLifecycleState = "IDLE";
+let publisherLifecycleStreamId = "";
+let publisherLifecycleError = null;
+let publisherLifecycleWaiters = [];
+
+function resolvePublisherWaiters(success) {
+    const waiters =
+        publisherLifecycleWaiters.splice(0);
+
+    for (const waiter of waiters) {
+        try {
+            waiter(success);
+        } catch (e) {
+            console.warn(
+                "⚠️ Publisher waiter callback failed:",
+                e
+            );
+        }
+    }
+}
+
+function waitForPublisherState(
+    streamId,
+    timeoutMs = 8000
+) {
+    if (
+        publisherLifecycleStreamId === streamId &&
+        publisherLifecycleState === "PUBLISHING"
+    ) {
+        return Promise.resolve(true);
+    }
+
+    return new Promise(resolve => {
+        let waiter;
+
+        const timer = setTimeout(() => {
+            const index =
+                publisherLifecycleWaiters.indexOf(
+                    waiter
+                );
+
+            if (index >= 0) {
+                publisherLifecycleWaiters.splice(
+                    index,
+                    1
+                );
+            }
+
+            console.warn(
+                "⏳ Publisher state timeout:",
+                {
+                    streamId,
+                    state:
+                        publisherLifecycleState,
+                    error:
+                        publisherLifecycleError
+                }
+            );
+
+            resolve(false);
+        }, timeoutMs);
+
+        waiter = success => {
+            clearTimeout(timer);
+            resolve(success);
+        };
+
+        publisherLifecycleWaiters.push(
+            waiter
+        );
+    });
+}
 
 // Mic and camera start OFF by default.
 let isMicOn = false;
@@ -936,18 +1013,20 @@ function setupNetworkQualityCallback() {
     }
 
     if (
-        typeof zg.onNetworkQuality ===
-        "function"
+        zg &&
+        (
+            "onNetworkQuality" in zg ||
+            typeof zg.onNetworkQuality !== "undefined"
+        )
     ) {
 
         console.log(
-            "ℹ️ ZEGO exposes onNetworkQuality."
+            "ℹ️ ZEGO exposes onNetworkQuality callback."
         );
 
         try {
 
-            zg.onNetworkQuality(
-                (userID, upstreamQuality, downstreamQuality) => {
+            zg.onNetworkQuality = (userID,upstreamQuality,downstreamQuality) => {
 
                     // Local publisher only.
                     if (
@@ -985,7 +1064,6 @@ function setupNetworkQualityCallback() {
                         }
                     );
                 }
-            );
 
             console.log(
                 "✅ ZEGO network quality callback registered."
@@ -1309,72 +1387,10 @@ window.startCustomZegoEngine = async function (
             }
         );
 
-        // =====================================================
-        // 🔥 3B. PUBLISHER STATE LIFECYCLE DEBUG
-        // =====================================================
-
-        // =====================================================
-        // 🔥 PUBLISHER LIFECYCLE STATE MACHINE
-        // =====================================================
-        let publisherLifecycleState = "IDLE";
-        let publisherLifecycleStreamId = "";
-        let publisherLifecycleError = null;
-        let publisherLifecycleWaiters = [];
-
-        function resolvePublisherWaiters(success) {
-            const waiters = publisherLifecycleWaiters.splice(0);
-
-            for (const waiter of waiters) {
-                try {
-                    waiter(success);
-                } catch (e) {}
-            }
-        }
-
-        function waitForPublisherState(
-            streamId,
-            timeoutMs = 8000
-        ) {
-            if (
-                publisherLifecycleStreamId === streamId &&
-                publisherLifecycleState === "PUBLISHING"
-            ) {
-                return Promise.resolve(true);
-            }
-
-            return new Promise(resolve => {
-                const timer = setTimeout(() => {
-                    const index =
-                        publisherLifecycleWaiters.indexOf(waiter);
-
-                    if (index >= 0) {
-                        publisherLifecycleWaiters.splice(
-                            index,
-                            1
-                        );
-                    }
-
-                    console.warn(
-                        "⏳ Publisher state timeout:",
-                        {
-                            streamId,
-                            state: publisherLifecycleState,
-                            error: publisherLifecycleError
-                        }
-                    );
-
-                    resolve(false);
-                }, timeoutMs);
-
-                const waiter = success => {
-                    clearTimeout(timer);
-                    resolve(success);
-                };
-
-                publisherLifecycleWaiters.push(waiter);
-            });
-        }
-
+// =====================================================
+// 🔥 3B. PUBLISHER STATE LIFECYCLE DEBUG
+// =====================================================
+        
         zg.on(
             "publisherStateUpdate",
             (
@@ -1484,11 +1500,11 @@ window.startCustomZegoEngine = async function (
         // =====================================================
 
         zg.on(
-            "publishQualityUpdate",
+            "publisherQualityUpdate",
             (streamID, quality) => {
 
                 console.log(
-                    "📊 ZEGO publishQualityUpdate:",
+                    "📊 ZEGO publisherQualityUpdate:",
                     {
                         streamID,
                         quality
@@ -2672,6 +2688,17 @@ function initializeGPUBlurEngine() {
     prevMaskTexture = createGPUTexture(gl);
     bgImageTexture = createGPUTexture(gl);
 
+    // Allocate temporal mask storage.
+    gl.bindTexture(gl.TEXTURE_2D,prevMaskTexture);
+    gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,gl.RGBA,
+        CANVAS_W,CANVAS_H,
+        0,gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        null
+    );
+
     // 🔥 PATCH 3: Face mask texture
     faceMaskTexture = createGPUTexture(gl);
     faceMaskCanvas = document.createElement('canvas');
@@ -2952,10 +2979,10 @@ function refineMaskGPU() {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-    uploadPrevMaskTexture(maskRefinedTexture);
-    maskTexture = maskRefinedTexture;
-    return maskRefinedTexture;
-}
+    copyTextureToTexture(maskRefinedTexture,prevMaskTexture,CANVAS_W,CANVAS_H);
+        maskTexture = maskRefinedTexture;
+        return maskRefinedTexture;
+    }
 
 function runBlurPass(inputTexture, outputFramebuffer, direction, strength) {
     const gl = gpu;
@@ -3436,7 +3463,7 @@ async function switchPublishToCanvas() {
         console.log("✅ Zego now publishing GPU canvas custom stream.", {
             camera: isCamOn,
             microphone: isMicOn,
-            fps: TARGET_FPS,
+            fps: captureFPS,
             width: CANVAS_W,
             height: CANVAS_H,
             zoom: currentZoom,
@@ -3500,6 +3527,25 @@ async function stopAIPipelineIfIdle() {
     segmentationFrameCounter = 0;
     lastSegResults = null;
     lastFaceLandmarks = null;
+
+    if (canvasStream) {
+        try {
+            canvasStream
+                .getTracks()
+                .forEach(track => {
+                    try {
+                        track.stop();
+                    } catch (e) {}
+                });
+        } catch (e) {
+            console.warn(
+                "⚠️ Canvas stream cleanup failed:",
+                e
+            );
+        }
+
+        canvasStream = null;
+    }
 
     if (zg && publishStream && publishStream !== localStream) {
         try {
