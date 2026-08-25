@@ -2194,7 +2194,7 @@ window.startCustomZegoEngine = async function (
         // 14. PERFORMANCE MONITOR
         // =====================================================
 
-        startPerformanceMonitor();
+        window.startPerformanceMonitor();
 
         console.log(
             "🎉 Ultra Premium Video Engine started successfully."
@@ -3446,9 +3446,16 @@ async function switchPublishToCanvas() {
     } catch (e) {
         console.error("❌ GPU canvas publish failed:", e);
         publishStream = localStream;
-        await zg.startPublishingStream(publishStreamId,localStream);
-        const restorePublisherReady = 
-            await waitForPublisherState(publishStreamId,8000);
+        await zg.startPublishingStream(
+            publishStreamId,
+            localStream
+        );
+
+        const restorePublisherReady =
+            await waitForPublisherState(
+                publishStreamId,
+                8000
+            );
 
         if (!restorePublisherReady) {
             throw new Error(
@@ -3456,11 +3463,13 @@ async function switchPublishToCanvas() {
             );
         }
 
-        await zg.mutePublishStreamAudio((publishStreamId, !isMicOn);
-            await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
-            console.log("↩️ Reverted to original camera stream.");
-        }
-    }
+        await zg.mutePublishStreamAudio(publishStreamId,!isMicOn);
+        await zg.mutePublishStreamVideo(publishStreamId,!isCamOn);
+
+        console.log(
+            "↩️ Reverted to original camera stream."
+        );
+    }   
 }
 
 async function stopAIPipelineIfIdle() {
@@ -3742,7 +3751,7 @@ function openBackgroundPicker(anchorBtn) {
 
 let performanceMonitorInterval = null;
 
-function startPerformanceMonitor() {
+window.startPerformanceMonitor = function () {
 
     // Prevent duplicate performance monitors
     if (performanceMonitorInterval) {
@@ -3849,7 +3858,11 @@ function startPerformanceMonitor() {
         "⚠️ Quality evaluation failed:",
             e
         );
-   }
+     }
+  }, 1000);
+    
+}
+    
 // =========================================
 // STOP PERFORMANCE MONITOR
 // =========================================
