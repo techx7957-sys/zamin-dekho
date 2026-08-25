@@ -2172,7 +2172,7 @@ window.startCustomZegoEngine = async function (
         // 12. CONTROLS
         // =====================================================
 
-        setupControls();
+        window.setupControls();
 
         refreshMicCamButtonUI();
 
@@ -3575,7 +3575,7 @@ function refreshMicCamButtonUI() {
     }
 }
 
-function setupControls() {
+window.setupControls = function () {
     document.getElementById('btn-mic').onclick = async function () {
         try {
             if (!localStream || !zg) return;
