@@ -1086,20 +1086,19 @@ function setupNetworkQualityCallback() {
             error
         );
 
-        return false;
-    }
-}
+           return false;
+      }
 
-    console.warn(
-        "⚠️ ZEGO SDK does not expose a usable network-quality callback."
-    );
+            console.warn(
+                "⚠️ ZEGO SDK does not expose a usable network-quality callback."
+            );
 
-    console.log(
-        "ℹ️ Adaptive quality will use the existing networkQuality value."
-    );
+            console.log(
+                "ℹ️ Adaptive quality will use the existing networkQuality value."
+            );
 
-    return false;
-}
+            return false;
+        }
 
 // ============================================================
 // 🔥 PATCH 1: ZOOM & AUTO FRAME MANAGER (updated)
@@ -3661,9 +3660,8 @@ async function stopAIPipelineIfIdle() {
                 "❌ Failed to restore original camera stream:",
                 e
             );
-                }
-
-            }
+         }
+      }
 
             if (rawVideoEl) {
         try { rawVideoEl.pause(); } catch (e) {}
