@@ -10,12 +10,12 @@ let localStream = null;   // Raw camera+mic stream from Zego
 let publishStream = null; // Final stream actually published (may be canvas-based)
 let publishStreamId = "";
 
-let canvasStream = null;          // Globally declared
-let customZegoStream = null;      // Globally declared
-let originalPublishingStopped = false;  // Track original publish state
+let canvasStream = null;      
+let customZegoStream = null;
+let originalPublishingStopped = false;
 
 // =====================================================
-// 🔥 GLOBAL PUBLISHER LIFECYCLE STATE
+// 🔥 GLOBAL PUBLISHER LIFECYCLE STATE MACHINE
 // =====================================================
 
 let publisherLifecycleState = "IDLE";
@@ -23,16 +23,30 @@ let publisherLifecycleStreamId = "";
 let publisherLifecycleError = null;
 let publisherLifecycleWaiters = [];
 
-function resolvePublisherWaiters(success) {
-    const waiters =
-        publisherLifecycleWaiters.splice(0);
+function resolvePublisherWaiters(
+    streamId,
+    success
+) {
+    const matchingWaiters =
+        publisherLifecycleWaiters.filter(
+            waiter => waiter.streamId === streamId
+        );
 
-    for (const waiter of waiters) {
+    publisherLifecycleWaiters =
+        publisherLifecycleWaiters.filter(
+            waiter => waiter.streamId !== streamId
+        );
+
+    for (const waiter of matchingWaiters) {
+        if (waiter.streamId !== streamId) {
+            continue;
+        }
+
         try {
-            waiter(success);
+            waiter.resolve(success);
         } catch (e) {
             console.warn(
-                "⚠️ Publisher waiter callback failed:",
+                "⚠️ Publisher waiter resolve failed:",
                 e
             );
         }
@@ -51,7 +65,10 @@ function waitForPublisherState(
     }
 
     return new Promise(resolve => {
-        let waiter;
+        const waiter = {
+            streamId,
+            resolve
+        };
 
         const timer = setTimeout(() => {
             const index =
@@ -80,7 +97,7 @@ function waitForPublisherState(
             resolve(false);
         }, timeoutMs);
 
-        waiter = success => {
+        waiter.resolve = success => {
             clearTimeout(timer);
             resolve(success);
         };
@@ -809,12 +826,12 @@ function normalizeZegoNetworkQuality(value) {
     }
 
     const qualityMap = {
-        0: 0.5,
-        1: 1.0,
-        2: 0.8,
-        3: 0.6,
-        4: 0.4,
-        5: 0.2
+        0: 1.0, // Excellent
+        1: 0.8, // Good
+        2: 0.6, // Medium
+        3: 0.4, // Bad
+        4: 0.2, // Die
+        5: 0.5  // Unknown
     };
 
     return qualityMap[n] ?? 0.5;
@@ -1004,82 +1021,74 @@ async function evaluateQuality() {
 
 function setupNetworkQualityCallback() {
 
-    if (!zg) {
+    if (!zg || typeof zg.on !== "function") {
         console.warn(
-            "⚠️ Network quality setup skipped: ZEGO engine missing."
+            "⚠️ ZEGO event API unavailable; network quality callback cannot be registered."
+        );
+        return false;
+    }
+
+    try {
+
+        zg.on(
+            "networkQuality",
+            (
+                userID,
+                upstreamQuality,
+                downstreamQuality
+            ) => {
+
+                // Empty userID = local user.
+                if (
+                    userID &&
+                    typeof myShortId !== "undefined" &&
+                    userID !== myShortId
+                ) {
+                    return;
+                }
+
+                const quality =
+                    normalizeZegoNetworkQuality(
+                        upstreamQuality
+                    );
+
+                networkQuality =
+                    quality;
+
+                lastNetworkQualityUpdate =
+                    Date.now();
+
+                networkQualitySource =
+                    "zego-event";
+
+                console.log(
+                    "📶 ZEGO network quality:",
+                    {
+                        userID,
+                        upstreamQuality,
+                        downstreamQuality,
+                        normalized: quality
+                    }
+                );
+            }
+        );
+
+        console.log(
+            "✅ ZEGO networkQuality event registered."
+        );
+
+        return true;
+
+    } catch (error) {
+
+        console.warn(
+            "⚠️ ZEGO networkQuality registration failed:",
+            error
         );
 
         return false;
     }
-
-    if (
-        zg &&
-        (
-            "onNetworkQuality" in zg ||
-            typeof zg.onNetworkQuality !== "undefined"
-        )
-    ) {
-
-        console.log(
-            "ℹ️ ZEGO exposes onNetworkQuality callback."
-        );
-
-        try {
-
-            zg.onNetworkQuality = (userID,upstreamQuality,downstreamQuality) => {
-
-                    // Local publisher only.
-                    if (
-                        userID &&
-                        typeof myShortId !== "undefined" &&
-                        userID !== myShortId
-                    ) {
-                        return;
-                    }
-
-
-                    const quality =
-                        normalizeZegoNetworkQuality(
-                            upstreamQuality
-                        );
-
-
-                    networkQuality =
-                        quality;
-
-                    lastNetworkQualityUpdate =
-                        Date.now();
-
-                    networkQualitySource =
-                        "zego-event";
-
-
-                    console.log(
-                        "📶 ZEGO network quality:",
-                        {
-                            userID,
-                            upstreamQuality,
-                            downstreamQuality,
-                            normalized: quality
-                        }
-                    );
-                }
-
-            console.log(
-                "✅ ZEGO network quality callback registered."
-            );
-
-            return true;
-
-        } catch (error) {
-
-            console.warn(
-                "⚠️ ZEGO network quality callback registration failed:",
-                error
-            );
-        }
-    }
-
+}
 
     console.warn(
         "⚠️ ZEGO SDK does not expose a usable network-quality callback."
@@ -1464,6 +1473,7 @@ window.startCustomZegoEngine = async function (
                     );
 
                     resolvePublisherWaiters(
+                        streamID,
                         true
                     );
                 }
@@ -1473,9 +1483,7 @@ window.startCustomZegoEngine = async function (
                 // -----------------------------------------------------
 
                 if (
-                    state === "NO_PUBLISH" &&
-                    errorCode &&
-                    errorCode !== 0
+                    state === "NO_PUBLISH"
                 ) {
                     console.error(
                         "🔴 ZEGO PUBLISH FAILED:",
@@ -1488,12 +1496,13 @@ window.startCustomZegoEngine = async function (
                     );
 
                     resolvePublisherWaiters(
+                        streamID,
                         false
                     );
                 }
 
-                }
-                );
+             }
+         );
 
         // =====================================================
         // 🔥 3C. PUBLISH QUALITY DEBUG
@@ -1510,11 +1519,47 @@ window.startCustomZegoEngine = async function (
                         quality
                     }
                 );
-            }
-        );
 
-        console.log(
-            "🧪 ZEGO DEBUG LISTENERS REGISTERED."
+                if (
+                    streamID !== publishStreamId ||
+                    !quality
+                ) {
+                    return;
+                }
+
+                const level =
+                    Number.isFinite(
+                        Number(quality.level)
+                    )
+                        ? Number(quality.level)
+                        : null;
+
+                if (level !== null) {
+
+                    networkQuality =
+                        normalizeZegoNetworkQuality(
+                            level
+                        );
+
+                    lastNetworkQualityUpdate =
+                        Date.now();
+
+                    networkQualitySource =
+                        "publisher-quality";
+                }
+
+                console.log(
+                    "📈 Publish quality metrics:",
+                    {
+                        level,
+                        videoFPS: quality.videoFPS,
+                        videoBitrate: quality.videoBitrate,
+                        videoPacketsLostRate:
+                            quality.videoPacketsLostRate,
+                        rtt: quality.rtt
+                    }
+                );
+            }
         );
 
         // =====================================================
@@ -2053,12 +2098,21 @@ window.startCustomZegoEngine = async function (
 
         try {
 
-            await zg.startPublishingStream(
-                publishStreamId,
-                publishStream
-            );
+        publisherLifecycleStreamId =
+            publishStreamId;
 
-            console.log(
+        publisherLifecycleState =
+            "PUBLISH_REQUESTING";
+
+        publisherLifecycleError =
+            null;
+
+        await zg.startPublishingStream(
+            publishStreamId,
+            publishStream
+        );
+
+        console.log(
                 "📡 Publishing requested:",
                 publishStreamId
             );
@@ -3137,11 +3191,18 @@ function renderFrame() {
                 currentTexture,
                 blurred
             );
-        } else if (isBgMode === "image") {
-            compositeImageFrame(
-                currentTexture
-            );
-        }
+            } else if (isBgMode === "image") {
+
+                if (bgImageEl) {
+                    uploadBGImageTexture(
+                        bgImageEl
+                    );
+                }
+
+                compositeImageFrame(
+                    currentTexture
+                );
+            }
     } else {
         // No background: draw currentTexture directly to screen
         // Need a simple texture draw program (gpuProgram)
@@ -3490,14 +3551,21 @@ async function switchPublishToCanvas() {
             );
         }
 
-        await zg.mutePublishStreamAudio(publishStreamId,!isMicOn);
-        await zg.mutePublishStreamVideo(publishStreamId,!isCamOn);
+        await zg.mutePublishStreamAudio(
+            publishStreamId,
+            !isMicOn
+        );
+
+        await zg.mutePublishStreamVideo(
+            publishStreamId,
+            !isCamOn
+        );
 
         console.log(
             "↩️ Reverted to original camera stream."
         );
-    }   
-}
+        }
+        }
 
 async function stopAIPipelineIfIdle() {
     if (isBeautyOn || isBgMode !== "none") return;
@@ -3558,24 +3626,46 @@ async function stopAIPipelineIfIdle() {
                 customZegoStream = null;
             }
             publishStream = localStream;
-            try {await zg.startPublishingStream(publishStreamId,localStream);
-                const fallbackPublisherReady =await waitForPublisherState(publishStreamId,8000);
+            await zg.startPublishingStream(
+                publishStreamId,
+                localStream
+            );
 
-                if (!fallbackPublisherReady) {
-                    throw new Error(
-                        "ZEGO fallback publisher did not reach PUBLISHING state."
-                    );
+            const fallbackPublisherReady =
+                await waitForPublisherState(
+                    publishStreamId,
+                    8000
+                );
+
+            if (!fallbackPublisherReady) {
+                throw new Error(
+                    "ZEGO fallback publisher did not reach PUBLISHING state."
+                );
+            }
+
+            await zg.mutePublishStreamAudio(
+                publishStreamId,
+                !isMicOn
+            );
+
+            await zg.mutePublishStreamVideo(
+                publishStreamId,
+                !isCamOn
+            );
+
+            console.log(
+                "✅ Original camera stream restored."
+            );
+            } catch (e) {
+            console.error(
+                "❌ Failed to restore original camera stream:",
+                e
+            );
                 }
 
-             await zg.mutePublishStreamAudio(publishStreamId,!isMicOn);
-            await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
-            console.log("✅ Original camera stream restored.");
-        } catch (e) {
-            console.error("❌ Failed to restore original camera stream:", e);
-        }
-    }
+            }
 
-    if (rawVideoEl) {
+            if (rawVideoEl) {
         try { rawVideoEl.pause(); } catch (e) {}
         try { rawVideoEl.srcObject = null; } catch (e) {}
     }
@@ -3893,27 +3983,27 @@ window.startPerformanceMonitor = function () {
                 }
             }
 
- // =====================================================
- // UNIFIED QUALITY EVALUATION
- // =====================================================
+// =====================================================
+// UNIFIED QUALITY EVALUATION
+// =====================================================
 
-     try {
-      await evaluateQuality();
-      } catch (e) {
-      console.warn(
-        "⚠️ Quality evaluation failed:",
-            e
-        );
-     }
-  }, 1000);
-    
-}
-    
+                    try {
+                        await evaluateQuality();
+                    } catch (e) {
+                        console.warn(
+                            "⚠️ Quality evaluation failed:",
+                            e
+                        );
+                    }
+
+                }, 1000);
+            }
+
 // =========================================
 // STOP PERFORMANCE MONITOR
 // =========================================
 
-function stopPerformanceMonitor() {
+  function stopPerformanceMonitor() {
 
     if (performanceMonitorInterval) {
 
