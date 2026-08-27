@@ -322,15 +322,14 @@ function enableAGC(zegoInstance) {
 }
 
 // ============================================================
-// 🔥 NEW: DYNAMIC BITRATE UPDATE FOR ZEGO (PATCH #7)
-// ============================================================
 // 🔥 PATCH: Real bitrate adaptation using ZEGO v3.12.0 APIs
 // ============================================================
         async function updateZegoBitrate(bitrate) {
+            const engine = zg;
 
-            if (!zg) {
+            if (!engine) {
                 console.warn(
-                    "⏭️ Bitrate skipped: ZEGO engine not ready."
+                    "⏭️ Bitrate update skipped: ZEGO engine unavailable."
                 );
                 return false;
             }
@@ -349,46 +348,58 @@ function enableAGC(zegoInstance) {
                 return false;
             }
 
-            if (
-                typeof zg.setVideoConfig !==
-                "function"
-            ) {
-                console.warn(
-                    "⚠️ ZEGO setVideoConfig() unavailable."
-                );
-                return false;
-            }
+            const videoConfig =
+                typeof engine.getVideoConfig === "function"
+                    ? engine.getVideoConfig()
+                    : {};
 
-            const config = {
+            const nextConfig = {
+                ...videoConfig,
                 bitrate: numericBitrate
             };
 
-            try {
+            if (
+                typeof engine.setVideoConfig !== "function"
+            ) {
+                console.warn(
+                    "⚠️ This ZEGO Web SDK instance does not expose setVideoConfig().",
+                    {
+                        requestedBitrate: numericBitrate,
+                        streamId: publishStreamId || null
+                    }
+                );
 
+                return false;
+            }
+
+            try {
                 console.log(
-                    "📡 Applying public ZEGO bitrate:",
+                    "📡 Applying ZEGO bitrate:",
                     {
                         bitrate: numericBitrate,
-                        publishStreamId:
+                        streamId:
                             publishStreamId || null
                     }
                 );
 
-                await zg.setVideoConfig(config);
+                const result =
+                    await engine.setVideoConfig(
+                        nextConfig
+                    );
 
                 console.log(
-                    "✅ ZEGO bitrate applied:",
+                    "✅ ZEGO bitrate configuration applied:",
                     {
-                        bitrate: numericBitrate
+                        bitrate: numericBitrate,
+                        result
                     }
                 );
 
                 return true;
 
             } catch (error) {
-
                 console.error(
-                    "❌ ZEGO setVideoConfig() failed:",
+                    "❌ ZEGO bitrate update failed:",
                     {
                         bitrate: numericBitrate,
                         error
@@ -398,6 +409,7 @@ function enableAGC(zegoInstance) {
                 return false;
             }
         }
+
 // ============================================================
 // 🔥 PATCH 4: ADAPTIVE OUTPUT PROFILE & CAMERA CAPABILITIES
 // ============================================================
@@ -1020,85 +1032,162 @@ async function evaluateQuality() {
 }
 
 function setupNetworkQualityCallback() {
-
     if (!zg || typeof zg.on !== "function") {
         console.warn(
-            "⚠️ ZEGO event API unavailable; network quality callback cannot be registered."
+            "⚠️ ZEGO event API unavailable; network quality monitoring disabled."
         );
+        networkQualitySource = "default";
         return false;
     }
 
+    let registered = false;
+
+    // ---------------------------------------------------------
+    // 1. Preferred publisher-quality event
+    // ---------------------------------------------------------
     try {
-
         zg.on(
-            "networkQuality",
-            (
-                userID,
-                upstreamQuality,
-                downstreamQuality
-            ) => {
-
-                // Empty userID = local user.
+            "publisherQualityUpdate",
+            (streamID, quality) => {
                 if (
-                    userID &&
-                    typeof myShortId !== "undefined" &&
-                    userID !== myShortId
+                    publishStreamId &&
+                    streamID &&
+                    streamID !== publishStreamId
                 ) {
                     return;
                 }
 
-                const quality =
-                    normalizeZegoNetworkQuality(
-                        upstreamQuality
-                    );
+                if (!quality) {
+                    return;
+                }
 
-                networkQuality =
-                    quality;
+                const rawLevel =
+                    Number(quality.level);
 
-                lastNetworkQualityUpdate =
-                    Date.now();
+                if (Number.isFinite(rawLevel)) {
+                    networkQuality =
+                        normalizeZegoNetworkQuality(
+                            rawLevel
+                        );
 
-                networkQualitySource =
-                    "zego-event";
+                    lastNetworkQualityUpdate =
+                        Date.now();
+
+                    networkQualitySource =
+                        "publisher-quality";
+                }
 
                 console.log(
-                    "📶 ZEGO network quality:",
+                    "📊 ZEGO publisher quality:",
                     {
-                        userID,
-                        upstreamQuality,
-                        downstreamQuality,
-                        normalized: quality
+                        streamID,
+                        level: rawLevel,
+                        networkQuality,
+                        videoFPS:
+                            quality.videoFPS ?? null,
+                        videoBitrate:
+                            quality.videoBitrate ?? null,
+                        packetLoss:
+                            quality.videoPacketsLostRate ?? null,
+                        rtt:
+                            quality.rtt ?? null
                     }
                 );
             }
         );
 
-        console.log(
-            "✅ ZEGO networkQuality event registered."
-        );
+        registered = true;
 
-        return true;
+        console.log(
+            "✅ ZEGO publisherQualityUpdate registered."
+        );
 
     } catch (error) {
-
         console.warn(
-            "⚠️ ZEGO networkQuality registration failed:",
+            "⚠️ publisherQualityUpdate registration failed:",
             error
         );
+    }
 
-           return false;
-      }
+    // ---------------------------------------------------------
+    // 2. SDK networkQuality event — only if actually supported
+    // ---------------------------------------------------------
+    try {
+        if (
+            typeof zg.onNetworkQuality === "function"
+        ) {
+            zg.onNetworkQuality(
+                (
+                    userID,
+                    upstreamQuality,
+                    downstreamQuality
+                ) => {
 
-            console.warn(
-                "⚠️ ZEGO SDK does not expose a usable network-quality callback."
+                    if (
+                        userID &&
+                        typeof myShortId !== "undefined" &&
+                        userID !== myShortId
+                    ) {
+                        return;
+                    }
+
+                    const quality =
+                        normalizeZegoNetworkQuality(
+                            upstreamQuality
+                        );
+
+                    networkQuality = quality;
+
+                    lastNetworkQualityUpdate =
+                        Date.now();
+
+                    networkQualitySource =
+                        "zego-event";
+
+                    console.log(
+                        "📶 ZEGO network quality:",
+                        {
+                            userID,
+                            upstreamQuality,
+                            downstreamQuality,
+                            normalized: quality
+                        }
+                    );
+                }
             );
+
+            registered = true;
 
             console.log(
-                "ℹ️ Adaptive quality will use the existing networkQuality value."
+                "✅ ZEGO onNetworkQuality callback registered."
             );
-
-            return false;
         }
+    } catch (error) {
+        console.warn(
+            "⚠️ ZEGO onNetworkQuality registration failed:",
+            error
+        );
+    }
+
+    // ---------------------------------------------------------
+    // 3. Final state
+    // ---------------------------------------------------------
+    if (!registered) {
+        networkQualitySource = "publisher-quality-unavailable";
+
+        console.warn(
+            "⚠️ No usable ZEGO network-quality callback exposed."
+        );
+
+        console.log(
+            "ℹ️ Adaptive quality will rely on FPS + publisher metrics."
+        );
+
+        return false;
+    }
+
+    return true;
+}
 
 // ============================================================
 // 🔥 PATCH 1: ZOOM & AUTO FRAME MANAGER (updated)
@@ -1320,7 +1409,18 @@ window.startCustomZegoEngine = async function (
         // 3. CREATE ZEGO ENGINE
         // =====================================================
 
-        const serverUrl = "";
+        const serverUrl =
+            window.ZEGO_SERVER_URL ||
+            "";
+
+        if (
+            !serverUrl &&
+            !window.ZEGO_SERVER_URL
+        ) {
+            console.warn(
+                "⚠️ ZEGO server URL is empty; using SDK/default routing."
+            );
+        }
 
         zg = new ZegoClass(
             appId,
@@ -1372,13 +1472,27 @@ window.startCustomZegoEngine = async function (
                         }
                     );
 
-                    // Stop background performance monitor.
+                    publisherLifecycleState =
+                        "ROOM_DISCONNECTED";
+
+                    publisherLifecycleError = {
+                        errorCode,
+                        extendedData
+                    };
+
                     if (
                         typeof stopPerformanceMonitor ===
                         "function"
                     ) {
                         stopPerformanceMonitor();
                     }
+
+                    resolvePublisherWaiters(
+                        publisherLifecycleStreamId,
+                        false
+                    );
+
+                    return;
                 }
 
                 // -------------------------------------------------
@@ -1394,11 +1508,11 @@ window.startCustomZegoEngine = async function (
                 }
             }
         );
-
-// =====================================================
-// 🔥 3B. PUBLISHER STATE LIFECYCLE DEBUG
-// =====================================================
         
+// =====================================================
+// 🔥 3B. PUBLISHER STATE LIFECYCLE
+// =====================================================
+
         zg.on(
             "publisherStateUpdate",
             (
@@ -1408,19 +1522,8 @@ window.startCustomZegoEngine = async function (
                 extendedData
             ) => {
 
-                publisherLifecycleStreamId =
-                    streamID || "";
-
-                publisherLifecycleState =
-                    state || "UNKNOWN";
-
-                publisherLifecycleError =
-                    errorCode && errorCode !== 0
-                        ? {
-                            errorCode,
-                            extendedData
-                        }
-                        : null;
+                const matches =
+                    streamID === publishStreamId;
 
                 console.log(
                     "🔎 ZEGO publisherStateUpdate:",
@@ -1428,20 +1531,42 @@ window.startCustomZegoEngine = async function (
                         streamID,
                         state,
                         errorCode,
-                        extendedData
+                        extendedData,
+                        expectedStreamId:
+                            publishStreamId,
+                        matches
                     }
                 );
 
-                // -----------------------------------------------------
-                // PUBLISH ERROR
-                // -----------------------------------------------------
+                if (!matches) {
+                    return;
+                }
+
+                publisherLifecycleStreamId =
+                    streamID;
+
+                publisherLifecycleState =
+                    state || "UNKNOWN";
+
+                publisherLifecycleError =
+                    errorCode &&
+                    errorCode !== 0
+                        ? {
+                            errorCode,
+                            extendedData
+                        }
+                        : null;
+
+                // ---------------------------------------------
+                // ERROR
+                // ---------------------------------------------
 
                 if (
                     errorCode &&
                     errorCode !== 0
                 ) {
                     console.error(
-                        "🔴 ZEGO PUBLISHER ERROR:",
+                        "🔴 ZEGO PUBLISH ERROR:",
                         {
                             streamID,
                             state,
@@ -1450,36 +1575,37 @@ window.startCustomZegoEngine = async function (
                         }
                     );
 
-                    publisherLifecycleError = {
-                        errorCode,
-                        extendedData
-                    };
+                    resolvePublisherWaiters(
+                        streamID,
+                        false
+                    );
+
+                    return;
                 }
 
-                // -----------------------------------------------------
-                // PUBLISHING
-                // -----------------------------------------------------
+                // ---------------------------------------------
+                // SUCCESS
+                // ---------------------------------------------
 
                 if (
                     state === "PUBLISHING"
                 ) {
                     console.log(
                         "🟢 ZEGO PUBLISHER READY:",
-                        {
-                            streamID,
-                            state
-                        }
+                        streamID
                     );
 
                     resolvePublisherWaiters(
                         streamID,
                         true
                     );
+
+                    return;
                 }
 
-                // -----------------------------------------------------
-                // PUBLISH FAILURE
-                // -----------------------------------------------------
+                // ---------------------------------------------
+                // HARD FAILURE
+                // ---------------------------------------------
 
                 if (
                     state === "NO_PUBLISH"
@@ -1499,13 +1625,12 @@ window.startCustomZegoEngine = async function (
                         false
                     );
                 }
-
-             }
-         );
-
-        // =====================================================
-        // 🔥 3C. PUBLISH QUALITY DEBUG
-        // =====================================================
+            }
+        );
+        
+// =====================================================
+// 🔥 3C. PUBLISH QUALITY DEBUG
+// =====================================================
 
         zg.on(
             "publisherQualityUpdate",
@@ -2097,37 +2222,63 @@ window.startCustomZegoEngine = async function (
 
         try {
 
-        publisherLifecycleStreamId =
-            publishStreamId;
+            publisherLifecycleStreamId =
+                publishStreamId;
 
-        publisherLifecycleState =
-            "PUBLISH_REQUESTING";
+            publisherLifecycleState =
+                "PUBLISH_REQUESTING";
 
-        publisherLifecycleError =
-            null;
+            publisherLifecycleError =
+                null;
 
-        await zg.startPublishingStream(
-            publishStreamId,
-            publishStream
-        );
+            // Remove stale waiters from an older publish attempt.
+            publisherLifecycleWaiters =
+                publisherLifecycleWaiters.filter(
+                    waiter =>
+                        waiter.streamId !== publishStreamId
+                );
 
-        console.log(
-                "📡 Publishing requested:",
+            console.log(
+                "📡 Starting ZEGO publisher:",
+                {
+                    streamId: publishStreamId,
+                    hasEngine: !!zg,
+                    hasLocalStream: !!localStream,
+                    audioTracks:
+                        localStream.getAudioTracks().length,
+                    videoTracks:
+                        localStream.getVideoTracks().length
+                }
+            );
+
+            await zg.startPublishingStream(
+                publishStreamId,
+                publishStream
+            );
+
+            console.log(
+                "📡 ZEGO publish request accepted:",
                 publishStreamId
             );
 
             const publisherReady =
                 await waitForPublisherState(
                     publishStreamId,
-                    8000
+                    12000
                 );
 
             if (!publisherReady) {
                 throw new Error(
-                    "ZEGO publisher did not reach PUBLISHING state."
+                    `ZEGO publisher failed: state=${publisherLifecycleState}, ` +
+                    `error=${JSON.stringify(publisherLifecycleError)}`
                 );
             }
 
+            console.log(
+                "🟢 ZEGO publisher reached PUBLISHING:",
+                publishStreamId
+            );
+            
             console.log(
                 "🟢 ZEGO publisher reached PUBLISHING:",
                 publishStreamId
