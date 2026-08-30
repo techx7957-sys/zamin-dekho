@@ -22,6 +22,62 @@ let publisherLifecycleState = "IDLE";
 let publisherLifecycleStreamId = "";
 let publisherLifecycleError = null;
 let publisherLifecycleWaiters = [];
+let roomConnectionState = "DISCONNECTED";
+let roomConnectionError = null;
+let roomConnectionWaiters = [];
+
+function waitForRoomConnected(timeoutMs = 15000) {
+
+    if (
+        roomConnectionState === "CONNECTED"
+    ) {
+        return Promise.resolve(true);
+    }
+
+    return new Promise(resolve => {
+
+        const waiter = {
+            resolve
+        };
+
+        const timer = setTimeout(() => {
+
+            const index =
+                roomConnectionWaiters.indexOf(waiter);
+
+            if (index >= 0) {
+                roomConnectionWaiters.splice(
+                    index,
+                    1
+                );
+            }
+
+            console.warn(
+                "⏳ ZEGO room connection timeout:",
+                {
+                    state:
+                        roomConnectionState,
+                    error:
+                        roomConnectionError
+                }
+            );
+
+            resolve(false);
+
+        }, timeoutMs);
+
+        waiter.resolve = success => {
+
+            clearTimeout(timer);
+
+            resolve(success);
+        };
+
+        roomConnectionWaiters.push(
+            waiter
+        );
+    });
+}
 
 function resolvePublisherWaiters(
     streamId,
@@ -53,9 +109,20 @@ function resolvePublisherWaiters(
     }
 }
 
+function resetPublisherAttempt(streamId) {
+    publisherLifecycleStreamId = streamId;
+    publisherLifecycleState = "PUBLISH_REQUESTING";
+    publisherLifecycleError = null;
+
+    publisherLifecycleWaiters =
+        publisherLifecycleWaiters.filter(
+            waiter => waiter.streamId !== streamId
+        );
+}
+
 function waitForPublisherState(
     streamId,
-    timeoutMs = 8000
+    timeoutMs = 30000
 ) {
     if (
         publisherLifecycleStreamId === streamId &&
@@ -72,9 +139,7 @@ function waitForPublisherState(
 
         const timer = setTimeout(() => {
             const index =
-                publisherLifecycleWaiters.indexOf(
-                    waiter
-                );
+                publisherLifecycleWaiters.indexOf(waiter);
 
             if (index >= 0) {
                 publisherLifecycleWaiters.splice(
@@ -84,7 +149,7 @@ function waitForPublisherState(
             }
 
             console.warn(
-                "⏳ Publisher state timeout:",
+                "⏳ Publisher wait timeout:",
                 {
                     streamId,
                     state:
@@ -150,7 +215,7 @@ const TARGET_ASPECT_RATIO = () => CANVAS_W / CANVAS_H; // dynamic
 
 // 🔥 Resolution Profiles
 const RESOLUTION_PROFILES = {
-    LOW:      { width: 640,  height: 480,  fps: 24, bitrate: 800  },
+    LOW:      { width: 640,  height: 360,  fps: 24, bitrate: 800  },
     BALANCED: { width: 1280, height: 720,  fps: 30, bitrate: 2500 },
     HIGH:     { width: 1920, height: 1080, fps: 30, bitrate: 4000 }
 };
@@ -1047,7 +1112,7 @@ function setupNetworkQualityCallback() {
     // ---------------------------------------------------------
     try {
         zg.on(
-            "publisherQualityUpdate",
+            "publishQualityUpdate",
             (streamID, quality) => {
                 if (
                     publishStreamId &&
@@ -1472,6 +1537,12 @@ window.startCustomZegoEngine = async function (
                         }
                     );
 
+                    roomConnectionState = "DISCONNECTED";
+                    roomConnectionError = {
+                        errorCode,
+                        extendedData
+                    };
+                    
                     publisherLifecycleState =
                         "ROOM_DISCONNECTED";
 
@@ -1487,27 +1558,75 @@ window.startCustomZegoEngine = async function (
                         stopPerformanceMonitor();
                     }
 
-                    resolvePublisherWaiters(
-                        publisherLifecycleStreamId,
-                        false
+                    console.warn(
+                        "⏳ ZEGO room disconnected; publisher will remain waiting for SDK reconnect.",
+                        {
+                            roomID: callbackRoomID,
+                            errorCode,
+                            extendedData
+                        }
                     );
 
                     return;
                 }
-
+                
                 // -------------------------------------------------
                 // CONNECTED
                 // -------------------------------------------------
 
                 if (state === "CONNECTED") {
 
-                    console.log(
-                        "🟢 ZEGO ROOM CONNECTED:",
-                        callbackRoomID
+                if (
+                    callbackRoomID !==
+                    window.meetingRoomId
+                ) {
+                    console.warn(
+                        "⚠️ Ignoring CONNECTED event for another room:",
+                        {
+                            callbackRoomID,
+                            expectedRoomID:
+                                window.meetingRoomId
+                        }
                     );
+
+                    return;
                 }
-            }
-        );
+
+                roomConnectionState = "CONNECTED";
+                roomConnectionError = null;
+
+                publisherLifecycleError = null;
+
+                console.log(
+                    "🟢 ZEGO ROOM CONNECTED:",
+                    callbackRoomID
+                );
+
+                const waiters =
+                    roomConnectionWaiters.splice(0);
+
+                for (const waiter of waiters) {
+
+                    try {
+                        waiter.resolve(true);
+                    } catch (e) {
+                        console.warn(
+                            "⚠️ Room waiter resolve failed:",
+                            e
+                        );
+                    }
+                }
+
+                    if (
+                        typeof startPerformanceMonitor ===
+                        "function" &&
+                        zg &&
+                        localStream &&
+                        publishStreamId
+                    ) {
+                        startPerformanceMonitor();
+                    }
+                }
         
 // =====================================================
 // 🔥 3B. PUBLISHER STATE LIFECYCLE
@@ -1625,64 +1744,6 @@ window.startCustomZegoEngine = async function (
                         false
                     );
                 }
-            }
-        );
-        
-// =====================================================
-// 🔥 3C. PUBLISH QUALITY DEBUG
-// =====================================================
-
-        zg.on(
-            "publisherQualityUpdate",
-            (streamID, quality) => {
-
-                console.log(
-                    "📊 ZEGO publisherQualityUpdate:",
-                    {
-                        streamID,
-                        quality
-                    }
-                );
-
-                if (
-                    streamID !== publishStreamId ||
-                    !quality
-                ) {
-                    return;
-                }
-
-                const level =
-                    Number.isFinite(
-                        Number(quality.level)
-                    )
-                        ? Number(quality.level)
-                        : null;
-
-                if (level !== null) {
-
-                    networkQuality =
-                        normalizeZegoNetworkQuality(
-                            level
-                        );
-
-                    lastNetworkQualityUpdate =
-                        Date.now();
-
-                    networkQualitySource =
-                        "publisher-quality";
-                }
-
-                console.log(
-                    "📈 Publish quality metrics:",
-                    {
-                        level,
-                        videoFPS: quality.videoFPS,
-                        videoBitrate: quality.videoBitrate,
-                        videoPacketsLostRate:
-                            quality.videoPacketsLostRate,
-                        rtt: quality.rtt
-                    }
-                );
             }
         );
 
@@ -2200,8 +2261,19 @@ window.startCustomZegoEngine = async function (
             userID +
             "_" +
             Date.now();
+                
+            const roomReady =
+                await waitForRoomConnected(15000);
 
-        publishStream =
+            if (!roomReady) {
+                throw new Error(
+                    `ZEGO room is not CONNECTED before publishing. ` +
+                    `state=${roomConnectionState}, ` +
+                    `error=${JSON.stringify(roomConnectionError)}`
+                );
+            }
+
+            publishStreamId =
             localStream;
 
         console.log(
@@ -2264,7 +2336,7 @@ window.startCustomZegoEngine = async function (
             const publisherReady =
                 await waitForPublisherState(
                     publishStreamId,
-                    12000
+                    30000
                 );
 
             if (!publisherReady) {
@@ -3207,8 +3279,8 @@ function runBlurPass(inputTexture, outputFramebuffer, direction, strength) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
-function runHeavyBlur() {
-    runBlurPass(videoTexture, framebufferA, 'horizontal', 7.0);
+function runHeavyBlur(inputTexture = videoTexture) {
+    runBlurPass(inputTexture, framebufferA, 'horizontal', 7.0);
     runBlurPass(blurTexA, framebufferB, 'vertical', 7.0);
     runBlurPass(blurTexB, framebufferA, 'horizontal', 5.0);
     runBlurPass(blurTexA, framebufferB, 'vertical', 5.0);
@@ -3331,10 +3403,7 @@ function renderFrame() {
 
         if (isBgMode === "blur") {
             // Blur the currentTexture (beauty or raw)
-            runBlurPass(currentTexture, framebufferA, 'horizontal', 7.0);
-            runBlurPass(blurTexA, framebufferB, 'vertical', 7.0);
-            runBlurPass(blurTexB, framebufferA, 'horizontal', 5.0);
-            runBlurPass(blurTexA, framebufferB, 'vertical', 5.0);
+            runHeavyBlur(currentTexture);
             const blurred = blurTexB;
 
             compositeFrame(
@@ -3654,8 +3723,20 @@ async function switchPublishToCanvas() {
 
         publishStream = customZegoStream;
 
-        await zg.startPublishingStream(publishStreamId,customZegoStream);
-        const canvasPublisherReady =await waitForPublisherState(publishStreamId,8000);
+        resetPublisherAttempt(
+            publishStreamId
+        );
+
+        await zg.startPublishingStream(
+            publishStreamId,
+            customZegoStream
+        );
+
+        const canvasPublisherReady =
+            await waitForPublisherState(
+                publishStreamId,
+                30000
+            );
 
         if (!canvasPublisherReady) {
             throw new Error(
