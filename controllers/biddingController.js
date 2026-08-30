@@ -284,9 +284,9 @@ exports.removeVideoParticipant = async (req, res) => {
     }
 };
 
-// ==========================================
-// 🔥 SECURE TOKEN GENERATOR FOR ZEGOCLOUD
-// ==========================================
+// =====================================
+// SECURE TOKEN GENERATOR FOR ZEGOCLOUD 
+// =====================================
 exports.generateZegoToken = async (req, res) => {
     try {
         const access = await getUserAccessDetails(req.user.id, req.user.role);
@@ -301,19 +301,30 @@ exports.generateZegoToken = async (req, res) => {
             return res.status(400).json({ success: false, message: "Missing required info." });
         }
 
-        const appId = parseInt(process.env.ZEGO_APP_ID, 10);
-        const serverSecret = process.env.ZEGO_SERVER_SECRET;
+        // 🔥 FIX 1: Added .trim() to strictly remove any hidden invisible spaces from .env
+        const appId = parseInt(process.env.ZEGO_APP_ID.trim(), 10);
+        const serverSecret = process.env.ZEGO_SERVER_SECRET.trim();
 
         if (!appId || !serverSecret) {
             console.error("Zego App ID or Secret is missing in .env!");
             return res.status(500).json({ success: false, message: "Server config error." });
         }
 
-        const effectiveTimeInSeconds = 3600;
+        const effectiveTimeInSeconds = 3600; // 1 hour validity
 
-        // 🔥 FIX: Use an empty string for the payload. UIKit Prebuilt SDKs often reject complex JSON payloads.
-        const payload = ""; 
+        // 🔥 FIX 2: Added Strict JSON Privilege Payload for Core SDK
+        // Core ZegoExpressEngine strictly requires this to allow room entry & camera publishing
+        const payloadObject = {
+            room_id: room_id,
+            privilege: {
+                1: 1,   // 1 means 'allowed' to login room
+                2: 1    // 1 means 'allowed' to publish video/audio stream
+            },
+            stream_id_list: null
+        };
+        const payload = JSON.stringify(payloadObject); 
 
+        // Generate Token using the exact parameters
         const token = generateToken04(appId, user_id, serverSecret, effectiveTimeInSeconds, payload);
 
         res.json({
