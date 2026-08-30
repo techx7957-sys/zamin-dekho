@@ -1492,17 +1492,20 @@ window.startCustomZegoEngine = async function (
             serverUrl
         );
 
+        window.zg = zg;
+
+        console.log(
+            "🌐 ZEGO engine exposed for diagnostics:",
+            !!window.zg
+        );
+
         window.meetingRoomId = roomID;
 
         console.log("✅ Zego engine instance created.");
 
-        // =====================================================
-        // 🔥 3A. ROOM STATE LIFECYCLE DEBUG
-        // =====================================================
-        // IMPORTANT:
-        // Register immediately after engine creation so we don't
-        // miss CONNECTING / CONNECTED / DISCONNECTED events.
-
+    // =====================================================
+    // 🔥 3A. ROOM STATE LIFECYCLE DEBUG
+    // =====================================================
         zg.on(
             "roomStateUpdate",
             (
@@ -3278,6 +3281,14 @@ function runBlurPass(inputTexture, outputFramebuffer, direction, strength) {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
+
+     function runHeavyBlur(inputTexture = videoTexture){
+        runBlurPass(inputTexture, framebufferA, 'horizontal', 7.0);
+        runBlurPass(blurTexA, framebufferB, 'vertical', 7.0);
+        runBlurPass(blurTexB, framebufferA, 'horizontal', 5.0);
+        runBlurPass(blurTexA, framebufferB, 'vertical', 5.0);
+        return blurTexB;
+    }
 
 // ------------------------------------------------------------
 // MAIN RENDER FUNCTIONS (PATCH 2: intermediate textures)
