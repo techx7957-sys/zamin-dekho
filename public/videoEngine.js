@@ -714,7 +714,7 @@ async function switchOutputProfile(profileName) {
 
         try {
 
-            window.destroyRenderTargets();
+            destroyRenderTargets();
 
             createRenderTargets(
                 CANVAS_W,
@@ -3279,8 +3279,8 @@ function runBlurPass(inputTexture, outputFramebuffer, direction, strength) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
-    function runHeavyBlur() {
-    runBlurPass(videoTexture, framebufferA, 'horizontal', 7.0);
+function runHeavyBlur(inputTexture = videoTexture) {
+    runBlurPass(inputTexture, framebufferA, 'horizontal', 7.0);
     runBlurPass(blurTexA, framebufferB, 'vertical', 7.0);
     runBlurPass(blurTexB, framebufferA, 'horizontal', 5.0);
     runBlurPass(blurTexA, framebufferB, 'vertical', 5.0);
@@ -3403,10 +3403,7 @@ function renderFrame() {
 
         if (isBgMode === "blur") {
             // Blur the currentTexture (beauty or raw)
-            runBlurPass(currentTexture, framebufferA, 'horizontal', 7.0);
-            runBlurPass(blurTexA, framebufferB, 'vertical', 7.0);
-            runBlurPass(blurTexB, framebufferA, 'horizontal', 5.0);
-            runBlurPass(blurTexA, framebufferB, 'vertical', 5.0);
+            runHeavyBlur(currentTexture);
             const blurred = blurTexB;
 
             compositeFrame(
