@@ -714,7 +714,7 @@ async function switchOutputProfile(profileName) {
 
         try {
 
-            destroyRenderTargets();
+            window.destroyRenderTargets();
 
             createRenderTargets(
                 CANVAS_W,
@@ -2870,7 +2870,7 @@ function createRenderTarget(gl, width = CANVAS_W, height = CANVAS_H) {
 }
 
 // 🔥 PATCH 4: Destroy render targets helper
-function destroyRenderTargets() {
+window.destroyRenderTargets = function () {
     const gl = gpu;
     if (!gl) return;
     // Delete old textures and framebuffers
@@ -3279,8 +3279,8 @@ function runBlurPass(inputTexture, outputFramebuffer, direction, strength) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
-function runHeavyBlur(inputTexture = videoTexture) {
-    runBlurPass(inputTexture, framebufferA, 'horizontal', 7.0);
+    function runHeavyBlur() {
+    runBlurPass(videoTexture, framebufferA, 'horizontal', 7.0);
     runBlurPass(blurTexA, framebufferB, 'vertical', 7.0);
     runBlurPass(blurTexB, framebufferA, 'horizontal', 5.0);
     runBlurPass(blurTexA, framebufferB, 'vertical', 5.0);
@@ -3403,7 +3403,10 @@ function renderFrame() {
 
         if (isBgMode === "blur") {
             // Blur the currentTexture (beauty or raw)
-            runHeavyBlur(currentTexture);
+            runBlurPass(currentTexture, framebufferA, 'horizontal', 7.0);
+            runBlurPass(blurTexA, framebufferB, 'vertical', 7.0);
+            runBlurPass(blurTexB, framebufferA, 'horizontal', 5.0);
+            runBlurPass(blurTexA, framebufferB, 'vertical', 5.0);
             const blurred = blurTexB;
 
             compositeFrame(
@@ -4131,26 +4134,37 @@ window.startPerformanceMonitor = function () {
         setInterval(async () => {
 
         // =====================================================
-        // 🔴 CRITICAL LIFECYCLE GUARD
-        // If Zego engine / local stream / publish ID is gone,
-        // DO NOT perform any more quality operations.
+        // LIFECYCLE GUARD
         // =====================================================
-        if (!zg || !localStream || !publishStreamId) {
+            if (
+                !zg ||
+                !localStream ||
+                !publishStreamId ||
+                publisherLifecycleState !== "PUBLISHING"
+            ) {
 
-            console.log(
-                "🛑 Performance monitor stopped:",
-                {
-                    zgExists: !!zg,
-                    localStreamExists: !!localStream,
-                    publishStreamId: publishStreamId || ""
+                console.log(
+                    "⏸️ Performance monitor waiting for active publisher:",
+                    {
+                        zgExists: !!zg,
+                        localStreamExists:
+                            !!localStream,
+                        publishStreamId:
+                            publishStreamId || "",
+                        publisherState:
+                            publisherLifecycleState
+                    }
+                );
+
+                if (
+                    publisherLifecycleState ===
+                        "PUBLISHING"
+                ) {
+                    // continue normally
+                } else {
+                    return;
                 }
-            );
-
-            clearInterval(performanceMonitorInterval);
-            performanceMonitorInterval = null;
-
-            return;
-        }
+            }
 
         // =====================================================
         // FPS CALCULATION
