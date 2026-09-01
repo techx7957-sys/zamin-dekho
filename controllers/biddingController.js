@@ -312,15 +312,14 @@ exports.generateZegoToken = async (req, res) => {
 
         const effectiveTimeInSeconds = 3600; // 1 hour validity
 
-        // 🔥 FIX 2: Added Strict JSON Privilege Payload for Core SDK
+        // 🔥 FIX 2: Added Strict JSON Privilege Payload for Core SDK (Removed stream_id_list entirely)
         // Core ZegoExpressEngine strictly requires this to allow room entry & camera publishing
         const payloadObject = {
             room_id: room_id,
             privilege: {
                 1: 1,   // 1 means 'allowed' to login room
                 2: 1    // 1 means 'allowed' to publish video/audio stream
-            },
-            stream_id_list: null
+            }
         };
         const payload = JSON.stringify(payloadObject); 
 
