@@ -489,6 +489,7 @@
             let meetingRoomId = "zamin_room_1"; 
             let hasChatAccess = false;
             let hasVideoAccess = false;
+            let customVideoStartInProgress = false;
 
             function switchMode(mode) {
                 document.body.setAttribute("data-mode", mode);
@@ -602,10 +603,16 @@
             // 📹 CORE ENGINE LAUNCHER (Replaces Prebuilt)
             // ==========================================
             window.initCustomVideoCall = async function() {
+                if (customVideoStartInProgress) {
+                    return;
+                }
+
                 if (!hasVideoAccess && currentUser.role !== 'admin') {
                     Swal.fire({ icon: 'error', title: 'Restricted', text: 'You do not have permission to join the video call.' });
                     return;
                 }
+
+                customVideoStartInProgress = true;
 
                 // Hide pre-join, show custom UI wrapper
                 document.getElementById('preJoinScreen').style.display = 'none';
@@ -633,9 +640,9 @@
                     if (!data.success) throw new Error(data.message || "Failed to retrieve secure video token.");
 
                     // 2. Pass control to our new videoEngine.js file
-                    if (typeof startCustomZegoEngine === 'function') {
+                    if (typeof window.startCustomZegoEngine === 'function') {
                         // This function will be defined in videoEngine.js
-                        await startCustomZegoEngine(data.appId, data.token, meetingRoomId, myShortId, userName);
+                        await window.startCustomZegoEngine(data.appId, data.token, meetingRoomId, myShortId, userName);
                     } else {
                         throw new Error("videoEngine.js file not loaded properly.");
                     }
@@ -652,6 +659,8 @@
                             </button>
                         </div>
                     `;
+                } finally {
+                    customVideoStartInProgress = false;
                 }
             };
 

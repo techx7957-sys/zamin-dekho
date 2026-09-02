@@ -25,6 +25,56 @@ let publisherLifecycleWaiters = [];
 let roomConnectionState = "DISCONNECTED";
 let roomConnectionError = null;
 let roomConnectionWaiters = [];
+let engineStartPromise = null;
+let engineSessionId = 0;
+let engineEventBindings = [];
+let remoteStreamIds = new Set();
+let remoteRevealTimers = new Map();
+let leavePromise = null;
+
+function resolveRoomWaiters(success) {
+    const waiters = roomConnectionWaiters.splice(0);
+    for (const waiter of waiters) {
+        try {
+            waiter.resolve(success);
+        } catch (e) {
+            console.warn("⚠️ Room waiter resolve failed:", e);
+        }
+    }
+}
+
+function unbindEngineEvents(engine = zg) {
+    if (!engine || typeof engine.off !== "function") {
+        engineEventBindings = [];
+        return;
+    }
+
+    for (const binding of engineEventBindings) {
+        try {
+            engine.off(binding.eventName, binding.handler);
+        } catch (e) {
+            console.warn("⚠️ ZEGO event cleanup failed:", binding.eventName, e);
+        }
+    }
+
+    engineEventBindings = [];
+}
+
+function bindEngineEvent(engine, eventName, handler) {
+    if (!engine || typeof engine.on !== "function") {
+        throw new Error(`ZEGO event API unavailable for ${eventName}.`);
+    }
+
+    engine.on(eventName, handler);
+    engineEventBindings.push({ eventName, handler });
+}
+
+function clearRemoteRevealTimers() {
+    for (const timer of remoteRevealTimers.values()) {
+        clearTimeout(timer);
+    }
+    remoteRevealTimers.clear();
+}
 
 function waitForRoomConnected(timeoutMs = 15000) {
 
@@ -105,6 +155,17 @@ function resolvePublisherWaiters(
                 "⚠️ Publisher waiter resolve failed:",
                 e
             );
+        }
+    }
+}
+
+function rejectAllPublisherWaiters() {
+    const waiters = publisherLifecycleWaiters.splice(0);
+    for (const waiter of waiters) {
+        try {
+            waiter.resolve(false);
+        } catch (e) {
+            console.warn("⚠️ Publisher waiter cleanup failed:", e);
         }
     }
 }
@@ -413,14 +474,18 @@ function enableAGC(zegoInstance) {
                 return false;
             }
 
-            const videoConfig =
-                typeof engine.getVideoConfig === "function"
-                    ? engine.getVideoConfig()
-                    : {};
+            const streamForConfig =
+                publishStream || localStream;
+
+            if (!streamForConfig) {
+                console.warn(
+                    "⏭️ Bitrate update skipped: no published Zego stream."
+                );
+                return false;
+            }
 
             const nextConfig = {
-                ...videoConfig,
-                bitrate: numericBitrate
+                maxBitrate: numericBitrate
             };
 
             if (
@@ -449,6 +514,7 @@ function enableAGC(zegoInstance) {
 
                 const result =
                     await engine.setVideoConfig(
+                        streamForConfig,
                         nextConfig
                     );
 
@@ -1111,7 +1177,8 @@ function setupNetworkQualityCallback() {
     // 1. Preferred publisher-quality event
     // ---------------------------------------------------------
     try {
-        zg.on(
+        bindEngineEvent(
+            zg,
             "publishQualityUpdate",
             (streamID, quality) => {
                 if (
@@ -1416,7 +1483,7 @@ function createZoomSliderUI() {
 // =========================================
 // 4. ENGINE START FUNCTION
 // =========================================
-window.startCustomZegoEngine = async function (
+async function startCustomZegoEngineInternal(
     appId,
     token,
     roomID,
@@ -1431,7 +1498,16 @@ window.startCustomZegoEngine = async function (
         // 0. BASIC VALIDATION
         // =====================================================
 
-        if (!appId || !token || !roomID || !userID) {
+        if (
+            !Number.isFinite(Number(appId)) ||
+            Number(appId) <= 0 ||
+            typeof token !== "string" ||
+            token.length < 16 ||
+            typeof roomID !== "string" ||
+            !roomID.trim() ||
+            typeof userID !== "string" ||
+            !userID.trim()
+        ) {
             throw new Error(
                 "Invalid Zego connection parameters."
             );
@@ -1492,6 +1568,18 @@ window.startCustomZegoEngine = async function (
             serverUrl
         );
 
+        const engine = zg;
+        const thisSessionId = ++engineSessionId;
+        const isCurrentSession = () =>
+            thisSessionId === engineSessionId && zg === engine;
+
+        roomConnectionState = "CONNECTING";
+        roomConnectionError = null;
+        publisherLifecycleState = "IDLE";
+        publisherLifecycleStreamId = "";
+        publisherLifecycleError = null;
+        rejectAllPublisherWaiters();
+
         window.meetingRoomId = roomID;
 
         console.log("✅ Zego engine instance created.");
@@ -1503,7 +1591,8 @@ window.startCustomZegoEngine = async function (
         // Register immediately after engine creation so we don't
         // miss CONNECTING / CONNECTED / DISCONNECTED events.
 
-        zg.on(
+        bindEngineEvent(
+            zg,
             "roomStateUpdate",
             (
                 callbackRoomID,
@@ -1511,6 +1600,7 @@ window.startCustomZegoEngine = async function (
                 errorCode,
                 extendedData
             ) => {
+                if (!isCurrentSession()) return;
 
                 console.log(
                     "🔎 ZEGO roomStateUpdate:",
@@ -1542,6 +1632,7 @@ window.startCustomZegoEngine = async function (
                         errorCode,
                         extendedData
                     };
+                    resolveRoomWaiters(false);
                     
                     publisherLifecycleState =
                         "ROOM_DISCONNECTED";
@@ -1552,10 +1643,10 @@ window.startCustomZegoEngine = async function (
                     };
 
                     if (
-                        typeof stopPerformanceMonitor ===
+                        typeof window.stopPerformanceMonitor ===
                         "function"
                     ) {
-                        stopPerformanceMonitor();
+                        window.stopPerformanceMonitor();
                     }
 
                     console.warn(
@@ -1602,20 +1693,7 @@ window.startCustomZegoEngine = async function (
                     callbackRoomID
                 );
 
-                const waiters =
-                    roomConnectionWaiters.splice(0);
-
-                for (const waiter of waiters) {
-
-                    try {
-                        waiter.resolve(true);
-                    } catch (e) {
-                        console.warn(
-                            "⚠️ Room waiter resolve failed:",
-                            e
-                        );
-                    }
-                }
+                resolveRoomWaiters(true);
 
                     if (
                         typeof startPerformanceMonitor ===
@@ -1624,15 +1702,18 @@ window.startCustomZegoEngine = async function (
                         localStream &&
                         publishStreamId
                     ) {
-                        startPerformanceMonitor();
+                        window.startPerformanceMonitor();
                     }
                 }
+            }
+        );
         
 // =====================================================
 // 🔥 3B. PUBLISHER STATE LIFECYCLE
 // =====================================================
 
-        zg.on(
+        bindEngineEvent(
+            zg,
             "publisherStateUpdate",
             (
                 streamID,
@@ -1640,6 +1721,7 @@ window.startCustomZegoEngine = async function (
                 errorCode,
                 extendedData
             ) => {
+                if (!isCurrentSession()) return;
 
                 const matches =
                     streamID === publishStreamId;
@@ -1751,7 +1833,8 @@ window.startCustomZegoEngine = async function (
         // 4. REMOTE STREAM EVENT LISTENER
         // =====================================================
 
-        zg.on(
+        bindEngineEvent(
+            zg,
             "roomStreamUpdate",
             async (
                 callbackRoomID,
@@ -1759,6 +1842,7 @@ window.startCustomZegoEngine = async function (
                 streamList,
                 extendedData
             ) => {
+                if (!isCurrentSession()) return;
 
                 console.log(
                     "🔎 ZEGO roomStreamUpdate:",
@@ -1800,6 +1884,8 @@ window.startCustomZegoEngine = async function (
                         if (!streamInfo?.streamID) {
                             continue;
                         }
+
+                        remoteStreamIds.add(streamInfo.streamID);
 
                         console.log(
                             "🎥 Remote Stream Added:",
@@ -1926,7 +2012,7 @@ window.startCustomZegoEngine = async function (
                             }
                         }
 
-                        setTimeout(() => {
+                        const revealTimer = setTimeout(() => {
 
                             if (
                                 remoteVideo &&
@@ -1935,8 +2021,13 @@ window.startCustomZegoEngine = async function (
                                 remoteVideo.style.opacity =
                                     "1";
                             }
+                            remoteRevealTimers.delete(streamInfo.streamID);
 
                         }, 200);
+                        remoteRevealTimers.set(
+                            streamInfo.streamID,
+                            revealTimer
+                        );
                     }
                 }
 
@@ -1950,6 +2041,26 @@ window.startCustomZegoEngine = async function (
 
                         if (!streamInfo?.streamID) {
                             continue;
+                        }
+
+                        remoteStreamIds.delete(streamInfo.streamID);
+                        const revealTimer =
+                            remoteRevealTimers.get(streamInfo.streamID);
+                        if (revealTimer) {
+                            clearTimeout(revealTimer);
+                            remoteRevealTimers.delete(streamInfo.streamID);
+                        }
+
+                        if (zg && typeof zg.stopPlayingStream === "function") {
+                            try {
+                                await zg.stopPlayingStream(streamInfo.streamID);
+                            } catch (e) {
+                                console.warn(
+                                    "⚠️ Remote stream stop warning:",
+                                    streamInfo.streamID,
+                                    e
+                                );
+                            }
                         }
 
                         console.log(
@@ -2273,8 +2384,7 @@ window.startCustomZegoEngine = async function (
                 );
             }
 
-            publishStreamId =
-            localStream;
+        publishStream = localStream;
 
         console.log(
             "📡 Starting publish:",
@@ -2346,11 +2456,6 @@ window.startCustomZegoEngine = async function (
                 );
             }
 
-            console.log(
-                "🟢 ZEGO publisher reached PUBLISHING:",
-                publishStreamId
-            );
-            
             console.log(
                 "🟢 ZEGO publisher reached PUBLISHING:",
                 publishStreamId
@@ -2499,6 +2604,17 @@ window.startCustomZegoEngine = async function (
             error
         );
 
+        if (zg || localStream || publishStream) {
+            try {
+                await leaveRoom();
+            } catch (cleanupError) {
+                console.warn(
+                    "⚠️ Startup failure cleanup failed:",
+                    cleanupError
+                );
+            }
+        }
+
         let displayMessage =
             error?.message ||
             "Unknown video engine error.";
@@ -2520,6 +2636,7 @@ window.startCustomZegoEngine = async function (
             );
 
         if (wrapper) {
+            wrapper.style.display = "block";
 
             wrapper.innerHTML = `
                 <div
@@ -2560,7 +2677,39 @@ window.startCustomZegoEngine = async function (
                 </div>
             `;
         }
+
+        throw error;
     }
+}
+
+window.startCustomZegoEngine = function (
+    appId,
+    token,
+    roomID,
+    userID,
+    userName
+) {
+    if (engineStartPromise) {
+        console.log("ℹ️ ZEGO engine start already in progress.");
+        return engineStartPromise;
+    }
+
+    if (zg || localStream || roomConnectionState !== "DISCONNECTED") {
+        console.log("ℹ️ ZEGO engine is already active.");
+        return Promise.resolve(true);
+    }
+
+    engineStartPromise = startCustomZegoEngineInternal(
+        appId,
+        token,
+        roomID,
+        userID,
+        userName
+    ).finally(() => {
+        engineStartPromise = null;
+    });
+
+    return engineStartPromise;
 };
 
 // =========================================
@@ -2839,8 +2988,13 @@ function createProgram(gl, vertexSource, fragmentSource) {
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
         console.error("Program link error:", gl.getProgramInfoLog(program));
+        gl.deleteProgram(program);
+        gl.deleteShader(vertexShader);
+        gl.deleteShader(fragmentShader);
         return null;
     }
+    gl.deleteShader(vertexShader);
+    gl.deleteShader(fragmentShader);
     return program;
 }
 
@@ -2905,6 +3059,64 @@ function createRenderTargets(width, height) {
     const beautyTarget = createRenderTarget(gl, width, height);
     beautyTexture = beautyTarget.texture;
     beautyFramebuffer = beautyTarget.framebuffer;
+}
+
+function destroyGPUResources() {
+    const gl = gpu;
+    if (!gl) {
+        gpuReady = false;
+        return;
+    }
+
+    try {
+        destroyRenderTargets();
+
+        [
+            videoTexture,
+            maskTexture,
+            prevMaskTexture,
+            bgImageTexture,
+            maskRawTexture,
+            faceMaskTexture
+        ].forEach(texture => {
+            if (texture) gl.deleteTexture(texture);
+        });
+
+        [
+            gpuProgram,
+            blurProgram,
+            compositeProgram,
+            imageCompositeProgram,
+            beautyProgram,
+            maskRefineProgram
+        ].forEach(program => {
+            if (program) gl.deleteProgram(program);
+        });
+
+        [gpuPositionBuffer, gpuTexCoordBuffer].forEach(buffer => {
+            if (buffer) gl.deleteBuffer(buffer);
+        });
+    } catch (e) {
+        console.warn("⚠️ GPU resource cleanup failed:", e);
+    } finally {
+        videoTexture = null;
+        maskTexture = null;
+        prevMaskTexture = null;
+        bgImageTexture = null;
+        maskRawTexture = null;
+        faceMaskTexture = null;
+        gpuProgram = null;
+        blurProgram = null;
+        compositeProgram = null;
+        imageCompositeProgram = null;
+        beautyProgram = null;
+        maskRefineProgram = null;
+        gpuPositionBuffer = null;
+        gpuTexCoordBuffer = null;
+        faceMaskCanvas = null;
+        gpuReady = false;
+        gpu = null;
+    }
 }
 
 // ============================================================
@@ -3279,8 +3491,8 @@ function runBlurPass(inputTexture, outputFramebuffer, direction, strength) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
-    function runHeavyBlur({
-    runBlurPass(videoTexture, framebufferA, 'horizontal', 7.0);
+function runHeavyBlur(inputTexture = videoTexture) {
+    runBlurPass(inputTexture, framebufferA, 'horizontal', 7.0);
     runBlurPass(blurTexA, framebufferB, 'vertical', 7.0);
     runBlurPass(blurTexB, framebufferA, 'horizontal', 5.0);
     runBlurPass(blurTexA, framebufferB, 'vertical', 5.0);
@@ -3403,10 +3615,7 @@ function renderFrame() {
 
         if (isBgMode === "blur") {
             // Blur the currentTexture (beauty or raw)
-            runBlurPass(currentTexture, framebufferA, 'horizontal', 7.0);
-            runBlurPass(blurTexA, framebufferB, 'vertical', 7.0);
-            runBlurPass(blurTexB, framebufferA, 'horizontal', 5.0);
-            runBlurPass(blurTexA, framebufferB, 'vertical', 5.0);
+            runHeavyBlur(currentTexture);
             const blurred = blurTexB;
 
             compositeFrame(
@@ -3648,16 +3857,43 @@ async function startAIPipeline() {
         scheduleNextVideoFrame();
 
     } catch (e) {
-        console.error("❌ AI Pipeline failed. Using fallback rendering loop!", e);
-        ensurePipelineElements();
-        if (localStream && localStream.getVideoTracks().length > 0) {
-            const fallbackStream = new MediaStream([localStream.getVideoTracks()[0]]);
-            rawVideoEl.srcObject = fallbackStream;
-            await rawVideoEl.play().catch(() => {});
+        console.error("❌ AI pipeline unavailable:", e);
+        pipelineRunning = false;
+
+        if (videoFrameCallbackId && rawVideoEl?.cancelVideoFrameCallback) {
+            try {
+                rawVideoEl.cancelVideoFrameCallback(videoFrameCallbackId);
+            } catch (cancelError) {
+                console.warn("⚠️ AI frame callback cleanup failed:", cancelError);
+            }
+            videoFrameCallbackId = null;
         }
-        pipelineRunning = true;
-        scheduleNextVideoFrame();
-        await switchPublishToCanvas();
+
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+
+        if (fallbackTimeoutId) {
+            clearTimeout(fallbackTimeoutId);
+            fallbackTimeoutId = null;
+        }
+
+        if (canvasStream) {
+            canvasStream.getVideoTracks?.().forEach(track => track.stop());
+            canvasStream = null;
+        }
+
+        if (rawVideoEl) {
+            try {
+                rawVideoEl.pause();
+                rawVideoEl.srcObject = null;
+            } catch (videoError) {
+                console.warn("⚠️ AI preview cleanup failed:", videoError);
+            }
+        }
+
+        throw e;
     }
 }
 
@@ -3691,7 +3927,6 @@ async function switchPublishToCanvas() {
         canvasStream = canvasCaptureStream;
 
         const audioTrack = localStream.getAudioTracks()[0];
-        if (audioTrack) canvasStream.addTrack(audioTrack);
 
         const canvasVideoTrack = canvasStream.getVideoTracks()[0];
         if (!canvasVideoTrack) throw new Error("GPU canvas did not produce a video track.");
@@ -3710,25 +3945,27 @@ async function switchPublishToCanvas() {
             customZegoStream = null;
         }
 
-        customZegoStream =await zg.createZegoStream({
-                videoBitrate:canvasProfile.bitrate,
-                custom: {
-                    video: {
-                        source: canvasStream
-                    },
-                    audio: {
-                        source: canvasStream
-                    }
-                }
-            });
+        const customSource = {
+            video: {
+                source: canvasStream
+            }
+        };
+
+        if (audioTrack) {
+            customSource.audio = {
+                source: new MediaStream([audioTrack])
+            };
+        }
+
+        customZegoStream = await zg.createZegoStream({
+            custom: customSource
+        });
 
         if (!customZegoStream) throw new Error("Zego custom stream creation failed.");
 
         publishStream = customZegoStream;
 
-        resetPublisherAttempt(
-            publishStreamId
-        );
+        resetPublisherAttempt(publishStreamId);
 
         await zg.startPublishingStream(
             publishStreamId,
@@ -3768,6 +4005,7 @@ async function switchPublishToCanvas() {
     } catch (e) {
         console.error("❌ GPU canvas publish failed:", e);
         publishStream = localStream;
+        resetPublisherAttempt(publishStreamId);
         await zg.startPublishingStream(
             publishStreamId,
             localStream
@@ -3945,7 +4183,13 @@ function refreshMicCamButtonUI() {
 }
 
 window.setupControls = function () {
-    document.getElementById('btn-mic').onclick = async function () {
+    const micBtn = document.getElementById('btn-mic');
+    const camBtn = document.getElementById('btn-cam');
+    const beautyBtn = document.getElementById('btn-beauty');
+    const bgBtn = document.getElementById('btn-bg');
+    const leaveBtn = document.getElementById('btn-leave');
+
+    if (micBtn) micBtn.onclick = async function () {
         try {
             if (!localStream || !zg) return;
             const nextState = !isMicOn;
@@ -3970,7 +4214,7 @@ window.setupControls = function () {
         } catch (e) { console.error("Mic toggle error:", e); }
     };
 
-    document.getElementById('btn-cam').onclick = async function () {
+    if (camBtn) camBtn.onclick = async function () {
         try {
             if (!localStream || !zg) return;
             const nextState = !isCamOn;
@@ -3994,7 +4238,7 @@ window.setupControls = function () {
         } catch (e) { console.error("Camera toggle error:", e); }
     };
 
-    document.getElementById('btn-beauty').onclick = async function () {
+    if (beautyBtn) beautyBtn.onclick = async function () {
         const btn = this;
         try {
             if (!localStream) return;
@@ -4023,7 +4267,7 @@ window.setupControls = function () {
         }
     };
 
-    document.getElementById('btn-bg').onclick = async function () {
+    if (bgBtn) bgBtn.onclick = async function () {
         const btn = this;
         try {
             if (!localStream) return;
@@ -4039,7 +4283,7 @@ window.setupControls = function () {
         } catch (e) { console.error("BG toggle error:", e); }
     };
 
-    document.getElementById('btn-leave').onclick = leaveRoom;
+    if (leaveBtn) leaveBtn.onclick = leaveRoom;
 }
 
 // =========================================
@@ -4236,7 +4480,7 @@ window.startPerformanceMonitor = function () {
 // STOP PERFORMANCE MONITOR
 // =========================================
 
-  function stopPerformanceMonitor() {
+window.stopPerformanceMonitor = function stopPerformanceMonitor() {
 
     if (performanceMonitorInterval) {
 
@@ -4248,13 +4492,13 @@ window.startPerformanceMonitor = function () {
             "🛑 Performance monitor stopped."
         );
     }
-}
+};
 
 // =========================================
 // 10. LEAVE ROOM & CLEANUP
 // =========================================
 
-async function leaveRoom() {
+async function performLeaveRoom() {
 
     console.log("🚪 Leaving room...");
 
@@ -4262,7 +4506,7 @@ async function leaveRoom() {
     // 🔴 STEP 1 — STOP BACKGROUND MONITOR FIRST
     // =====================================================
 
-    stopPerformanceMonitor();
+    window.stopPerformanceMonitor();
 
     // Prevent quality evaluation / resolution switching
     // while cleanup is happening.
@@ -4376,6 +4620,16 @@ async function leaveRoom() {
         customZegoStream;
     const streamId = publishStreamId;
     const roomId = window.meetingRoomId;
+    const remoteIds = Array.from(remoteStreamIds);
+
+    // Invalidate callbacks before mutating shared state so late SDK
+    // events cannot revive a room that is being torn down.
+    engineSessionId++;
+    unbindEngineEvents(engine);
+    clearRemoteRevealTimers();
+    remoteStreamIds.clear();
+    resolveRoomWaiters(false);
+    rejectAllPublisherWaiters();
 
     // =====================================================
     // STEP 8 — CLEAR GLOBAL ZEGO STATE EARLY
@@ -4412,6 +4666,20 @@ async function leaveRoom() {
                 "⚠️ stopPublishingStream failed:",
                 e
             );
+        }
+    }
+
+    if (engine && typeof engine.stopPlayingStream === "function") {
+        for (const remoteId of remoteIds) {
+            try {
+                await engine.stopPlayingStream(remoteId);
+            } catch (e) {
+                console.warn(
+                    "⚠️ stopPlayingStream cleanup failed:",
+                    remoteId,
+                    e
+                );
+            }
         }
     }
 
@@ -4459,6 +4727,15 @@ async function leaveRoom() {
                 e
             );
         }
+
+        try {
+            stream.getTracks?.().forEach(track => track.stop());
+        } catch (e) {
+            console.warn(
+                "⚠️ Local media track cleanup failed:",
+                e
+            );
+        }
     }
 
     // =====================================================
@@ -4487,6 +4764,40 @@ async function leaveRoom() {
         }
     }
 
+    if (engine && typeof engine.destroyEngine === "function") {
+        try {
+            engine.destroyEngine();
+            console.log("✅ ZEGO engine destroyed.");
+        } catch (e) {
+            console.warn(
+                "⚠️ ZEGO engine destroy failed:",
+                e
+            );
+        }
+    }
+
+    if (rawVideoEl) {
+        try {
+            rawVideoEl.pause();
+            rawVideoEl.srcObject = null;
+            rawVideoEl.remove();
+        } catch (e) {
+            console.warn("⚠️ Hidden video cleanup failed:", e);
+        }
+        rawVideoEl = null;
+    }
+
+    destroyGPUResources();
+
+    if (outCanvas) {
+        try {
+            outCanvas.remove();
+        } catch (e) {
+            console.warn("⚠️ Output canvas cleanup failed:", e);
+        }
+        outCanvas = null;
+    }
+
     // =====================================================
     // STEP 12 — CLEAR REMAINING STREAM REFERENCES
     // =====================================================
@@ -4507,6 +4818,15 @@ async function leaveRoom() {
     isBgMode = "none";
 
     currentZoom = 1.0;
+    requestedZoom = 1.0;
+    hardwareZoomApplied = 1.0;
+    digitalZoom = 1.0;
+    zoomSliderElement = null;
+    roomConnectionState = "DISCONNECTED";
+    roomConnectionError = null;
+    publisherLifecycleState = "IDLE";
+    publisherLifecycleStreamId = "";
+    publisherLifecycleError = null;
 
     // =====================================================
     // STEP 14 — CLEAR LOCAL VIDEO ELEMENT
@@ -4653,28 +4973,16 @@ async function leaveRoom() {
         "✅ Successfully left the meeting."
     );
 
-    // =====================================================
-    // STEP 23 — SAFETY UI CHECK
-    // =====================================================
+}
 
-    setTimeout(() => {
+async function leaveRoom() {
+    if (leavePromise) {
+        return leavePromise;
+    }
 
-        const wrapper =
-            document.getElementById(
-                "custom-video-wrapper"
-            );
+    leavePromise = performLeaveRoom().finally(() => {
+        leavePromise = null;
+    });
 
-        if (
-            wrapper &&
-            wrapper.style.display !== "none"
-        ) {
-
-            console.warn(
-                "⚠️ UI cleanup failed, forcing page reload."
-            );
-
-            location.reload();
-        }
-
-    }, 500);
+    return leavePromise;
 }

@@ -4,9 +4,9 @@ const User = require("../models/User");
 // 🔥 Apni local ZegoCloud Token Generator file use kar rahe hain
 const { generateToken04 } = require("./zegoToken"); 
 
-// ==========================================
+// ==============================================
 // 🛡️ HELPER: Check User Access (DUAL WHITELIST)
-// ==========================================
+// ==============================================
 async function getUserAccessDetails(userId, role) {
     if (role === 'admin') {
         return { isAllowed: true, defaultView: 'chat', hasChatAccess: true, hasVideoAccess: true };
@@ -35,9 +35,9 @@ async function findUserSafely(accountId) {
     }
 }
 
-// ==========================================
+// ================================================
 // 🛡️ SECURITY & ACCESS ROUTE (SMART DEFAULT VIEW)
-// ==========================================
+// ================================================
 exports.checkAccess = async (req, res) => {
     try {
         const accessDetails = await getUserAccessDetails(req.user.id, req.user.role);
