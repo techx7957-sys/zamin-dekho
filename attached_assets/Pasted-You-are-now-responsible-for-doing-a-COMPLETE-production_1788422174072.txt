@@ -1,0 +1,816 @@
+You are now responsible for doing a COMPLETE production-grade audit, repair,
+refactor and upgrade of my Zamin Dekho video calling engine.
+
+DO NOT make superficial fixes.
+DO NOT hide errors with try/catch.
+DO NOT comment out broken code.
+DO NOT disable features just to make the console green.
+DO NOT create duplicate fallback implementations when a real implementation
+already exists.
+DO NOT randomly rewrite working parts.
+
+FIRST inspect the ENTIRE repository and understand the existing architecture.
+
+============================================================
+🚨 CURRENT BLOCKING ERRORS
+============================================================
+
+Chrome DevTools currently shows:
+
+1.
+Uncaught SyntaxError:
+await is only valid in async functions and the top level of modules
+videoEngine.js:2012:9
+
+2.
+Video Engine Launch Error:
+Error: videoEngine.js file not loaded properly.
+at window.initCustomVideoCall (bidding.html:640:31)
+
+The second error is very likely a downstream consequence of the syntax error,
+because videoEngine.js fails to parse/load.
+
+Find the EXACT code around videoEngine.js line 2012 and determine why an
+await exists outside a valid async function/module context.
+
+Fix the ROOT CAUSE properly.
+
+Do NOT simply remove await.
+Determine whether that operation belongs inside an async lifecycle function,
+whether the surrounding function should be async, or whether the architecture
+needs to change.
+
+After fixing it, verify the entire file parses successfully.
+
+============================================================
+🎯 MAIN OBJECTIVE
+============================================================
+
+Turn the existing Zamin Dekho video engine into a genuinely
+production-grade, professional video-call engine.
+
+The target is:
+
+- stable
+- low latency
+- smooth
+- resource efficient
+- predictable
+- maintainable
+- properly event driven
+- properly integrated with ZEGO
+- no fake implementations
+- no duplicate handlers
+- no stale state
+- no race conditions
+- no console errors
+
+The goal is NOT to copy Zoom's proprietary code.
+
+The goal is to achieve a professional video-call experience using the
+APIs and technologies that are actually available in this project.
+
+============================================================
+🔍 STEP 1 — COMPLETE CODEBASE AUDIT
+============================================================
+
+Inspect the ENTIRE repository before changing architecture.
+
+Especially inspect:
+
+- videoEngine.js
+- bidding.html
+- all ZEGO initialization code
+- ZEGO SDK loading
+- room login/logout
+- camera initialization
+- microphone initialization
+- MediaStream creation
+- canvas processing
+- WebGL/WebGL2 processing
+- MediaPipe
+- FaceMesh
+- Selfie Segmentation
+- background blur
+- background replacement
+- beauty processing
+- zoom
+- auto framing
+- adaptive resolution
+- FPS control
+- bitrate control
+- network quality
+- publisher lifecycle
+- remote stream handling
+- cleanup
+- reconnect
+- start/stop camera
+- mute/unmute
+- call start/end
+- DOM event handlers
+
+Search the whole repository for every occurrence of:
+
+- startCustomZegoEngine
+- initCustomVideoCall
+- startPublishingStream
+- stopPublishingStream
+- publisherStateUpdate
+- roomStateUpdate
+- roomStateChanged
+- roomStreamUpdate
+- localStream
+- publishStream
+- publishStreamId
+- createStream
+- setVideoConfig
+- setPublishConfig
+- zoom
+- beauty
+- blur
+- segmentation
+- FaceMesh
+- MediaPipe
+- WebGL
+- canvas
+- getUserMedia
+- addEventListener
+- onclick
+- on*
+- setInterval
+- setTimeout
+
+Build a mental map of which function owns each responsibility.
+
+============================================================
+🧹 STEP 2 — REMOVE DUPLICATE / CONFLICTING LOGIC
+============================================================
+
+Find and eliminate duplicate implementations.
+
+There must be ONE authoritative implementation for each responsibility.
+
+Examples:
+
+ONE:
+- ZEGO engine instance
+
+ONE:
+- room login lifecycle
+
+ONE:
+- local camera stream lifecycle
+
+ONE:
+- processed/publish stream lifecycle
+
+ONE:
+- publisher lifecycle listener
+
+ONE:
+- room lifecycle listener
+
+ONE:
+- zoom controller
+
+ONE:
+- background processing pipeline
+
+ONE:
+- beauty pipeline
+
+ONE:
+- cleanup routine
+
+ONE:
+- adaptive quality controller
+
+ONE:
+- network quality controller
+
+ONE:
+- camera start/stop controller
+
+ONE:
+- microphone start/stop controller
+
+Remove duplicate event listeners.
+
+Remove repeated:
+addEventListener(...)
+zg.on(...)
+setInterval(...)
+setTimeout(...)
+observers
+animation loops
+WebGL render loops
+
+Make initialization idempotent.
+
+If startCustomZegoEngine() is called twice, it must NOT create two engines,
+two cameras, two pipelines, two publisher listeners or two render loops.
+
+============================================================
+🎥 STEP 3 — BUILD A CORRECT MEDIA LIFECYCLE
+============================================================
+
+Establish one authoritative lifecycle:
+
+Camera/device
+    ↓
+Raw MediaStream
+    ↓
+Processing pipeline
+    ↓
+Processed MediaStream
+    ↓
+ZEGO publisher
+    ↓
+Remote users
+
+Never confuse:
+
+- raw camera MediaStream
+- processed MediaStream
+- ZEGO ZegoLocalStream
+- published stream ID
+
+Do not assume that window.localStream is always a native MediaStream.
+
+Verify the actual object returned by the installed ZEGO SDK.
+
+Track:
+
+- stream identity
+- MediaStream active state
+- audio tracks
+- video tracks
+- track.readyState
+- track.enabled
+- track.onended
+- track.onmute
+- track.onunmute
+
+Handle device disappearance and track ending correctly.
+
+============================================================
+📡 STEP 4 — FIX ZEGO PUBLISHER LIFECYCLE
+============================================================
+
+Use the actual ZEGO SDK API version installed in this repository.
+
+Do NOT invent APIs.
+
+Do NOT assume an API exists because another ZEGO version has it.
+
+Verify every API against the installed SDK.
+
+Publisher lifecycle should correctly handle:
+
+NO_PUBLISH
+    ↓
+PUBLISH_REQUESTING
+    ↓
+PUBLISHING
+
+and failures/retries.
+
+Do not treat a custom timeout as proof that ZEGO publishing failed.
+
+If PUBLISH_REQUESTING lasts too long:
+
+1. inspect room state
+2. inspect network state
+3. inspect stream state
+4. inspect SDK error code
+5. inspect extendedData
+6. determine the real reason
+7. then fail/retry appropriately
+
+Do not blindly throw:
+
+"ZEGO publisher failed"
+
+just because an arbitrary timer expired.
+
+Use actual publisherStateUpdate information.
+
+============================================================
+🏠 STEP 5 — ROOM LIFECYCLE
+============================================================
+
+Implement a clean room lifecycle:
+
+ENGINE_CREATED
+ROOM_LOGIN_REQUESTING
+ROOM_LOGINED
+ROOM_DISCONNECTED
+ROOM_RECONNECTING
+ROOM_RECONNECTED
+ROOM_LOGGED_OUT
+ENGINE_DESTROYED
+
+Handle reconnect safely.
+
+Do not create a second engine during reconnect.
+
+Do not republish duplicate streams.
+
+Do not leave stale publisher state after logout.
+
+============================================================
+📹 STEP 6 — CAMERA + MICROPHONE
+============================================================
+
+Camera and microphone must be controlled independently.
+
+Support:
+
+camera ON
+camera OFF
+microphone ON
+microphone OFF
+
+Do not unnecessarily destroy and recreate the whole engine when only camera
+mute/unmute is needed.
+
+Handle:
+
+- permission denied
+- device unavailable
+- track ended
+- device changed
+- browser permission changes
+
+Use actual browser MediaStream APIs and actual ZEGO APIs.
+
+============================================================
+🔍 STEP 7 — PROFESSIONAL ZOOM SYSTEM
+============================================================
+
+Implement ONE zoom controller.
+
+Never apply hardware zoom AND digital zoom simultaneously unless the
+architecture explicitly requires a controlled combined zoom calculation.
+
+Prefer:
+
+1. Camera hardware zoom when supported.
+2. Digital/GPU zoom only for the remaining required zoom.
+3. No accidental double magnification.
+
+Detect actual camera capabilities where supported:
+
+track.getCapabilities()
+
+If zoom exists:
+
+apply actual camera zoom using applyConstraints()
+
+If hardware zoom is unavailable:
+
+use the processing pipeline's digital zoom.
+
+Keep a single source of truth:
+
+currentZoom
+minZoom
+maxZoom
+hardwareZoomSupported
+digitalZoomActive
+
+Zoom changes must be smooth and must not recreate the stream.
+
+============================================================
+🤖 STEP 8 — AUTO FRAMING
+============================================================
+
+Implement proper face-aware auto framing.
+
+Do not simply move the whole image arbitrarily.
+
+Use detected face/subject coordinates.
+
+Apply:
+
+- smoothing
+- dead zone
+- maximum movement per frame
+- stabilization
+- loss-of-face timeout
+- reacquisition
+
+Do not make the camera jump.
+
+Avoid conflicts between:
+
+manual zoom
+hardware zoom
+digital zoom
+auto framing
+
+Manual zoom should have predictable priority.
+
+============================================================
+✨ STEP 9 — BEAUTY PROCESSING
+============================================================
+
+Beauty must be face-aware.
+
+Do not blur the entire frame.
+
+If FaceMesh/face landmarks are used:
+
+- identify face region
+- create appropriate mask
+- process only intended facial regions
+- preserve eyes/hair/background as appropriate
+- avoid obvious artificial artifacts
+
+Do not claim AI beauty is implemented if it is only CSS blur.
+
+If the current implementation is fake or placeholder logic, replace it with
+a real implementation supported by the existing stack.
+
+============================================================
+🧍 STEP 10 — BACKGROUND BLUR / REPLACEMENT
+============================================================
+
+Implement a real segmentation-based background pipeline.
+
+Pipeline should conceptually be:
+
+Camera frame
+    ↓
+Segmentation
+    ↓
+Foreground mask
+    ↓
+Mask refinement
+    ↓
+Background processing
+    ↓
+Composite
+    ↓
+Final frame
+
+For blur:
+
+Background → GPU blur
+Foreground → preserved
+Composite → output
+
+Do not blur the person's face/body accidentally.
+
+Avoid CPU-heavy per-pixel loops if WebGL/WebGL2 is available.
+
+Reuse GPU resources.
+
+Do NOT create a new canvas or WebGL context every frame.
+
+============================================================
+⚡ STEP 11 — WEBGL / GPU PIPELINE
+============================================================
+
+Audit the current WebGL implementation.
+
+Ensure:
+
+- one WebGL context
+- reusable textures
+- reusable framebuffers
+- reusable shaders/programs
+- no per-frame allocation
+- no unnecessary canvas creation
+- no memory leaks
+- no context recreation
+- proper cleanup
+
+Use GPU processing where it genuinely improves performance.
+
+If WebGL2 is unavailable, use a safe fallback.
+
+Do not pretend GPU acceleration exists if it isn't actually being used.
+
+============================================================
+📐 STEP 12 — ADAPTIVE RESOLUTION
+============================================================
+
+Use actual camera/encoding capabilities.
+
+Create stable quality profiles, for example:
+
+LOW
+BALANCED
+HIGH
+
+But do NOT hard-code 1280x720 forever.
+
+Adapt based on:
+
+- network quality
+- packet loss if available
+- RTT if available
+- actual publish quality
+- CPU/GPU pressure where available
+- frame rate
+- encoder behavior
+
+Use hysteresis/debounce so quality doesn't constantly oscillate.
+
+Example:
+
+HIGH → BALANCED
+BALANCED → LOW
+
+should require sustained poor conditions.
+
+Likewise for upgrades.
+
+============================================================
+📶 STEP 13 — NETWORK QUALITY
+============================================================
+
+Do not invent a network-quality API.
+
+Check the exact installed ZEGO SDK API.
+
+If onNetworkQuality is unavailable:
+
+use the actual supported SDK callbacks/statistics or a clearly defined
+fallback based on available information.
+
+Clearly identify the source:
+
+networkQualitySource
+
+Possible real sources:
+
+SDK callback
+publish quality statistics
+browser/network metrics
+fallback
+
+Do not label a guessed value as ZEGO network quality.
+
+============================================================
+🎚️ STEP 14 — BITRATE / FPS / RESOLUTION
+============================================================
+
+Verify whether the installed ZEGO SDK actually supports changing:
+
+- bitrate
+- resolution
+- FPS
+
+at runtime.
+
+If an API does not exist:
+
+DO NOT call it.
+
+DO NOT create fake functions with the same name.
+
+Use the correct supported configuration path.
+
+Make sure requested values and actual encoder values do not get confused.
+
+============================================================
+🧠 STEP 15 — STATE MANAGEMENT
+============================================================
+
+Replace scattered global flags with a coherent state model.
+
+Avoid contradictory states such as:
+
+isCamOn = true
+while video track is ended
+
+or:
+
+publishStream exists
+while its video track is dead
+
+or:
+
+publisherState = PUBLISHING
+while no valid publisher exists
+
+Create authoritative state for:
+
+engine
+room
+camera
+microphone
+rawStream
+processedStream
+publisher
+processing
+zoom
+beauty
+background
+quality
+network
+
+Every transition should be explicit.
+
+============================================================
+🧹 STEP 16 — CLEANUP
+============================================================
+
+Implement ONE complete cleanup function.
+
+It must safely stop:
+
+- camera tracks
+- microphone tracks
+- processing loops
+- animation frames
+- timers
+- segmentation
+- FaceMesh processing
+- WebGL resources
+- canvas resources
+- publisher
+- room
+- engine
+
+Calling cleanup twice must be safe.
+
+Calling start → stop → start must work.
+
+Calling start twice must not duplicate anything.
+
+============================================================
+🛡️ STEP 17 — ERROR HANDLING
+============================================================
+
+Every async operation must have correct async/await structure.
+
+Specifically audit the ENTIRE videoEngine.js file for:
+
+- top-level await
+- await inside non-async functions
+- missing await
+- unhandled promises
+- floating promises
+- race conditions
+- errors swallowed by catch
+- errors thrown after successful recovery
+- duplicate error reporting
+
+Fix the syntax error around line 2012 first, then scan the ENTIRE file
+for similar problems.
+
+Do NOT just fix the first syntax error.
+
+============================================================
+🧪 STEP 18 — VALIDATION
+============================================================
+
+After modifications:
+
+1. Parse/lint the entire videoEngine.js.
+2. Check bidding.html integration.
+3. Check every function called by initCustomVideoCall().
+4. Search for undefined functions.
+5. Search for duplicate handlers.
+6. Search for duplicate intervals/timeouts.
+7. Search for duplicate ZEGO listeners.
+8. Search for references to removed variables.
+9. Search for stale old implementations.
+10. Verify script loading order.
+11. Verify async functions.
+12. Verify all promises.
+13. Verify cleanup.
+14. Verify start/stop/restart lifecycle.
+
+Then run the application.
+
+Open DevTools and verify that there are ZERO:
+
+- SyntaxError
+- ReferenceError
+- TypeError
+- undefined function errors
+- duplicate initialization errors
+- unhandled promise rejections
+
+Do not simply hide console errors.
+
+============================================================
+📊 STEP 19 — ADD PROFESSIONAL DIAGNOSTICS
+============================================================
+
+Create a small centralized diagnostic system.
+
+Example:
+
+window.ZegoVideoDebug
+
+It should expose current state such as:
+
+engineState
+roomState
+cameraState
+micState
+publisherState
+publisherStreamId
+rawStreamId
+processedStreamId
+zoomState
+backgroundMode
+beautyState
+qualityProfile
+networkQuality
+fps
+resolution
+bitrate
+
+Diagnostics should be structured and useful.
+
+Avoid console spam.
+
+Log only meaningful state transitions/errors.
+
+============================================================
+🚨 VERY IMPORTANT DEVELOPMENT RULES
+============================================================
+
+Before changing anything:
+
+- inspect the whole relevant code
+- understand dependencies
+- identify duplicate implementations
+- identify ownership of each state
+- identify actual ZEGO SDK APIs
+
+After changing:
+
+- do not leave the old implementation beside the new implementation
+- remove obsolete handlers
+- remove dead code
+- remove fake fallbacks
+- remove unreachable code
+- remove duplicate state variables
+- remove duplicate event listeners
+
+Use the existing architecture where it is sound.
+Refactor only where necessary.
+
+Never replace real working functionality with a mock.
+
+Never invent a ZEGO method.
+
+Never assume a method exists.
+
+Check the actual installed ZEGO SDK version and its available methods.
+
+============================================================
+🏆 FINAL TARGET
+============================================================
+
+The final result should feel like a professional modern video-call engine:
+
+- fast startup
+- reliable publishing
+- stable reconnect
+- smooth camera
+- smooth zoom
+- stable auto framing
+- high-quality background blur
+- face-aware beauty
+- adaptive quality
+- efficient GPU processing
+- low unnecessary CPU usage
+- no duplicate handlers
+- no stale streams
+- no race conditions
+- clean lifecycle
+- clean console
+
+Do NOT tell me "fixed" after changing one line.
+
+At the end provide a concise engineering report containing:
+
+1. Root cause of videoEngine.js:2012 syntax error
+2. Root cause of videoEngine.js not loading
+3. All duplicate handlers removed
+4. All duplicate implementations removed
+5. ZEGO lifecycle problems found
+6. MediaStream lifecycle problems found
+7. Zoom problems found
+8. AI/blur/beauty problems found
+9. Adaptive quality problems found
+10. APIs that were invalid/nonexistent and what was used instead
+11. Files changed
+12. Major functions changed
+13. Any remaining limitations
+14. Exact tests performed
+15. Final console status
+
+MOST IMPORTANT:
+DO NOT STOP AFTER FIXING THE SYNTAX ERROR.
+That error is only the immediate blocker.
+
+Perform the COMPLETE audit and production-grade cleanup described above.
