@@ -31,6 +31,87 @@ let engineEventBindings = [];
 let remoteStreamIds = new Set();
 let remoteRevealTimers = new Map();
 let leavePromise = null;
+let activeRoomId = "";
+let publishAttemptId = 0;
+let publishStreamSequence = 0;
+let publishOperation = Promise.resolve();
+let aiStartPromise = null;
+let rawMediaStream = null;
+let backgroundPopoverCloseHandler = null;
+let networkQualityFresh = false;
+
+const ENGINE_IDLE = "IDLE";
+const ENGINE_STARTING = "STARTING";
+const ENGINE_RUNNING = "RUNNING";
+const ENGINE_STOPPING = "STOPPING";
+let engineLifecycleState = ENGINE_IDLE;
+
+function isCurrentEngineSession(sessionId, engine = zg) {
+    return (
+        sessionId === engineSessionId &&
+        engine &&
+        engine === zg &&
+        engineLifecycleState !== ENGINE_STOPPING
+    );
+}
+
+function enqueuePublishOperation(operation) {
+    const previous = publishOperation;
+    let release;
+    publishOperation = new Promise(resolve => {
+        release = resolve;
+    });
+
+    return previous
+        .catch(() => {})
+        .then(operation)
+        .finally(() => release());
+}
+
+function createPublishStreamId(userID) {
+    publishStreamSequence += 1;
+    return `stream_${userID}_${engineSessionId}_${publishStreamSequence}`;
+}
+
+function getVideoEngineState() {
+    return {
+        engineState: engineLifecycleState,
+        roomState: roomConnectionState,
+        roomId: activeRoomId || null,
+        cameraState: isCamOn ? "ON" : "OFF",
+        micState: isMicOn ? "ON" : "OFF",
+        publisherState: publisherLifecycleState,
+        publisherStreamId: publishStreamId || null,
+        rawStreamId: rawMediaStream?.id || localStream?.id || null,
+        processedStreamId: canvasStream?.id || customZegoStream?.id || null,
+        processingState: pipelineRunning ? "RUNNING" : "IDLE",
+        zoomState: {
+            currentZoom,
+            minZoom,
+            maxZoom,
+            hardwareZoomSupported: hasHardwareZoom,
+            hardwareZoomApplied,
+            digitalZoomActive: zoomMode === "digital",
+            digitalZoom
+        },
+        backgroundMode: isBgMode,
+        beautyState: isBeautyOn ? "ON" : "OFF",
+        qualityProfile: currentResProfile,
+        networkQuality,
+        networkQualitySource,
+        networkQualityFresh,
+        fps: currentFPS,
+        resolution: { width: CANVAS_W, height: CANVAS_H },
+        bitrate: RESOLUTION_PROFILES[currentResProfile]?.bitrate || null
+    };
+}
+
+window.ZegoVideoDebug = {
+    getState: getVideoEngineState,
+    get state() {
+        return getVideoEngineState();
+    }
+};
 
 function resolveRoomWaiters(success) {
     const waiters = roomConnectionWaiters.splice(0);
@@ -474,18 +555,15 @@ function enableAGC(zegoInstance) {
                 return false;
             }
 
-            const streamForConfig =
-                publishStream || localStream;
-
-            if (!streamForConfig) {
+            if (!publishStreamId) {
                 console.warn(
-                    "⏭️ Bitrate update skipped: no published Zego stream."
+                    "⏭️ Bitrate update skipped: no published stream ID."
                 );
                 return false;
             }
 
             const nextConfig = {
-                maxBitrate: numericBitrate
+                bitrate: numericBitrate
             };
 
             if (
@@ -514,7 +592,7 @@ function enableAGC(zegoInstance) {
 
                 const result =
                     await engine.setVideoConfig(
-                        streamForConfig,
+                        publishStreamId,
                         nextConfig
                     );
 
@@ -577,7 +655,7 @@ function detectCameraCapabilities(track) {
 
 // 🔥 PATCH 4: New switchOutputProfile() - dynamic canvas + render targets + bitrate
 async function switchOutputProfile(profileName) {
-    
+
     if (profileSwitchInProgress) {
         console.warn(
             "⏳ Profile switch already running:",
@@ -589,7 +667,7 @@ async function switchOutputProfile(profileName) {
     profileSwitchInProgress = true;
 
     try {
-        
+
     const profile =
         RESOLUTION_PROFILES?.[profileName];
 
@@ -1012,9 +1090,12 @@ async function evaluateQuality() {
             fpsLevel = 2; // HIGH
         }
 
+        const hasFreshNetworkMetric =
+            networkQualityFresh &&
+            Date.now() - lastNetworkQualityUpdate <= 10000;
         let netLevel;
 
-        if (!Number.isFinite(networkQuality)) {
+        if (!hasFreshNetworkMetric || !Number.isFinite(networkQuality)) {
             netLevel = 1;
         } else if (networkQuality < 0.4) {
             netLevel = 0; // LOW
@@ -1053,7 +1134,7 @@ async function evaluateQuality() {
 
             return;
         }
-  
+
         if (targetLevel < currentLevel) {
 
             if (fpsLevel < currentLevel) {
@@ -1201,6 +1282,7 @@ function setupNetworkQualityCallback() {
                         normalizeZegoNetworkQuality(
                             rawLevel
                         );
+                    networkQualityFresh = true;
 
                     lastNetworkQualityUpdate =
                         Date.now();
@@ -1242,19 +1324,19 @@ function setupNetworkQualityCallback() {
     }
 
     // ---------------------------------------------------------
-    // 2. SDK networkQuality event — only if actually supported
+    // 2. SDK networkQuality event. ZEGO v3.12 exposes this as
+    // an engine event; it does not expose onNetworkQuality().
     // ---------------------------------------------------------
     try {
-        if (
-            typeof zg.onNetworkQuality === "function"
-        ) {
-            zg.onNetworkQuality(
+        if (typeof zg.on === "function") {
+            bindEngineEvent(
+                zg,
+                "networkQuality",
                 (
                     userID,
                     upstreamQuality,
                     downstreamQuality
                 ) => {
-
                     if (
                         userID &&
                         typeof myShortId !== "undefined" &&
@@ -1269,30 +1351,14 @@ function setupNetworkQualityCallback() {
                         );
 
                     networkQuality = quality;
-
-                    lastNetworkQualityUpdate =
-                        Date.now();
-
-                    networkQualitySource =
-                        "zego-event";
-
-                    console.log(
-                        "📶 ZEGO network quality:",
-                        {
-                            userID,
-                            upstreamQuality,
-                            downstreamQuality,
-                            normalized: quality
-                        }
-                    );
+                    networkQualityFresh = true;
+                    lastNetworkQualityUpdate = Date.now();
+                    networkQualitySource = "zego-event";
                 }
             );
 
             registered = true;
-
-            console.log(
-                "✅ ZEGO onNetworkQuality callback registered."
-            );
+            console.log("✅ ZEGO networkQuality event registered.");
         }
     } catch (error) {
         console.warn(
@@ -1305,7 +1371,8 @@ function setupNetworkQualityCallback() {
     // 3. Final state
     // ---------------------------------------------------------
     if (!registered) {
-        networkQualitySource = "publisher-quality-unavailable";
+        networkQualitySource = "unavailable";
+        networkQualityFresh = false;
 
         console.warn(
             "⚠️ No usable ZEGO network-quality callback exposed."
@@ -1480,6 +1547,60 @@ function createZoomSliderUI() {
     });
 }
 
+async function republishAfterReconnect(sessionId, engine) {
+    return enqueuePublishOperation(async () => {
+        if (
+            !isCurrentEngineSession(sessionId, engine) ||
+            !publishStream ||
+            !publishStreamId
+        ) {
+            return false;
+        }
+
+        const source = publishStream;
+        const previousStreamId = publishStreamId;
+
+        try {
+            await engine.stopPublishingStream(previousStreamId);
+        } catch (error) {
+            console.warn(
+                "⚠️ Existing publisher stop during reconnect was not required:",
+                error
+            );
+        }
+
+        if (!isCurrentEngineSession(sessionId, engine)) {
+            return false;
+        }
+
+        publishStreamId = createPublishStreamId(
+            window.currentZegoUserId || "user"
+        );
+        resetPublisherAttempt(publishStreamId);
+        await engine.startPublishingStream(publishStreamId, source);
+
+        const ready = await waitForPublisherState(
+            publishStreamId,
+            15000
+        );
+        if (!ready || !isCurrentEngineSession(sessionId, engine)) {
+            throw new Error(
+                `Publisher did not recover after reconnect: ${publisherLifecycleState}`
+            );
+        }
+
+        await engine.mutePublishStreamAudio(
+            publishStreamId,
+            !isMicOn
+        );
+        await engine.mutePublishStreamVideo(
+            publishStreamId,
+            !isCamOn
+        );
+        return true;
+    });
+}
+
 // =========================================
 // 4. ENGINE START FUNCTION
 // =========================================
@@ -1491,6 +1612,7 @@ async function startCustomZegoEngineInternal(
     userName
 ) {
     try {
+        engineLifecycleState = ENGINE_STARTING;
 
         console.log("🚀 Starting Ultra Premium Video Engine v3.2...");
 
@@ -1571,7 +1693,12 @@ async function startCustomZegoEngineInternal(
         const engine = zg;
         const thisSessionId = ++engineSessionId;
         const isCurrentSession = () =>
-            thisSessionId === engineSessionId && zg === engine;
+            isCurrentEngineSession(thisSessionId, engine);
+        const assertCurrentSession = () => {
+            if (!isCurrentSession()) {
+                throw new Error("ZEGO session is no longer active.");
+            }
+        };
 
         roomConnectionState = "CONNECTING";
         roomConnectionError = null;
@@ -1581,6 +1708,8 @@ async function startCustomZegoEngineInternal(
         rejectAllPublisherWaiters();
 
         window.meetingRoomId = roomID;
+        activeRoomId = roomID;
+        window.currentZegoUserId = userID;
 
         console.log("✅ Zego engine instance created.");
 
@@ -1627,13 +1756,13 @@ async function startCustomZegoEngineInternal(
                         }
                     );
 
-                    roomConnectionState = "DISCONNECTED";
+                    roomConnectionState = "RECONNECTING";
                     roomConnectionError = {
                         errorCode,
                         extendedData
                     };
                     resolveRoomWaiters(false);
-                    
+
                     publisherLifecycleState =
                         "ROOM_DISCONNECTED";
 
@@ -1660,7 +1789,7 @@ async function startCustomZegoEngineInternal(
 
                     return;
                 }
-                
+
                 // -------------------------------------------------
                 // CONNECTED
                 // -------------------------------------------------
@@ -1669,7 +1798,7 @@ async function startCustomZegoEngineInternal(
 
                 if (
                     callbackRoomID !==
-                    window.meetingRoomId
+                    roomID
                 ) {
                     console.warn(
                         "⚠️ Ignoring CONNECTED event for another room:",
@@ -1683,6 +1812,8 @@ async function startCustomZegoEngineInternal(
                     return;
                 }
 
+                const wasReconnecting =
+                    roomConnectionState === "RECONNECTING";
                 roomConnectionState = "CONNECTED";
                 roomConnectionError = null;
 
@@ -1704,10 +1835,26 @@ async function startCustomZegoEngineInternal(
                     ) {
                         window.startPerformanceMonitor();
                     }
+
+                    if (
+                        wasReconnecting &&
+                        publishStream &&
+                        publishStreamId
+                    ) {
+                        republishAfterReconnect(
+                            thisSessionId,
+                            engine
+                        ).catch(error => {
+                            console.error(
+                                "❌ ZEGO republish after reconnect failed:",
+                                error
+                            );
+                        });
+                    }
                 }
             }
         );
-        
+
 // =====================================================
 // 🔥 3B. PUBLISHER STATE LIFECYCLE
 // =====================================================
@@ -1964,7 +2111,7 @@ async function startCustomZegoEngineInternal(
                                 return;
                             }
 
-                            await zg.startPlayingStream(
+                            await engine.startPlayingStream(
                                 streamInfo.streamID,
                                 {
                                     video: remoteVideo,
@@ -2053,7 +2200,7 @@ async function startCustomZegoEngineInternal(
 
                         if (zg && typeof zg.stopPlayingStream === "function") {
                             try {
-                                await zg.stopPlayingStream(streamInfo.streamID);
+                            await engine.stopPlayingStream(streamInfo.streamID);
                             } catch (e) {
                                 console.warn(
                                     "⚠️ Remote stream stop warning:",
@@ -2132,6 +2279,7 @@ async function startCustomZegoEngineInternal(
         console.log(
             "✅ Room Login Success"
         );
+        assertCurrentSession();
 
         // =====================================================
         // 🔥 5A. LOGIN VALIDATION
@@ -2229,6 +2377,7 @@ async function startCustomZegoEngineInternal(
                 "Zego createStream returned an empty local stream."
             );
         }
+        assertCurrentSession();
 
         console.log(
             "✅ Local stream created:",
@@ -2367,14 +2516,11 @@ async function startCustomZegoEngineInternal(
         // 10. PUBLISH
         // =====================================================
 
-        publishStreamId =
-            "stream_" +
-            userID +
-            "_" +
-            Date.now();
-                
+            publishStreamId = createPublishStreamId(userID);
+
             const roomReady =
                 await waitForRoomConnected(15000);
+            assertCurrentSession();
 
             if (!roomReady) {
                 throw new Error(
@@ -2437,6 +2583,7 @@ async function startCustomZegoEngineInternal(
                 publishStreamId,
                 publishStream
             );
+            assertCurrentSession();
 
             console.log(
                 "📡 ZEGO publish request accepted:",
@@ -2448,6 +2595,7 @@ async function startCustomZegoEngineInternal(
                     publishStreamId,
                     30000
                 );
+            assertCurrentSession();
 
             if (!publisherReady) {
                 throw new Error(
@@ -2483,7 +2631,7 @@ async function startCustomZegoEngineInternal(
                     );
                 }
             }
-            
+
         } catch (e) {
 
             console.error(
@@ -2592,6 +2740,7 @@ async function startCustomZegoEngineInternal(
         // =====================================================
 
         window.startPerformanceMonitor();
+        engineLifecycleState = ENGINE_RUNNING;
 
         console.log(
             "🎉 Ultra Premium Video Engine started successfully."
@@ -2694,9 +2843,13 @@ window.startCustomZegoEngine = function (
         return engineStartPromise;
     }
 
-    if (zg || localStream || roomConnectionState !== "DISCONNECTED") {
+    if (engineLifecycleState !== ENGINE_IDLE) {
         console.log("ℹ️ ZEGO engine is already active.");
-        return Promise.resolve(true);
+        return Promise.reject(
+            new Error(
+                "A video session is already starting, running, or stopping."
+            )
+        );
     }
 
     engineStartPromise = startCustomZegoEngineInternal(
@@ -4206,7 +4359,7 @@ window.setupControls = function () {
                 audioTrack.enabled =
                     nextState;
             }
-            
+
             isMicOn = nextState;
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
@@ -4416,49 +4569,6 @@ window.startPerformanceMonitor = function () {
         }
 
         lastFPSCheckTime = now;
-
-// =====================================================
-// NETWORK QUALITY FALLBACK
-// =====================================================
-
-            if (
-                zg &&
-                typeof zg.onNetworkQuality !== "function" &&
-                typeof zg.getNetworkQuality === "function"
-            ) {
-
-                try {
-
-                    const quality =
-                        zg.getNetworkQuality();
-
-                    if (typeof quality === "number") {
-                        networkQuality =
-                            Math.min(
-                                1,
-                                Math.max(
-                                    0,
-                                    quality
-                                )
-                            );
-
-                        lastNetworkQualityUpdate =
-                            Date.now();
-
-                        networkQualitySource =
-                            "polling";
-                    } else {
-                        networkQuality = 0.5;
-                    }
-
-                } catch (e) {
-
-                    console.warn(
-                        "⚠️ Network quality polling failed:",
-                        e
-                    );
-                }
-            }
 
 // =====================================================
 // UNIFIED QUALITY EVALUATION
@@ -4686,7 +4796,7 @@ async function performLeaveRoom() {
     // =====================================================
     //  STOP CUSTOM ZEGO STREAM
     // =====================================================
-    
+
     if (engine && customStream) {
         try {
             engine.destroyStream(

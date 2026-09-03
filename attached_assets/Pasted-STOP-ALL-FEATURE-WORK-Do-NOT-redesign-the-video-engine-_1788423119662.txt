@@ -1,0 +1,77 @@
+STOP ALL FEATURE WORK.
+
+Do NOT redesign the video engine yet.
+
+I need you to debug the CURRENT production code only.
+
+Current runtime:
+
+- ZEGO SDK: v3.12.0
+- AppID: 1771433844
+- Room: zamin_room_1
+- publisher reaches:
+  PUBLISH_REQUESTING
+- then our custom waitForPublisherState() times out
+- then our code throws:
+  "ZEGO publisher failed: state=PUBLISH_REQUESTING, error=null"
+- then startCustomZegoEngineInternal() calls leaveRoom()
+- leaveRoom() calls logoutRoom()
+- engine is destroyed
+- Chrome then shows ZEGO disconnect logs
+
+IMPORTANT:
+Do NOT assume PUBLISH_REQUESTING itself is the root cause.
+
+Trace the COMPLETE execution path from:
+
+window.initCustomVideoCall()
+→ window.startCustomZegoEngine()
+→ startCustomZegoEngineInternal()
+→ engine creation
+→ room login
+→ roomStateChanged / roomStateUpdate
+→ local stream creation
+→ processed stream creation
+→ startPublishingStream()
+→ publisherStateUpdate
+→ timeout
+→ cleanup
+
+Inspect the actual code and identify:
+
+1. Was room login actually successful before publishing?
+2. What exact room-state event occurred?
+3. What exact stream object is passed to startPublishingStream?
+4. Is it a native MediaStream or ZegoLocalStream?
+5. Was createZegoStream() used correctly if a custom MediaStream is being published?
+6. Is startPublishingStream() called before ROOM LOGINED?
+7. Are we publishing the same stream twice?
+8. Are there duplicate publisher listeners?
+9. Is waitForPublisherState() listening to the correct ZEGO event signature for SDK v3.12.0?
+10. Is our event handler storing the state correctly?
+11. Is our 8-second timeout incorrectly declaring a failure?
+12. What exact errorCode and extendedData does ZEGO provide?
+13. Is cleanup being triggered too early?
+14. Is there a race between login, stream creation and publishing?
+15. Is another old engine/room/publisher still alive?
+
+DO NOT modify functionality yet.
+
+Only make the minimum diagnostic-safe changes necessary to expose the
+actual root cause.
+
+After investigation, report:
+
+ROOT CAUSE:
+...
+
+SECONDARY CAUSE:
+...
+
+EVIDENCE:
+...
+
+EXACT FILE + LINE:
+...
+
+DO NOT continue to Zoom/beauty/blur/quality work until this is fixed.
