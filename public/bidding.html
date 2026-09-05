@@ -63,7 +63,7 @@
         </script>
 
         <!-- 🔥 ZegoCloud Core SDK (Stable) 🔥 -->
-        <script src="/js/ZegoExpressEngine.v3.12.0.min.js" defer></script>
+        <script src="/js/ZegoExpressEngine.v3.12.0.min.js?v=3.12.0" defer></script>
 
         <!-- 🔥 AI Engine (MediaPipe) — powers real Beauty smoothing + real Background blur/replace 🔥 -->
         <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" defer crossorigin="anonymous"></script>
@@ -71,7 +71,7 @@
         <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" defer crossorigin="anonymous"></script>
 
         <!-- 🔥 Apna Custom Video Engine 🔥 -->
-        <script src="/videoEngine.js"defer></script>
+        <script src="/videoEngine.js?v=3.4" defer></script>
         <style>
             body { 
                 background: #f1f5f9; 
@@ -642,6 +642,9 @@
                     // 2. Pass control to our new videoEngine.js file
                     if (typeof window.startCustomZegoEngine === 'function') {
                         // This function will be defined in videoEngine.js
+                        if (typeof data.serverUrl === 'string' && data.serverUrl.trim()) {
+                            window.ZEGO_SERVER_URL = data.serverUrl.trim();
+                        }
                         await window.startCustomZegoEngine(data.appId, data.token, meetingRoomId, myShortId, userName);
                     } else {
                         throw new Error("videoEngine.js file not loaded properly.");
@@ -649,11 +652,17 @@
 
                 } catch (error) {
                     console.error("Video Engine Launch Error:", error);
+                     const safeErrorMessage = String(error?.message || "Unknown video engine error.")
+                         .replace(/&/g, "&amp;")
+                         .replace(/</g, "&lt;")
+                         .replace(/>/g, "&gt;")
+                         .replace(/"/g, "&quot;")
+                         .replace(/'/g, "&#039;");
                     document.getElementById('custom-video-wrapper').innerHTML = `
                         <div class='text-white mt-5 pt-5 d-flex flex-column align-items-center justify-content-center h-100'>
                             <i class="fas fa-shield-alt text-warning mb-3" style="font-size: 3.5rem; opacity: 0.8;"></i>
                             <h3 class='fw-bold mb-2'>Engine Error</h3>
-                            <p class='text-white-50 max-w-md mx-auto mb-4' style="font-size: 15px;">Could not start the custom video engine.<br><br><small>${error.message}</small></p>
+                             <p class='text-white-50 max-w-md mx-auto mb-4' style="font-size: 15px;">Could not start the custom video engine.<br><br><small>${safeErrorMessage}</small></p>
                             <button class='btn btn-primary px-4 rounded-pill fw-bold shadow-sm' onclick='location.reload()' style="background: #2563eb; border: none; padding: 12px 30px;">
                                 <i class="fas fa-sync-alt me-2"></i> Refresh Connection
                             </button>

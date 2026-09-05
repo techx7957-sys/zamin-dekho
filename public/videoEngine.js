@@ -25,17 +25,21 @@ let publisherLifecycleWaiters = [];
 let roomConnectionState = "DISCONNECTED";
 let roomConnectionError = null;
 let roomConnectionWaiters = [];
+let roomLoginSucceeded = false;
 let engineStartPromise = null;
 let engineSessionId = 0;
 let engineEventBindings = [];
 let remoteStreamIds = new Set();
 let remoteRevealTimers = new Map();
+let remoteStreamGenerations = new Map();
 let leavePromise = null;
 let activeRoomId = "";
 let publishAttemptId = 0;
+let publisherLifecycleAttemptId = 0;
 let publishStreamSequence = 0;
 let publishOperation = Promise.resolve();
 let aiStartPromise = null;
+let aiOperationGeneration = 0;
 let rawMediaStream = null;
 let backgroundPopoverCloseHandler = null;
 let networkQualityFresh = false;
@@ -52,6 +56,13 @@ function isCurrentEngineSession(sessionId, engine = zg) {
         engine &&
         engine === zg &&
         engineLifecycleState !== ENGINE_STOPPING
+    );
+}
+
+function isCurrentAIOperation(sessionId, operationId) {
+    return (
+        isCurrentEngineSession(sessionId) &&
+        operationId === aiOperationGeneration
     );
 }
 
@@ -81,6 +92,7 @@ function getVideoEngineState() {
         cameraState: isCamOn ? "ON" : "OFF",
         micState: isMicOn ? "ON" : "OFF",
         publisherState: publisherLifecycleState,
+        publisherError: publisherLifecycleError,
         publisherStreamId: publishStreamId || null,
         rawStreamId: rawMediaStream?.id || localStream?.id || null,
         processedStreamId: canvasStream?.id || customZegoStream?.id || null,
@@ -157,6 +169,14 @@ function clearRemoteRevealTimers() {
     remoteRevealTimers.clear();
 }
 
+function invalidateRemoteStream(streamId) {
+    remoteStreamGenerations.set(
+        streamId,
+        (remoteStreamGenerations.get(streamId) || 0) + 1
+    );
+    return remoteStreamGenerations.get(streamId);
+}
+
 function waitForRoomConnected(timeoutMs = 15000) {
 
     if (
@@ -212,16 +232,23 @@ function waitForRoomConnected(timeoutMs = 15000) {
 
 function resolvePublisherWaiters(
     streamId,
-    success
+    success,
+    attemptId = publisherLifecycleAttemptId
 ) {
     const matchingWaiters =
         publisherLifecycleWaiters.filter(
-            waiter => waiter.streamId === streamId
+            waiter =>
+                waiter.streamId === streamId &&
+                waiter.attemptId === attemptId
         );
 
     publisherLifecycleWaiters =
         publisherLifecycleWaiters.filter(
-            waiter => waiter.streamId !== streamId
+            waiter =>
+                !(
+                    waiter.streamId === streamId &&
+                    waiter.attemptId === attemptId
+                )
         );
 
     for (const waiter of matchingWaiters) {
@@ -252,6 +279,7 @@ function rejectAllPublisherWaiters() {
 }
 
 function resetPublisherAttempt(streamId) {
+    publisherLifecycleAttemptId++;
     publisherLifecycleStreamId = streamId;
     publisherLifecycleState = "PUBLISH_REQUESTING";
     publisherLifecycleError = null;
@@ -260,14 +288,18 @@ function resetPublisherAttempt(streamId) {
         publisherLifecycleWaiters.filter(
             waiter => waiter.streamId !== streamId
         );
+
+    return publisherLifecycleAttemptId;
 }
 
 function waitForPublisherState(
     streamId,
-    timeoutMs = 30000
+    timeoutMs = 30000,
+    attemptId = publisherLifecycleAttemptId
 ) {
     if (
         publisherLifecycleStreamId === streamId &&
+        publisherLifecycleAttemptId === attemptId &&
         publisherLifecycleState === "PUBLISHING"
     ) {
         return Promise.resolve(true);
@@ -276,6 +308,7 @@ function waitForPublisherState(
     return new Promise(resolve => {
         const waiter = {
             streamId,
+            attemptId,
             resolve
         };
 
@@ -294,10 +327,12 @@ function waitForPublisherState(
                 "⏳ Publisher wait timeout:",
                 {
                     streamId,
+                    attemptId,
                     state:
                         publisherLifecycleState,
                     error:
-                        publisherLifecycleError
+                        publisherLifecycleError,
+                    diagnostics: getPublishDiagnostics()
                 }
             );
 
@@ -313,6 +348,45 @@ function waitForPublisherState(
             waiter
         );
     });
+}
+
+function getPublishDiagnostics() {
+    const stream = publishStream || localStream;
+    const tracks = stream?.getTracks?.() || [];
+
+    return {
+        engineState: engineLifecycleState,
+        roomState: roomConnectionState,
+        roomId: activeRoomId || window.meetingRoomId || null,
+        streamId: publishStreamId || null,
+        streamConstructor: stream?.constructor?.name || null,
+        isMediaStream:
+            typeof MediaStream !== "undefined" &&
+            stream instanceof MediaStream,
+        streamTracks: tracks.map(track => ({
+            kind: track.kind,
+            id: track.id,
+            readyState: track.readyState,
+            enabled: track.enabled,
+            muted: track.muted
+        })),
+        streamSettings: tracks.map(track => {
+            try {
+                return {
+                    kind: track.kind,
+                    settings: track.getSettings?.() || {}
+                };
+            } catch (error) {
+                return {
+                    kind: track.kind,
+                    settingsError: error?.message || String(error)
+                };
+            }
+        }),
+        publisherState: publisherLifecycleState,
+        publisherError: publisherLifecycleError,
+        publisherAttemptId: publisherLifecycleAttemptId
+    };
 }
 
 // Mic and camera start OFF by default.
@@ -758,14 +832,20 @@ async function switchOutputProfile(profileName) {
             Math.max(1, profile.fps),
             maxFPS
         );
+    const minWidth = capabilities?.width?.min ?? 1;
+    const minHeight = capabilities?.height?.min ?? 1;
+    const minFPS = capabilities?.frameRate?.min ?? 1;
+    const safeTargetWidth = Math.max(minWidth, targetWidth);
+    const safeTargetHeight = Math.max(minHeight, targetHeight);
+    const safeTargetFPS = Math.max(minFPS, targetFPS);
 
 
     console.log(
         "🎯 Camera target:",
         {
-            width: targetWidth,
-            height: targetHeight,
-            fps: targetFPS,
+            width: safeTargetWidth,
+            height: safeTargetHeight,
+            fps: safeTargetFPS,
             cameraMaxWidth: maxWidth,
             cameraMaxHeight: maxHeight,
             cameraMaxFPS: maxFPS
@@ -776,18 +856,18 @@ async function switchOutputProfile(profileName) {
         await videoTrack.applyConstraints({
 
             width: {
-                ideal: targetWidth,
-                max: targetWidth
+                    ideal: safeTargetWidth,
+                    max: safeTargetWidth
             },
 
             height: {
-                ideal: targetHeight,
-                max: targetHeight
+                    ideal: safeTargetHeight,
+                    max: safeTargetHeight
             },
 
             frameRate: {
-                ideal: targetFPS,
-                max: targetFPS
+                    ideal: safeTargetFPS,
+                    max: safeTargetFPS
             }
 
         });
@@ -854,6 +934,11 @@ async function switchOutputProfile(profileName) {
         rawVideoEl.height =
             CANVAS_H;
     }
+    if (faceMaskCanvas) {
+        faceMaskCanvas.width = CANVAS_W;
+        faceMaskCanvas.height = CANVAS_H;
+    }
+    previousMaskData = null;
     if (gpuReady) {
 
         try {
@@ -1361,8 +1446,8 @@ function setupNetworkQualityCallback() {
             console.log("✅ ZEGO networkQuality event registered.");
         }
     } catch (error) {
-        console.warn(
-            "⚠️ ZEGO onNetworkQuality registration failed:",
+                console.warn(
+            "⚠️ ZEGO networkQuality registration failed:",
             error
         );
     }
@@ -1392,12 +1477,17 @@ function setupNetworkQualityCallback() {
 // 🔥 PATCH 1: ZOOM & AUTO FRAME MANAGER (updated)
 // ============================================================
 async function setZoom(value) {
-    requestedZoom = Math.max(minZoom, Math.min(maxZoom, value));
+    const numericZoom = Number(value);
+    if (!Number.isFinite(numericZoom)) return false;
+    requestedZoom = Math.max(minZoom, Math.min(maxZoom, numericZoom));
     if (requestedZoom === currentZoom) return;
 
     if (hasHardwareZoom) {
         try {
             const track = localStream?.getVideoTracks()?.[0];
+            if (!track?.applyConstraints) {
+                throw new Error("Camera zoom constraints are unavailable.");
+            }
             await track.applyConstraints({
                 advanced: [{ zoom: requestedZoom }]
             });
@@ -1408,6 +1498,7 @@ async function setZoom(value) {
             console.warn("Hardware zoom unavailable:", e);
             zoomMode = "digital";
             digitalZoom = requestedZoom;
+            hardwareZoomApplied = 1.0;
         }
     } else {
         zoomMode = "digital";
@@ -1417,6 +1508,7 @@ async function setZoom(value) {
     currentZoom = requestedZoom; // update for UI
     if (zoomSliderElement) zoomSliderElement.value = currentZoom;
     refreshZoomUILabel(currentZoom);
+    return true;
 }
 
 function setAutoFrame(enabled) {
@@ -1672,23 +1764,21 @@ async function startCustomZegoEngineInternal(
         // 3. CREATE ZEGO ENGINE
         // =====================================================
 
-        const serverUrl =
-            window.ZEGO_SERVER_URL ||
-            "";
+        const serverUrl = String(window.ZEGO_SERVER_URL || "").trim();
 
-        if (
-            !serverUrl &&
-            !window.ZEGO_SERVER_URL
-        ) {
-            console.warn(
-                "⚠️ ZEGO server URL is empty; using SDK/default routing."
+        if (!serverUrl) {
+            throw new Error(
+                "ZEGO server URL is missing. The secure token response must include ZEGO_SERVER_URL."
             );
         }
 
-        zg = new ZegoClass(
-            appId,
-            serverUrl
-        );
+        if (!/^wss?:\/\//i.test(serverUrl)) {
+            throw new Error(
+                "ZEGO server URL is invalid. It must start with ws:// or wss://."
+            );
+        }
+
+        zg = new ZegoClass(appId, serverUrl);
 
         const engine = zg;
         const thisSessionId = ++engineSessionId;
@@ -1705,6 +1795,7 @@ async function startCustomZegoEngineInternal(
         publisherLifecycleState = "IDLE";
         publisherLifecycleStreamId = "";
         publisherLifecycleError = null;
+        roomLoginSucceeded = false;
         rejectAllPublisherWaiters();
 
         window.meetingRoomId = roomID;
@@ -1990,6 +2081,7 @@ async function startCustomZegoEngineInternal(
                 extendedData
             ) => {
                 if (!isCurrentSession()) return;
+                if (callbackRoomID !== roomID) return;
 
                 console.log(
                     "🔎 ZEGO roomStreamUpdate:",
@@ -2032,6 +2124,15 @@ async function startCustomZegoEngineInternal(
                             continue;
                         }
 
+                        if (
+                            streamInfo.streamID === publishStreamId ||
+                            streamInfo.userID === userID
+                        ) {
+                            continue;
+                        }
+
+                        const streamGeneration =
+                            invalidateRemoteStream(streamInfo.streamID);
                         remoteStreamIds.add(streamInfo.streamID);
 
                         console.log(
@@ -2124,6 +2225,20 @@ async function startCustomZegoEngineInternal(
                                 streamInfo.streamID
                             );
 
+                            if (
+                                !isCurrentSession() ||
+                                !remoteStreamIds.has(streamInfo.streamID) ||
+                                remoteStreamGenerations.get(
+                                    streamInfo.streamID
+                                ) !== streamGeneration
+                            ) {
+                                await engine.stopPlayingStream(
+                                    streamInfo.streamID
+                                );
+                                remoteVideo.remove();
+                                continue;
+                            }
+
                         } catch (e) {
 
                             console.error(
@@ -2191,6 +2306,7 @@ async function startCustomZegoEngineInternal(
                         }
 
                         remoteStreamIds.delete(streamInfo.streamID);
+                        invalidateRemoteStream(streamInfo.streamID);
                         const revealTimer =
                             remoteRevealTimers.get(streamInfo.streamID);
                         if (revealTimer) {
@@ -2267,19 +2383,67 @@ async function startCustomZegoEngineInternal(
             roomID
         );
 
-        await zg.loginRoom(
-            roomID,
-            token,
-            {
-                userID,
-                userName
+        try {
+            await zg.loginRoom(
+                roomID,
+                token,
+                {
+                    userID,
+                    userName
+                }
+            );
+            roomLoginSucceeded = true;
+        } catch (loginError) {
+            roomLoginSucceeded = false;
+            roomConnectionState = "DISCONNECTED";
+            roomConnectionError = {
+                errorCode: loginError?.code || loginError?.errorCode || null,
+                message: loginError?.message || String(loginError),
+                details: loginError
+            };
+
+            const serverErrorCode =
+                roomConnectionError.errorCode ||
+                roomConnectionError.details?.msg;
+            if (
+                serverErrorCode === 200101 ||
+                loginError?.code === 1002099
+            ) {
+                loginError.message =
+                    "ZEGO room authentication failed (200101). " +
+                    "Check that ZEGO_APP_ID and ZEGO_SERVER_SECRET belong " +
+                    "to the same ZEGO project and that the Token04 payload " +
+                    "matches this room and user.";
             }
-        );
+
+            console.error(
+                "❌ ZEGO room login failed:",
+                {
+                    roomID,
+                    userID,
+                    errorCode: loginError?.code || loginError?.errorCode,
+                    message: loginError?.message,
+                    roomConnectionError
+                }
+            );
+            throw loginError;
+        }
 
         console.log(
             "✅ Room Login Success"
         );
         assertCurrentSession();
+
+        // loginRoom() resolving is the authoritative readiness signal. The
+        // room event normally follows, but treating the resolved promise as
+        // CONNECTED also prevents a missed event from blocking publishing.
+        if (roomConnectionState !== "CONNECTED") {
+            roomConnectionState = "CONNECTED";
+            roomConnectionError = null;
+            console.log(
+                "✅ ZEGO room marked CONNECTED from loginRoom() resolution."
+            );
+        }
 
         // =====================================================
         // 🔥 5A. LOGIN VALIDATION
@@ -2550,21 +2714,8 @@ async function startCustomZegoEngineInternal(
 
         try {
 
-            publisherLifecycleStreamId =
-                publishStreamId;
-
-            publisherLifecycleState =
-                "PUBLISH_REQUESTING";
-
-            publisherLifecycleError =
-                null;
-
-            // Remove stale waiters from an older publish attempt.
-            publisherLifecycleWaiters =
-                publisherLifecycleWaiters.filter(
-                    waiter =>
-                        waiter.streamId !== publishStreamId
-                );
+            const firstPublishStreamId = publishStreamId;
+            resetPublisherAttempt(firstPublishStreamId);
 
             console.log(
                 "📡 Starting ZEGO publisher:",
@@ -2590,17 +2741,59 @@ async function startCustomZegoEngineInternal(
                 publishStreamId
             );
 
-            const publisherReady =
+            let publisherReady =
                 await waitForPublisherState(
                     publishStreamId,
                     30000
                 );
             assertCurrentSession();
 
+            // A request that remains PUBLISH_REQUESTING without an SDK error
+            // is recoverable. Stop that one stream ID, create a fresh ID, and
+            // retry exactly once. This avoids destroying a valid engine just
+            // because one publisher callback was delayed or dropped.
+            if (
+                !publisherReady &&
+                publisherLifecycleState === "PUBLISH_REQUESTING" &&
+                !publisherLifecycleError
+            ) {
+                console.warn(
+                    "⚠️ ZEGO publisher remained PUBLISH_REQUESTING; " +
+                    "starting one controlled recovery attempt.",
+                    getPublishDiagnostics()
+                );
+
+                try {
+                    await zg.stopPublishingStream(firstPublishStreamId);
+                } catch (stopError) {
+                    console.warn(
+                        "⚠️ Timed-out publish stop warning:",
+                        stopError
+                    );
+                }
+
+                publishStreamId = createPublishStreamId(userID);
+                resetPublisherAttempt(publishStreamId);
+                console.log(
+                    "📡 ZEGO controlled publish retry:",
+                    getPublishDiagnostics()
+                );
+                await zg.startPublishingStream(
+                    publishStreamId,
+                    publishStream
+                );
+                publisherReady = await waitForPublisherState(
+                    publishStreamId,
+                    15000
+                );
+                assertCurrentSession();
+            }
+
             if (!publisherReady) {
                 throw new Error(
                     `ZEGO publisher failed: state=${publisherLifecycleState}, ` +
-                    `error=${JSON.stringify(publisherLifecycleError)}`
+                    `error=${JSON.stringify(publisherLifecycleError)}, ` +
+                    `diagnostics=${JSON.stringify(getPublishDiagnostics())}`
                 );
             }
 
@@ -2870,30 +3063,66 @@ window.startCustomZegoEngine = function (
 // =========================================
 function initAIModels() {
     if (faceMesh && selfieSegmentation) return;
+    if (faceMesh || selfieSegmentation) {
+        try { faceMesh?.close?.(); } catch (error) {
+            console.warn("⚠️ Partial FaceMesh cleanup failed:", error);
+        }
+        try { selfieSegmentation?.close?.(); } catch (error) {
+            console.warn("⚠️ Partial segmentation cleanup failed:", error);
+        }
+        faceMesh = null;
+        selfieSegmentation = null;
+    }
+
+    let nextFaceMesh = null;
+    let nextSegmentation = null;
     try {
-        faceMesh = new window.FaceMesh({
+        if (!window.FaceMesh || !window.SelfieSegmentation) {
+            throw new Error("MediaPipe models are not available.");
+        }
+
+        nextFaceMesh = new window.FaceMesh({
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
         });
-        faceMesh.setOptions({
+        nextFaceMesh.setOptions({
             maxNumFaces: 1,
             refineLandmarks: true,
             minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5
         });
-        faceMesh.onResults((results) => {
-            lastFaceLandmarks = (results.multiFaceLandmarks && results.multiFaceLandmarks[0]) || null;
+        nextFaceMesh.onResults((results) => {
+            if (pipelineRunning) {
+                lastFaceLandmarks =
+                    (results.multiFaceLandmarks &&
+                        results.multiFaceLandmarks[0]) ||
+                    null;
+            }
         });
 
-        selfieSegmentation = new window.SelfieSegmentation({
+        nextSegmentation = new window.SelfieSegmentation({
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
         });
-        selfieSegmentation.setOptions({ modelSelection: 1 });
-        selfieSegmentation.onResults((results) => {
-            lastSegResults = results;
+        nextSegmentation.setOptions({ modelSelection: 1 });
+        nextSegmentation.onResults((results) => {
+            if (pipelineRunning) {
+                lastSegResults = results;
+            }
         });
+        faceMesh = nextFaceMesh;
+        selfieSegmentation = nextSegmentation;
         console.log("🧠 AI models initialized successfully.");
+        return true;
     } catch (e) {
+        try { nextFaceMesh?.close?.(); } catch (error) {
+            console.warn("⚠️ FaceMesh initialization cleanup failed:", error);
+        }
+        try { nextSegmentation?.close?.(); } catch (error) {
+            console.warn("⚠️ Segmentation initialization cleanup failed:", error);
+        }
+        faceMesh = null;
+        selfieSegmentation = null;
         console.error("Failed to init AI models", e);
+        throw e;
     }
 }
 
@@ -3267,6 +3496,18 @@ function destroyGPUResources() {
         gpuPositionBuffer = null;
         gpuTexCoordBuffer = null;
         faceMaskCanvas = null;
+        gpuAttribs = {};
+        blurAttribs = {};
+        compositeAttribs = {};
+        imageCompositeAttribs = {};
+        maskRefineAttribs = {};
+        beautyAttribs = {};
+        gpuUniforms = {};
+        blurUniforms = {};
+        compositeUniforms = {};
+        imageCompositeUniforms = {};
+        maskRefineUniforms = {};
+        beautyUniforms = {};
         gpuReady = false;
         gpu = null;
     }
@@ -3296,7 +3537,11 @@ function initializeGPUBlurEngine() {
         powerPreference: 'high-performance'
     });
 
-    if (!gpu) { console.error('WebGL2 is not available.'); return false; }
+    if (!gpu) {
+        console.error('WebGL2 is not available.');
+        gpu = null;
+        return false;
+    }
 
     const gl = gpu;
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -3311,6 +3556,7 @@ function initializeGPUBlurEngine() {
 
     if (!gpuProgram || !blurProgram || !compositeProgram || !imageCompositeProgram || !maskRefineProgram || !beautyProgram) {
         console.error("❌ GPU shader initialization failed.");
+        destroyGPUResources();
         return false;
     }
 
@@ -3546,6 +3792,9 @@ function bindGeometry(program, attribsCache, uniformsCache) {
         if (uniformsCache.bgSize && bgImageEl) {
             gl.uniform2f(uniformsCache.bgSize, bgImageEl.naturalWidth || bgImageEl.width, bgImageEl.naturalHeight || bgImageEl.height);
         }
+        if (uniformsCache.outputSize) {
+            gl.uniform2f(uniformsCache.outputSize, CANVAS_W, CANVAS_H);
+        }
     }
 
     // 🔥 APPLY ZOOM & AUTO FRAME (UV Transform) - PATCH 1
@@ -3569,11 +3818,17 @@ function bindGeometry(program, attribsCache, uniformsCache) {
         const centerOffsetY =
             0.5 - (0.5 * scaleY);
 
-        const offsetX =
-            centerOffsetX + autoFrameCurrentX;
-
-        const offsetY =
-            centerOffsetY + autoFrameCurrentY;
+        const maxAutoOffset = 0.5 * (1.0 - scaleX);
+        const boundedAutoX = Math.max(
+            -maxAutoOffset,
+            Math.min(maxAutoOffset, autoFrameCurrentX)
+        );
+        const boundedAutoY = Math.max(
+            -maxAutoOffset,
+            Math.min(maxAutoOffset, autoFrameCurrentY)
+        );
+        const offsetX = centerOffsetX + boundedAutoX;
+        const offsetY = centerOffsetY + boundedAutoY;
 
         gl.uniform4f(
             uniformsCache.uvTransform,
@@ -3860,7 +4115,8 @@ function ensurePipelineElements() {
         const success = initializeGPUBlurEngine();
         if (!success) throw new Error("WebGL2 GPU engine could not be initialized.");
     }
-    if (!rawVideoEl.dataset.aspectReady) {
+    if (!rawVideoEl.dataset.aspectListenerAttached) {
+        rawVideoEl.dataset.aspectListenerAttached = "true";
         rawVideoEl.addEventListener("loadedmetadata", () => {
             const sourceWidth = rawVideoEl.videoWidth;
             const sourceHeight = rawVideoEl.videoHeight;
@@ -3870,7 +4126,7 @@ function ensurePipelineElements() {
                 rawVideoEl.dataset.sourceAspect = String(sourceWidth / sourceHeight);
                 rawVideoEl.dataset.aspectReady = "true";
             }
-        }, { once: false });
+        }, { once: true });
     }
     return true;
 }
@@ -3970,7 +4226,7 @@ function scheduleNextVideoFrame() {
     }
 }
 
-async function startAIPipeline() {
+async function startAIPipelineInternal(sessionId, operationId) {
     if (pipelineRunning) {
         console.log("ℹ️ AI pipeline already running.");
         return;
@@ -3978,10 +4234,13 @@ async function startAIPipeline() {
 
     try {
         await ensureMediaPipeLoaded();
+        if (!isCurrentAIOperation(sessionId, operationId)) {
+            throw new Error("Video session ended while loading AI models.");
+        }
         initAIModels();
         ensurePipelineElements();
 
-        const videoTrack = localStream.getVideoTracks()[0];
+        const videoTrack = localStream?.getVideoTracks?.()[0];
         if (!videoTrack) throw new Error("No video track available to process AI.");
 
         segmentationBusy = false;
@@ -3989,11 +4248,14 @@ async function startAIPipeline() {
         lastSegResults = null;
         lastFaceLandmarks = null;
 
-        const rawMediaStream = new MediaStream([videoTrack]);
+        rawMediaStream = new MediaStream([videoTrack]);
         rawVideoEl.srcObject = rawMediaStream;
         await rawVideoEl.play().catch(() => {
             throw new Error("Failed to play hidden video for AI pipeline.");
         });
+        if (!isCurrentAIOperation(sessionId, operationId)) {
+            throw new Error("Video session ended while starting AI pipeline.");
+        }
 
         SOURCE_VIDEO_W = rawVideoEl.videoWidth || 1280;
         SOURCE_VIDEO_H = rawVideoEl.videoHeight || 720;
@@ -4005,7 +4267,10 @@ async function startAIPipeline() {
         });
 
         pipelineRunning = true;
-        await switchPublishToCanvas();
+        await switchPublishToCanvas(sessionId);
+        if (!isCurrentAIOperation(sessionId, operationId)) {
+            throw new Error("Video session ended while switching to AI output.");
+        }
 
         scheduleNextVideoFrame();
 
@@ -4050,150 +4315,185 @@ async function startAIPipeline() {
     }
 }
 
+function startAIPipeline() {
+    if (aiStartPromise) {
+        return aiStartPromise;
+    }
+
+    const sessionId = engineSessionId;
+    const operationId = ++aiOperationGeneration;
+    aiStartPromise = startAIPipelineInternal(
+        sessionId,
+        operationId
+    ).finally(() => {
+        aiStartPromise = null;
+    });
+    return aiStartPromise;
+}
+
 // ============================================================
 // 🔥 CORRECTED: switchPublishToCanvas
 // ============================================================
-async function switchPublishToCanvas() {
-    if (!zg || !localStream || !outCanvas) {
-        console.warn("⚠️ Cannot switch to canvas: Zego/localStream/outCanvas missing.");
-        return;
-    }
+async function switchPublishToCanvas(sessionId = engineSessionId) {
+    return enqueuePublishOperation(async () => {
+        const engine = zg;
+        const sourceStream = localStream;
+        if (
+            !engine ||
+            !sourceStream ||
+            !outCanvas ||
+            !isCurrentEngineSession(sessionId, engine)
+        ) {
+            throw new Error(
+                "Cannot switch to canvas: the ZEGO session is not active."
+            );
+        }
 
-    let canvasCaptureStream = null;
+        let nextCanvasStream = null;
+        let nextCustomStream = null;
+        let oldPublishStopped = false;
+        const oldStreamId = publishStreamId;
+        const oldCustomStream = customZegoStream;
 
-    try {
-        console.log("🔄 Switching Zego publish source → GPU canvas");
-
-        const canvasProfile =RESOLUTION_PROFILES[currentResProfile] || RESOLUTION_PROFILES.BALANCED;
-        const captureFPS =
-            Math.max(
+        try {
+            console.log("🔄 Switching ZEGO publish source → GPU canvas");
+            const canvasProfile =
+                RESOLUTION_PROFILES[currentResProfile] ||
+                RESOLUTION_PROFILES.BALANCED;
+            const captureFPS = Math.max(
                 1,
-                Math.min(
-                    Number(canvasProfile.fps) || 30,
-                    60
-                )
+                Math.min(Number(canvasProfile.fps) || 30, 60)
             );
 
-        canvasCaptureStream =outCanvas.captureStream(captureFPS);
-        if (!canvasCaptureStream) throw new Error("Canvas captureStream() is not supported.");
-
-        canvasStream = canvasCaptureStream;
-
-        const audioTrack = localStream.getAudioTracks()[0];
-
-        const canvasVideoTrack = canvasStream.getVideoTracks()[0];
-        if (!canvasVideoTrack) throw new Error("GPU canvas did not produce a video track.");
-
-        if (publishStreamId) {
-            try {
-                await zg.stopPublishingStream(publishStreamId);
-                originalPublishingStopped = true;
-            } catch (e) { console.warn("Previous publish stop warning:", e); }
-        }
-
-        if (customZegoStream) {
-            try {
-                zg.destroyStream(customZegoStream);
-            } catch (e) { console.warn("Custom stream destroy warning:", e); }
-            customZegoStream = null;
-        }
-
-        const customSource = {
-            video: {
-                source: canvasStream
+            nextCanvasStream = outCanvas.captureStream(captureFPS);
+            const canvasVideoTrack =
+                nextCanvasStream?.getVideoTracks?.()[0];
+            if (!canvasVideoTrack) {
+                throw new Error(
+                    "Canvas captureStream() did not produce a video track."
+                );
             }
-        };
 
-        if (audioTrack) {
-            customSource.audio = {
-                source: new MediaStream([audioTrack])
+            const audioTrack = sourceStream.getAudioTracks?.()[0];
+            const customSource = {
+                video: { source: nextCanvasStream }
             };
-        }
+            if (audioTrack) {
+                customSource.audio = {
+                    source: new MediaStream([audioTrack])
+                };
+            }
 
-        customZegoStream = await zg.createZegoStream({
-            custom: customSource
-        });
+            nextCustomStream = await engine.createZegoStream({
+                custom: customSource
+            });
+            if (!nextCustomStream) {
+                throw new Error("ZEGO custom stream creation failed.");
+            }
+            if (!isCurrentEngineSession(sessionId, engine)) {
+                throw new Error("Video session ended during canvas setup.");
+            }
 
-        if (!customZegoStream) throw new Error("Zego custom stream creation failed.");
+            if (oldStreamId) {
+                await engine.stopPublishingStream(oldStreamId);
+                oldPublishStopped = true;
+            }
 
-        publishStream = customZegoStream;
+            if (oldCustomStream) {
+                engine.destroyStream(oldCustomStream);
+            }
 
-        resetPublisherAttempt(publishStreamId);
+            canvasStream = nextCanvasStream;
+            customZegoStream = nextCustomStream;
+            publishStream = nextCustomStream;
+            publishStreamId = createPublishStreamId(
+                window.currentZegoUserId || "user"
+            );
+            resetPublisherAttempt(publishStreamId);
 
-        await zg.startPublishingStream(
-            publishStreamId,
-            customZegoStream
-        );
-
-        const canvasPublisherReady =
-            await waitForPublisherState(
+            await engine.startPublishingStream(
+                publishStreamId,
+                nextCustomStream
+            );
+            const ready = await waitForPublisherState(
                 publishStreamId,
                 30000
             );
+            if (!ready || !isCurrentEngineSession(sessionId, engine)) {
+                throw new Error(
+                    "ZEGO canvas publisher did not reach PUBLISHING."
+                );
+            }
 
-        if (!canvasPublisherReady) {
-            throw new Error(
-                "ZEGO canvas publisher did not reach PUBLISHING state."
-            );
-        }
-
-        await zg.mutePublishStreamAudio(publishStreamId,!isMicOn);
-        await zg.mutePublishStreamVideo(publishStreamId, !isCamOn);
-
-        const localVideoPreview = document.getElementById('my-local-video');
-        if (localVideoPreview) {
-            localVideoPreview.srcObject = canvasStream;
-        }
-
-        console.log("✅ Zego now publishing GPU canvas custom stream.", {
-            camera: isCamOn,
-            microphone: isMicOn,
-            fps: captureFPS,
-            width: CANVAS_W,
-            height: CANVAS_H,
-            zoom: currentZoom,
-            beauty: isBeautyOn
-        });
-
-    } catch (e) {
-        console.error("❌ GPU canvas publish failed:", e);
-        publishStream = localStream;
-        resetPublisherAttempt(publishStreamId);
-        await zg.startPublishingStream(
-            publishStreamId,
-            localStream
-        );
-
-        const restorePublisherReady =
-            await waitForPublisherState(
+            await engine.mutePublishStreamAudio(
                 publishStreamId,
-                8000
+                !isMicOn
+            );
+            await engine.mutePublishStreamVideo(
+                publishStreamId,
+                !isCamOn
             );
 
-        if (!restorePublisherReady) {
-            throw new Error(
-                "ZEGO restored publisher did not reach PUBLISHING state."
-            );
+            const localVideoPreview =
+                document.getElementById("my-local-video");
+            if (localVideoPreview) {
+                localVideoPreview.srcObject = nextCanvasStream;
+            }
+            console.log("✅ ZEGO is publishing the GPU canvas stream.");
+            return true;
+        } catch (error) {
+            if (nextCustomStream && nextCustomStream !== customZegoStream) {
+                try {
+                    engine.destroyStream(nextCustomStream);
+                } catch (cleanupError) {
+                    console.warn(
+                        "⚠️ Failed to destroy failed canvas stream:",
+                        cleanupError
+                    );
+                }
+            }
+            nextCanvasStream?.getTracks?.().forEach(track => track.stop());
+
+            if (oldPublishStopped && isCurrentEngineSession(sessionId, engine)) {
+                publishStream = sourceStream;
+                customZegoStream = null;
+                canvasStream = null;
+                publishStreamId = createPublishStreamId(
+                    window.currentZegoUserId || "user"
+                );
+                resetPublisherAttempt(publishStreamId);
+                await engine.startPublishingStream(
+                    publishStreamId,
+                    sourceStream
+                );
+                const restored = await waitForPublisherState(
+                    publishStreamId,
+                    10000
+                );
+                if (!restored) {
+                    throw new Error(
+                        `Canvas failed and camera restore failed: ${publisherLifecycleState}`
+                    );
+                }
+                await engine.mutePublishStreamAudio(
+                    publishStreamId,
+                    !isMicOn
+                );
+                await engine.mutePublishStreamVideo(
+                    publishStreamId,
+                    !isCamOn
+                );
+            }
+
+            console.error("❌ GPU canvas publish failed:", error);
+            throw error;
         }
+    });
+}
 
-        await zg.mutePublishStreamAudio(
-            publishStreamId,
-            !isMicOn
-        );
-
-        await zg.mutePublishStreamVideo(
-            publishStreamId,
-            !isCamOn
-        );
-
-        console.log(
-            "↩️ Reverted to original camera stream."
-        );
-        }
-        }
-
-async function stopAIPipelineIfIdle() {
+async function stopAIPipelineIfIdleInternal(sessionId = engineSessionId) {
     if (isBeautyOn || isBgMode !== "none") return;
+    aiOperationGeneration++;
 
     console.log("🛑 Stopping AI/GPU pipeline...");
 
@@ -4240,21 +4540,30 @@ async function stopAIPipelineIfIdle() {
         canvasStream = null;
     }
 
-    if (zg && publishStream && publishStream !== localStream) {
+    if (
+        zg &&
+        publishStream &&
+        publishStream !== localStream &&
+        isCurrentEngineSession(sessionId, zg)
+    ) {
         try {
             console.log("🔄 Restoring Zego publish source → original camera");
+            const engine = zg;
             if (publishStreamId) {
-                await zg.stopPublishingStream(publishStreamId);
+                await engine.stopPublishingStream(publishStreamId);
             }
             if (customZegoStream) {
-                zg.destroyStream(customZegoStream);
+                engine.destroyStream(customZegoStream);
                 customZegoStream = null;
             }
+            canvasStream?.getTracks?.().forEach(track => track.stop());
+            canvasStream = null;
             publishStream = localStream;
-            await zg.startPublishingStream(
-                publishStreamId,
-                localStream
+            publishStreamId = createPublishStreamId(
+                window.currentZegoUserId || "user"
             );
+            resetPublisherAttempt(publishStreamId);
+            await engine.startPublishingStream(publishStreamId, localStream);
 
             const fallbackPublisherReady =
                 await waitForPublisherState(
@@ -4268,12 +4577,12 @@ async function stopAIPipelineIfIdle() {
                 );
             }
 
-            await zg.mutePublishStreamAudio(
+            await engine.mutePublishStreamAudio(
                 publishStreamId,
                 !isMicOn
             );
 
-            await zg.mutePublishStreamVideo(
+            await engine.mutePublishStreamVideo(
                 publishStreamId,
                 !isCamOn
             );
@@ -4310,6 +4619,12 @@ async function stopAIPipelineIfIdle() {
     console.log("✅ AI/GPU pipeline stopped safely.");
 }
 
+function stopAIPipelineIfIdle() {
+    return enqueuePublishOperation(() =>
+        stopAIPipelineIfIdleInternal(engineSessionId)
+    );
+}
+
 // =========================================
 // 7. UI CONTROLS SETUP
 // =========================================
@@ -4343,6 +4658,8 @@ window.setupControls = function () {
     const leaveBtn = document.getElementById('btn-leave');
 
     if (micBtn) micBtn.onclick = async function () {
+        if (this.dataset.busy === "true") return;
+        this.dataset.busy = "true";
         try {
             if (!localStream || !zg) return;
             const nextState = !isMicOn;
@@ -4364,10 +4681,16 @@ window.setupControls = function () {
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
             setTimeout(() => this.style.transform = "scale(1)", 150);
-        } catch (e) { console.error("Mic toggle error:", e); }
+        } catch (e) {
+            console.error("Mic toggle error:", e);
+        } finally {
+            this.dataset.busy = "false";
+        }
     };
 
     if (camBtn) camBtn.onclick = async function () {
+        if (this.dataset.busy === "true") return;
+        this.dataset.busy = "true";
         try {
             if (!localStream || !zg) return;
             const nextState = !isCamOn;
@@ -4388,11 +4711,17 @@ window.setupControls = function () {
             refreshMicCamButtonUI();
             this.style.transform = "scale(0.85)";
             setTimeout(() => this.style.transform = "scale(1)", 150);
-        } catch (e) { console.error("Camera toggle error:", e); }
+        } catch (e) {
+            console.error("Camera toggle error:", e);
+        } finally {
+            this.dataset.busy = "false";
+        }
     };
 
     if (beautyBtn) beautyBtn.onclick = async function () {
         const btn = this;
+        if (btn.dataset.busy === "true") return;
+        btn.dataset.busy = "true";
         try {
             if (!localStream) return;
             isBeautyOn = !isBeautyOn;
@@ -4417,11 +4746,15 @@ window.setupControls = function () {
             btn.style.color = "";
             btn.style.boxShadow = "none";
             btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i>';
+        } finally {
+            btn.dataset.busy = "false";
         }
     };
 
     if (bgBtn) bgBtn.onclick = async function () {
         const btn = this;
+        if (btn.dataset.busy === "true") return;
+        btn.dataset.busy = "true";
         try {
             if (!localStream) return;
             if (isBgMode === "none") {
@@ -4433,7 +4766,11 @@ window.setupControls = function () {
             btn.style.color = "";
             btn.style.boxShadow = "none";
             await stopAIPipelineIfIdle();
-        } catch (e) { console.error("BG toggle error:", e); }
+        } catch (e) {
+            console.error("BG toggle error:", e);
+        } finally {
+            btn.dataset.busy = "false";
+        }
     };
 
     if (leaveBtn) leaveBtn.onclick = leaveRoom;
@@ -4442,9 +4779,24 @@ window.setupControls = function () {
 // =========================================
 // 8. BACKGROUND PICKER
 // =========================================
+function closeBackgroundPicker() {
+    const popover = document.getElementById("bg-picker-popover");
+    if (popover) popover.remove();
+    if (backgroundPopoverCloseHandler) {
+        document.removeEventListener(
+            "click",
+            backgroundPopoverCloseHandler
+        );
+        backgroundPopoverCloseHandler = null;
+    }
+}
+
 function openBackgroundPicker(anchorBtn) {
     const existing = document.getElementById('bg-picker-popover');
-    if (existing) { existing.remove(); return; }
+    if (existing) {
+        closeBackgroundPicker();
+        return;
+    }
 
     const popover = document.createElement('div');
     popover.id = 'bg-picker-popover';
@@ -4467,7 +4819,7 @@ function openBackgroundPicker(anchorBtn) {
     document.getElementById('custom-video-wrapper').appendChild(popover);
 
     document.getElementById('bg-pick-blur').onclick = async () => {
-        popover.remove();
+        closeBackgroundPicker();
         isBgMode = "blur";
         anchorBtn.style.background = "linear-gradient(135deg, #0ea5e9, #38bdf8)";
         anchorBtn.style.color = "#fff";
@@ -4482,15 +4834,25 @@ function openBackgroundPicker(anchorBtn) {
     fileInput.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        popover.remove();
+        closeBackgroundPicker();
 
+        if (bgImageEl?.src?.startsWith("blob:")) {
+            URL.revokeObjectURL(bgImageEl.src);
+        }
         const url = URL.createObjectURL(file);
         bgImageEl = new Image();
         bgImageEl.src = url;
-        await new Promise((resolve, reject) => {
-            bgImageEl.onload = resolve;
-            bgImageEl.onerror = () => reject(new Error("Failed to load background image"));
-        });
+        try {
+            await new Promise((resolve, reject) => {
+                bgImageEl.onload = resolve;
+                bgImageEl.onerror = () =>
+                    reject(new Error("Failed to load background image"));
+            });
+        } catch (error) {
+            URL.revokeObjectURL(url);
+            bgImageEl = null;
+            throw error;
+        }
 
         isBgMode = "image";
         anchorBtn.style.background = "linear-gradient(135deg, #a78bfa, #7c3aed)";
@@ -4501,13 +4863,18 @@ function openBackgroundPicker(anchorBtn) {
         anchorBtn.innerHTML = '<i class="fas fa-image"></i>';
     };
 
+    backgroundPopoverCloseHandler = ev => {
+        if (!popover.contains(ev.target) && ev.target !== anchorBtn) {
+            closeBackgroundPicker();
+        }
+    };
     setTimeout(() => {
-        document.addEventListener('click', function closePopover(ev) {
-            if (!popover.contains(ev.target) && ev.target !== anchorBtn) {
-                popover.remove();
-                document.removeEventListener('click', closePopover);
-            }
-        });
+        if (document.getElementById("bg-picker-popover") === popover) {
+            document.addEventListener(
+                "click",
+                backgroundPopoverCloseHandler
+            );
+        }
     }, 0);
 }
 
@@ -4611,6 +4978,8 @@ window.stopPerformanceMonitor = function stopPerformanceMonitor() {
 async function performLeaveRoom() {
 
     console.log("🚪 Leaving room...");
+    engineLifecycleState = ENGINE_STOPPING;
+    aiOperationGeneration++;
 
     // =====================================================
     // 🔴 STEP 1 — STOP BACKGROUND MONITOR FIRST
@@ -4728,9 +5097,12 @@ async function performLeaveRoom() {
     const stream = localStream;
     const customStream =
         customZegoStream;
+    const derivedCanvasStream = canvasStream;
     const streamId = publishStreamId;
     const roomId = window.meetingRoomId;
     const remoteIds = Array.from(remoteStreamIds);
+    const wasLoggedIntoRoom = roomLoginSucceeded;
+    roomLoginSucceeded = false;
 
     // Invalidate callbacks before mutating shared state so late SDK
     // events cannot revive a room that is being torn down.
@@ -4738,6 +5110,7 @@ async function performLeaveRoom() {
     unbindEngineEvents(engine);
     clearRemoteRevealTimers();
     remoteStreamIds.clear();
+    remoteStreamGenerations.clear();
     resolveRoomWaiters(false);
     rejectAllPublisherWaiters();
 
@@ -4814,6 +5187,14 @@ async function performLeaveRoom() {
         }
     }
 
+    if (derivedCanvasStream) {
+        try {
+            derivedCanvasStream.getTracks?.().forEach(track => track.stop());
+        } catch (error) {
+            console.warn("⚠️ Canvas capture cleanup failed:", error);
+        }
+    }
+
     // =====================================================
     // STEP 10 — DESTROY LOCAL ZEGO STREAM
     // =====================================================
@@ -4852,7 +5233,7 @@ async function performLeaveRoom() {
     // STEP 11 — LOGOUT ROOM
     // =====================================================
 
-    if (engine && roomId) {
+    if (engine && roomId && wasLoggedIntoRoom) {
 
         try {
 
@@ -4897,6 +5278,25 @@ async function performLeaveRoom() {
         rawVideoEl = null;
     }
 
+    if (rawMediaStream) {
+        rawMediaStream = null;
+    }
+
+    for (const model of [faceMesh, selfieSegmentation]) {
+        try {
+            model?.close?.();
+        } catch (error) {
+            console.warn("⚠️ MediaPipe model cleanup failed:", error);
+        }
+    }
+    faceMesh = null;
+    selfieSegmentation = null;
+
+    if (bgImageEl?.src?.startsWith("blob:")) {
+        URL.revokeObjectURL(bgImageEl.src);
+    }
+    bgImageEl = null;
+
     destroyGPUResources();
 
     if (outCanvas) {
@@ -4937,6 +5337,23 @@ async function performLeaveRoom() {
     publisherLifecycleState = "IDLE";
     publisherLifecycleStreamId = "";
     publisherLifecycleError = null;
+    publisherLifecycleAttemptId++;
+    networkQuality = 0.5;
+    networkQualitySource = "unavailable";
+    networkQualityFresh = false;
+    lastNetworkQualityUpdate = 0;
+    badFpsSamples = 0;
+    goodFpsSamples = 0;
+    badNetSamples = 0;
+    goodNetSamples = 0;
+    qualityEvaluationRunning = false;
+    frameRateCounter = 0;
+    lastFPSCheckTime = 0;
+    currentFPS = 30;
+    activeRoomId = "";
+    window.meetingRoomId = "";
+    window.currentZegoUserId = "";
+    engineLifecycleState = ENGINE_IDLE;
 
     // =====================================================
     // STEP 14 — CLEAR LOCAL VIDEO ELEMENT
@@ -5041,14 +5458,7 @@ async function performLeaveRoom() {
     // STEP 20 — REMOVE BACKGROUND POPOVER
     // =====================================================
 
-    const popover =
-        document.getElementById(
-            "bg-picker-popover"
-        );
-
-    if (popover) {
-        popover.remove();
-    }
+    closeBackgroundPicker();
 
     // =====================================================
     // STEP 21 — REMOVE ZOOM UI
