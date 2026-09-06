@@ -1,4 +1,4 @@
-const { BiddingParticipant, BidMessage } = require("../models/Bidding");
+const { BiddingParticipant, BidMessage } = require("../models/Bidding").default;
 const User = require("../models/User");
 
 // 🔥 Apni local ZegoCloud Token Generator file use kar rahe hain
