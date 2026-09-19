@@ -1,0 +1,1 @@
+- [ZEGO SDK compatibility](zego-sdk-compatibility.md) — preserve the installed publishing signatures and ZEGO Token04 cipher format.

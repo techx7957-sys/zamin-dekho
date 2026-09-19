@@ -639,12 +639,13 @@
                     const data = await response.json();
                     if (!data.success) throw new Error(data.message || "Failed to retrieve secure video token.");
 
+                    if (typeof data.serverUrl === 'string' && data.serverUrl.trim()) {
+                        window.ZEGO_SERVER_URL = data.serverUrl.trim();
+                    }
+
                     // 2. Pass control to our new videoEngine.js file
                     if (typeof window.startCustomZegoEngine === 'function') {
                         // This function will be defined in videoEngine.js
-                        if (typeof data.serverUrl === 'string' && data.serverUrl.trim()) {
-                            window.ZEGO_SERVER_URL = data.serverUrl.trim();
-                        }
                         await window.startCustomZegoEngine(data.appId, data.token, meetingRoomId, myShortId, userName);
                     } else {
                         throw new Error("videoEngine.js file not loaded properly.");

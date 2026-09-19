@@ -637,7 +637,7 @@ function enableAGC(zegoInstance) {
             }
 
             const nextConfig = {
-                bitrate: numericBitrate
+                maxBitrate: numericBitrate
             };
 
             if (

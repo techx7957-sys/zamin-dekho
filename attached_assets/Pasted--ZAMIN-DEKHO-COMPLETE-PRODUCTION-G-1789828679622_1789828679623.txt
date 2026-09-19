@@ -1,0 +1,1472 @@
+===============================================================
+ZAMIN DEKHO — COMPLETE PRODUCTION-GRADE FORENSIC AUDIT,
+SECURITY HARDENING, SEO RECOVERY, VIDEO ENGINE REBUILD,
+HANDLER ARCHITECTURE, ZEGO AUDIT & BIDDING INTEGRATION
+===============================================================
+
+ROLE:
+Act as a SENIOR SOFTWARE ARCHITECT + FULL-STACK ENGINEER +
+SECURITY ENGINEER + WEBRTC/VIDEO ENGINEER + ZEGO SDK ENGINEER +
+PERFORMANCE ENGINEER + SEO ENGINEER + QA ENGINEER.
+
+You are auditing a real production project.
+
+DO NOT perform a superficial scan.
+
+DO NOT fix only the first error you see.
+
+DO NOT rewrite working code blindly.
+
+DO NOT invent APIs.
+
+DO NOT expose secrets.
+
+DO NOT hide errors.
+
+DO NOT claim success without verification.
+
+The final objective is a stable, secure, maintainable, production-grade
+Zamin Dekho platform with a highly reliable video bidding experience.
+
+===============================================================
+PHASE 1 — COMPLETE REPOSITORY DISCOVERY
+===============================================================
+
+Before editing ANY file:
+
+SCAN THE ENTIRE REPOSITORY.
+
+Inspect all:
+
+- .js
+- .jsx
+- .ts
+- .tsx
+- .html
+- .css
+- .json
+- server files
+- controllers
+- routes
+- middleware
+- models
+- config
+- public
+- frontend
+- backend
+- API
+- authentication
+- authorization
+- admin
+- broker
+- listing
+- payment
+- bidding
+- video
+- ZEGO
+- deployment
+- SEO
+- assets
+- scripts
+
+Specifically locate:
+
+- videoEngine.js
+- bidding.html
+- all bidding JavaScript
+- all bidding CSS
+- all video files
+- ZEGO token generation
+- ZEGO configuration
+- ZEGO SDK loading
+- room login
+- stream publishing
+- remote stream subscription
+- camera/microphone handling
+- MediaStream handling
+- canvas
+- WebGL
+- MediaPipe
+- segmentation
+- face detection
+- beauty
+- zoom
+- auto-frame
+- bitrate
+- resolution
+- reconnect
+- cleanup
+
+DO NOT start coding until you understand the dependency structure.
+
+Create an internal architecture map:
+
+Frontend
+↓
+Bidding UI
+↓
+Video Engine
+↓
+ZEGO SDK
+↓
+Backend token endpoint
+↓
+ZEGO service
+
+Also map:
+
+Frontend
+↓
+API
+↓
+Controllers
+↓
+Routes
+↓
+Models
+↓
+Database
+
+===============================================================
+PHASE 2 — FULL SECRET / SECURITY AUDIT
+===============================================================
+
+Search the ENTIRE project for:
+
+- ZEGO App ID
+- ZEGO Server Secret
+- JWT secret
+- MongoDB URI
+- Cloudinary secret
+- Cloudinary API key
+- Razorpay secret
+- OAuth secrets
+- API keys
+- bearer tokens
+- passwords
+- private keys
+- webhook secrets
+- encryption keys
+- credentials
+- access tokens
+
+CRITICAL:
+
+NEVER print actual secret values.
+
+NEVER put server secrets into:
+
+- frontend JS
+- HTML
+- public/
+- browser console
+- API response
+- client bundle
+
+ZEGO Server Secret MUST remain server-side.
+
+Check:
+
+- .env
+- .gitignore
+- Git-tracked files
+- public files
+- Vercel configuration
+- Replit configuration
+- deployment variables
+
+Find all process.env references.
+
+Create an internal environment-variable matrix:
+
+VARIABLE
+PURPOSE
+FILE
+SERVER/CLIENT
+REQUIRED/OPTIONAL
+MISSING/PRESENT
+
+Report variable NAMES only.
+
+Never reveal values.
+
+===============================================================
+PHASE 3 — ENVIRONMENT CONSISTENCY
+===============================================================
+
+Find:
+
+- variables referenced but missing
+- incorrect variable names
+- duplicate variable names
+- development fallbacks
+- production fallbacks
+- inconsistent ZEGO configuration
+- inconsistent API base URLs
+- inconsistent database configuration
+- frontend/backend configuration mismatch
+
+Remove unsafe hardcoded fallback secrets.
+
+Fail safely when required production configuration is missing.
+
+Do not silently use fake/default credentials.
+
+===============================================================
+PHASE 4 — BACKEND FORENSIC AUDIT
+===============================================================
+
+Inspect:
+
+- server.js
+- Express setup
+- middleware
+- CORS
+- authentication
+- authorization
+- JWT
+- sessions
+- routes
+- controllers
+- models
+- database
+- uploads
+- Cloudinary
+- payments
+- bidding
+- video token endpoint
+- admin
+- broker
+
+Find and fix:
+
+- broken imports
+- incorrect exports
+- .default mistakes
+- async bugs
+- missing await
+- unhandled promises
+- race conditions
+- duplicate routes
+- duplicate middleware
+- insecure endpoints
+- missing authorization
+- missing validation
+- incorrect status codes
+- swallowed errors
+- memory leaks
+- unsafe user input
+- excessive request sizes
+- missing rate limits
+
+Add appropriate:
+
+- input validation
+- authorization
+- rate limiting
+- security headers
+- safe error responses
+- structured server logging
+
+Do not expose stack traces or secrets to clients.
+
+===============================================================
+PHASE 5 — COMPLETE EVENT HANDLER AUDIT
+===============================================================
+
+THIS IS CRITICAL.
+
+Audit EVERY EVENT HANDLER in the project.
+
+Search for:
+
+- addEventListener
+- onclick
+- onload
+- onchange
+- oninput
+- onmessage
+- onerror
+- onbeforeunload
+- visibilitychange
+- resize
+- pointer events
+- keyboard events
+- ZEGO callbacks
+- MediaStream callbacks
+- track.onended
+- track.onmute
+- track.onunmute
+- room callbacks
+- publish callbacks
+- subscribe callbacks
+
+Identify:
+
+- duplicate handlers
+- handlers registered repeatedly
+- handlers never removed
+- handlers attached before DOM exists
+- handlers attached to removed elements
+- inline + addEventListener duplicates
+- race conditions
+- stale closures
+- callbacks using destroyed objects
+- callbacks firing after cleanup
+
+===============================================================
+PHASE 6 — BUILD A PROPER HANDLER ARCHITECTURE
+===============================================================
+
+Do NOT scatter event handlers randomly across the code.
+
+Create a clear ownership model.
+
+Every major subsystem must have one authoritative handler owner.
+
+For example:
+
+UI HANDLERS
+→ bidding UI module
+
+VIDEO HANDLERS
+→ videoEngine.js
+
+ZEGO HANDLERS
+→ ZEGO lifecycle manager
+
+MEDIA HANDLERS
+→ media manager
+
+NETWORK HANDLERS
+→ connection/recovery manager
+
+CLEANUP
+→ single cleanup coordinator
+
+Do NOT allow bidding.html and videoEngine.js to both independently control
+the same ZEGO lifecycle.
+
+Use named handler functions instead of anonymous duplicated handlers
+where cleanup is required.
+
+Use:
+
+- AbortController where appropriate
+- removeEventListener
+- one-time listeners where appropriate
+- idempotent initialization
+- idempotent cleanup
+
+Every initialization function must be safe against accidental double calls.
+
+Example concept:
+
+init()
+→ if already initialized, do not initialize again.
+
+cleanup()
+→ if already cleaned, do not cleanup again.
+
+connect()
+→ if already connecting/connected, do not create another connection.
+
+publish()
+→ if already publishing, do not publish again.
+
+===============================================================
+PHASE 7 — HANDLER REGISTRY / CLEANUP SYSTEM
+===============================================================
+
+Create a centralized lifecycle/handler management mechanism where useful.
+
+Track:
+
+- event listeners
+- timers
+- intervals
+- animation frames
+- MediaStream tracks
+- WebGL resources
+- canvas resources
+- ZEGO subscriptions
+- room listeners
+
+Every resource created by a subsystem must have a defined owner
+and cleanup path.
+
+Prevent:
+
+- orphaned timers
+- orphaned event listeners
+- orphaned animation loops
+- orphaned streams
+- orphaned tracks
+- orphaned WebGL contexts
+- duplicate ZEGO callbacks
+
+Cleanup must be safe to call multiple times.
+
+===============================================================
+PHASE 8 — COMPLETE VIDEO ENGINE FORENSIC AUDIT
+===============================================================
+
+Deeply inspect the COMPLETE:
+
+public/videoEngine.js
+
+Do not inspect only selected functions.
+
+Understand the complete file.
+
+Map:
+
+1. global state
+2. initialization
+3. SDK loading
+4. ZEGO engine creation
+5. token acquisition
+6. room login
+7. camera
+8. microphone
+9. MediaStream
+10. canvas
+11. WebGL
+12. face detection
+13. segmentation
+14. beauty
+15. zoom
+16. auto-frame
+17. output stream
+18. audio preservation
+19. publishing
+20. remote subscription
+21. network quality
+22. adaptive quality
+23. reconnect
+24. error recovery
+25. cleanup
+26. destroy
+
+Identify state variables that have multiple owners.
+
+Create ONE authoritative lifecycle.
+
+===============================================================
+PHASE 9 — VIDEO STATE MACHINE
+===============================================================
+
+Implement or improve an explicit state machine.
+
+Possible states:
+
+IDLE
+INITIALIZING
+MEDIA_REQUESTING
+MEDIA_READY
+ENGINE_CREATING
+ROOM_CONNECTING
+ROOM_CONNECTED
+PUBLISHING
+PUBLISHED
+RECONNECTING
+ENDING
+ENDED
+ERROR
+
+Transitions must be controlled.
+
+Prevent invalid transitions such as:
+
+PUBLISHING → PUBLISHING
+LOGIN → LOGIN
+INITIALIZING → INITIALIZING
+CLEANUP → PUBLISHING
+
+Prevent duplicate initialization.
+
+Prevent duplicate publish.
+
+Prevent duplicate room login.
+
+Prevent duplicate cleanup.
+
+===============================================================
+PHASE 10 — ZEGO SDK FORENSIC AUDIT
+===============================================================
+
+The project uses ZEGO Express Web SDK.
+
+Verify every ZEGO API against the ACTUAL SDK version loaded by the project.
+
+DO NOT invent:
+
+- methods
+- events
+- properties
+- configuration options
+
+Do not assume a method exists because it exists in another SDK version.
+
+Verify:
+
+- create engine
+- loginRoom
+- logoutRoom
+- createStream
+- destroyStream
+- startPublishingStream
+- stopPublishingStream
+- startPlayingStream
+- stopPlayingStream
+- mutePublishStreamVideo
+- mutePublishStreamAudio
+- publish configuration
+- room callbacks
+- publisher callbacks
+- player callbacks
+- network callbacks
+
+Use only verified APIs.
+
+===============================================================
+PHASE 11 — ZEGO AUTH / TOKEN FORENSICS
+===============================================================
+
+Audit:
+
+- ZEGO App ID
+- Server Secret
+- Token04 generation
+- token endpoint
+- room ID
+- user ID
+- privilege
+- expiration
+- payload
+- authentication flow
+
+Verify that:
+
+SERVER
+→ securely generates token
+→ CLIENT receives token
+→ CLIENT logs into correct room
+→ CLIENT uses matching user ID
+
+Prevent arbitrary unauthorized token generation.
+
+Validate room/user IDs server-side.
+
+Never expose Server Secret.
+
+If authentication fails, trace the actual root cause.
+
+Do NOT hide 1002099 / 200101 / timeout errors.
+
+===============================================================
+PHASE 12 — MEDIASTREAM LIFECYCLE
+===============================================================
+
+Create a clearly defined architecture:
+
+RAW CAMERA + MICROPHONE
+↓
+PROCESSING PIPELINE
+↓
+FINAL OUTPUT
+↓
+ZEGO PUBLISH
+
+Verify:
+
+- video track exists
+- audio track exists
+- tracks are live
+- tracks are not prematurely stopped
+- canvas captureStream works
+- audio is preserved
+- output stream is valid
+- publishing uses intended stream
+
+Avoid unnecessary cloning.
+
+Avoid stream recreation.
+
+Avoid track duplication.
+
+===============================================================
+PHASE 13 — VIDEO PROCESSING PIPELINE
+===============================================================
+
+Target architecture:
+
+CAMERA
+↓
+ZOOM
+↓
+AUTO-FRAME
+↓
+FACE-AWARE BEAUTY
+↓
+SEGMENTATION
+↓
+BACKGROUND BLUR
+↓
+GPU/WebGL
+↓
+FINAL CANVAS
+↓
+AUDIO PRESERVATION
+↓
+FINAL MEDIASTREAM
+↓
+ZEGO
+
+Adjust order if technical analysis proves another order is better.
+
+Do not double-process.
+
+Do not double-zoom.
+
+Do not repeatedly recreate models.
+
+Do not recreate WebGL contexts every frame.
+
+===============================================================
+PHASE 14 — PROFESSIONAL ZOOM
+===============================================================
+
+Build ONE unified zoom system.
+
+Requirements:
+
+- hardware zoom when supported
+- digital zoom fallback
+- capability detection
+- smooth zoom
+- correct crop
+- correct aspect ratio
+- no double zoom
+- no sudden jumps
+- no stretched video
+
+Hardware zoom and digital zoom must have clearly defined interaction.
+
+Manual zoom and auto-framing must have clearly defined priority.
+
+===============================================================
+PHASE 15 — PROFESSIONAL AUTO-FRAMING
+===============================================================
+
+Implement stable auto-framing.
+
+Requirements:
+
+- face/person detection
+- smooth movement
+- no jitter
+- no oscillation
+- correct crop
+- aspect-ratio preservation
+- no-face fallback
+- multi-person handling
+- recovery when face returns
+
+Do not let auto-frame continuously fight manual zoom.
+
+===============================================================
+PHASE 16 — FACE-AWARE BEAUTY
+===============================================================
+
+Audit existing beauty processing.
+
+If currently applied globally, improve toward face-aware processing.
+
+Requirements:
+
+- natural output
+- no extreme distortion
+- GPU acceleration where practical
+- model reuse
+- no model initialization every frame
+- graceful fallback
+
+===============================================================
+PHASE 17 — BACKGROUND BLUR / SEGMENTATION
+===============================================================
+
+Audit:
+
+- segmentation model
+- initialization
+- mask quality
+- mask smoothing
+- edge quality
+- blur
+- temporal stability
+- CPU/GPU usage
+- fallback
+
+Video call MUST continue if segmentation fails.
+
+Effects must never be allowed to destroy the underlying call.
+
+===============================================================
+PHASE 18 — AUDIO ENGINE
+===============================================================
+
+Verify:
+
+- microphone
+- mute
+- unmute
+- audio track lifecycle
+- echo cancellation
+- noise suppression
+- auto gain
+- audio preservation through video processing
+
+Do not duplicate audio tracks.
+
+Do not create feedback loops.
+
+===============================================================
+PHASE 19 — ADAPTIVE QUALITY ENGINE
+===============================================================
+
+Build REAL adaptive quality based on actual available data.
+
+Never fake network quality.
+
+Never invent unsupported ZEGO APIs.
+
+Adapt:
+
+- bitrate
+- resolution
+- FPS
+- video processing quality
+
+Use hysteresis/debounce.
+
+Do not rapidly oscillate between quality levels.
+
+Respect device capabilities.
+
+Suggested profiles:
+
+LOW
+BALANCED
+HIGH
+
+But verify actual capabilities before using them.
+
+===============================================================
+PHASE 20 — NETWORK / RECONNECT ENGINE
+===============================================================
+
+Implement robust recovery for:
+
+- network loss
+- room disconnect
+- publish failure
+- camera failure
+- microphone failure
+- device change
+- browser visibility changes
+- network changes
+
+Use controlled retry.
+
+Use backoff.
+
+Prevent infinite reconnect loops.
+
+Prevent duplicate reconnect attempts.
+
+Preserve call state where possible.
+
+===============================================================
+PHASE 21 — BIDDING.HTML COMPLETE AUDIT
+===============================================================
+
+Deeply inspect:
+
+bidding.html
+
+AND every file loaded by it.
+
+Map all:
+
+- buttons
+- controls
+- forms
+- event handlers
+- video elements
+- audio elements
+- chat
+- bidding events
+- room events
+- call controls
+- zoom
+- camera
+- microphone
+- reconnect
+- end-call
+
+Remove conflicting handlers.
+
+Make bidding.html communicate with videoEngine.js through a clean API.
+
+bidding.html MUST NOT manipulate internal ZEGO objects directly.
+
+===============================================================
+PHASE 22 — BIDDING + VIDEO ISOLATION
+===============================================================
+
+Bidding and video must be separate subsystems.
+
+Video failure must not crash bidding.
+
+Bidding failure must not destroy video.
+
+Chat failure must not destroy video.
+
+UI re-render must not recreate the video engine.
+
+Bidding state and video state must remain separate.
+
+===============================================================
+PHASE 23 — USER-FACING VIDEO STATUS
+===============================================================
+
+Show truthful states:
+
+Initializing
+Requesting camera
+Requesting microphone
+Connecting
+Connected
+Publishing
+Live
+Remote participant connected
+Reconnecting
+Camera unavailable
+Microphone unavailable
+Permission denied
+Connection failed
+Call ended
+
+Never show fake "Connected".
+
+Never show fake "Live".
+
+===============================================================
+PHASE 24 — STRUCTURED VIDEO LOGGING
+===============================================================
+
+Create controlled diagnostic events:
+
+ENGINE_INIT
+MEDIA_REQUEST
+MEDIA_READY
+ROOM_LOGIN_START
+ROOM_LOGIN_SUCCESS
+ROOM_LOGIN_FAILED
+PUBLISH_START
+PUBLISH_SUCCESS
+PUBLISH_FAILED
+REMOTE_STREAM_ADD
+REMOTE_STREAM_REMOVE
+NETWORK_CHANGE
+RECONNECT_START
+RECONNECT_SUCCESS
+RECONNECT_FAILED
+CLEANUP_START
+CLEANUP_COMPLETE
+
+NEVER log:
+
+- tokens
+- server secrets
+- passwords
+- credentials
+- private keys
+
+===============================================================
+PHASE 25 — SEO RECOVERY TO LIGHTHOUSE 100
+===============================================================
+
+THIS IS A HIGH PRIORITY REQUIREMENT.
+
+The website previously had a much higher Lighthouse SEO score and now has
+a significantly lower score.
+
+Perform a COMPLETE SEO forensic audit.
+
+DO NOT simply add random meta tags.
+
+Identify the EXACT reason for every failed Lighthouse SEO audit.
+
+Fix EVERY legitimate SEO issue.
+
+TARGET:
+Lighthouse SEO = 100 where technically possible.
+
+Audit and fix:
+
+1. <title>
+2. meta description
+3. canonical URL
+4. robots.txt
+5. sitemap.xml
+6. sitemap URL
+7. robots directives
+8. noindex
+9. nofollow
+10. viewport
+11. crawlable links
+12. descriptive link text
+13. image alt attributes
+14. heading hierarchy
+15. semantic HTML
+16. HTTPS
+17. www/non-www consistency
+18. trailing slash consistency
+19. redirects
+20. canonical duplication
+21. SPA routing
+22. indexability
+23. public-page rendering
+24. structured data
+25. Open Graph
+26. Twitter metadata
+27. language metadata
+28. favicon/manifest where relevant
+29. broken internal links
+30. missing important page content
+31. duplicate content
+32. accidental noindex
+33. accidental robots blocking
+34. JavaScript-rendering problems
+35. mobile viewport problems
+
+DO NOT index:
+
+- admin pages
+- private dashboards
+- private deal rooms
+- private user information
+- authenticated-only content
+- internal APIs
+
+Keep private content protected.
+
+===============================================================
+PHASE 26 — TECHNICAL SEO
+===============================================================
+
+Create proper metadata for important public pages.
+
+Where appropriate use:
+
+- unique title
+- unique description
+- canonical
+- Open Graph
+- Twitter cards
+- semantic headings
+- structured data
+
+Do NOT generate fake structured data.
+
+Only mark up content that actually exists.
+
+Verify JSON-LD syntax.
+
+===============================================================
+PHASE 27 — ROBOTS.TXT + SITEMAP
+===============================================================
+
+Inspect current robots.txt.
+
+Make sure it:
+
+- does not accidentally block the homepage
+- does not accidentally block important public pages
+- does not expose private paths
+- points to the correct sitemap
+
+Inspect sitemap.xml.
+
+Ensure:
+
+- valid XML
+- correct HTTPS URLs
+- canonical URLs
+- no private pages
+- no broken URLs
+- no duplicate URLs
+- no irrelevant URLs
+
+===============================================================
+PHASE 28 — CORE WEB VITALS
+===============================================================
+
+SEO is not just Lighthouse.
+
+Optimize:
+
+- LCP
+- CLS
+- INP
+- FCP
+- TTFB where controllable
+
+Avoid:
+
+- render blocking resources
+- huge images
+- layout shifts
+- unnecessary JavaScript
+- unnecessary third-party scripts
+- massive initial bundles
+
+Do not sacrifice application functionality just to improve a score.
+
+===============================================================
+PHASE 29 — ACCESSIBILITY
+===============================================================
+
+Audit:
+
+- buttons
+- forms
+- labels
+- keyboard navigation
+- focus states
+- ARIA
+- semantic elements
+- contrast
+- alt text
+- modal accessibility
+
+Do not add meaningless ARIA.
+
+Prefer native semantic HTML.
+
+===============================================================
+PHASE 30 — BROWSER / DEVICE COMPATIBILITY
+===============================================================
+
+Test/consider:
+
+Chrome
+Edge
+Firefox
+Safari where practical
+
+Desktop
+Mobile
+Tablet
+
+Different camera capabilities.
+
+Different microphone capabilities.
+
+Different GPU capabilities.
+
+Different screen sizes.
+
+Video engine must gracefully degrade when advanced effects are unsupported.
+
+===============================================================
+PHASE 31 — MEMORY LEAK AUDIT
+===============================================================
+
+Specifically search for:
+
+- setInterval without clearInterval
+- setTimeout chains
+- requestAnimationFrame loops
+- addEventListener without removal
+- MediaStream tracks
+- WebGL textures
+- WebGL buffers
+- WebGL programs
+- canvas contexts
+- MediaPipe instances
+- ZEGO engines
+- subscriptions
+- observers
+
+Every resource needs a cleanup path.
+
+===============================================================
+PHASE 32 — ERROR HANDLING
+===============================================================
+
+Never use:
+
+catch(e) {}
+
+Never silently swallow important errors.
+
+Errors should be:
+
+- logged safely
+- classified
+- shown to user when relevant
+- recoverable where possible
+
+Separate:
+
+USER ERROR
+NETWORK ERROR
+MEDIA ERROR
+ZEGO ERROR
+AUTH ERROR
+SERVER ERROR
+PROGRAMMING ERROR
+
+===============================================================
+PHASE 33 — DEPENDENCY AUDIT
+===============================================================
+
+Inspect package.json and lockfile.
+
+Check:
+
+- vulnerabilities
+- incompatible versions
+- unused dependencies
+- duplicate dependencies
+- heavy unnecessary dependencies
+
+DO NOT blindly upgrade everything.
+
+Protect ZEGO/MediaPipe/browser compatibility.
+
+===============================================================
+PHASE 34 — CODE QUALITY
+===============================================================
+
+Find:
+
+- duplicate functions
+- duplicate variables
+- dead code
+- unreachable code
+- stale comments
+- incorrect comments
+- inconsistent naming
+- globals
+- conflicting state
+- duplicate implementations
+
+Refactor carefully.
+
+Do not destroy working features.
+
+===============================================================
+PHASE 35 — TESTING MATRIX
+===============================================================
+
+After modifications, verify:
+
+WEBSITE
+- homepage
+- navigation
+- authentication
+- public pages
+- dashboard
+- reels
+- property pages
+
+BIDDING
+- page load
+- bidding UI
+- chat
+- call controls
+- call ending
+- reconnect
+
+VIDEO
+- camera
+- microphone
+- local preview
+- remote video
+- mute
+- camera toggle
+- zoom
+- auto-frame
+- beauty
+- background blur
+- adaptive quality
+- reconnect
+- cleanup
+- rejoin
+
+ZEGO
+- SDK load
+- token
+- room login
+- publish
+- remote stream
+- leave
+- rejoin
+
+SECURITY
+- no secrets in frontend
+- no secrets in logs
+- authorization works
+- token endpoint protected
+
+SEO
+- Lighthouse SEO
+- robots
+- sitemap
+- canonical
+- title
+- description
+- crawlability
+- structured data
+
+===============================================================
+PHASE 36 — REGRESSION PROTECTION
+===============================================================
+
+Before modifying a shared function:
+
+SEARCH FOR ALL CALLERS.
+
+Before modifying a route:
+
+SEARCH FOR ALL FRONTEND CALLERS.
+
+Before modifying videoEngine.js:
+
+SEARCH FOR ALL FUNCTIONS CALLED FROM bidding.html.
+
+Before changing authentication:
+
+SEARCH ALL AUTH DEPENDENCIES.
+
+Before changing a model:
+
+SEARCH ALL CONTROLLERS USING IT.
+
+Never break an existing caller accidentally.
+
+===============================================================
+PHASE 37 — FINAL SECURITY CHECK
+===============================================================
+
+After all modifications:
+
+SCAN AGAIN FOR:
+
+- secrets
+- hardcoded credentials
+- server secrets
+- tokens
+- passwords
+- unsafe URLs
+- debug credentials
+- exposed environment variables
+
+The second scan is mandatory.
+
+===============================================================
+PHASE 38 — FINAL SEO CHECK
+===============================================================
+
+After all SEO changes:
+
+RUN/VERIFY Lighthouse SEO again.
+
+Do NOT simply report "SEO improved".
+
+Report:
+
+- previous issue
+- fix
+- verification result
+
+Target:
+100 SEO score.
+
+If a score remains below 100, identify EXACTLY which audit remains,
+why it remains, and whether it is actually fixable.
+
+Do not fake a 100.
+
+===============================================================
+PHASE 39 — FINAL VIDEO CHECK
+===============================================================
+
+After video changes:
+
+Verify that the actual stream lifecycle is:
+
+MEDIA READY
+→ ENGINE READY
+→ ROOM CONNECTED
+→ PUBLISH START
+→ PUBLISH SUCCESS
+→ LIVE
+
+If it fails:
+
+trace the FIRST failure.
+
+Do not blame cleanup if cleanup happened after the real failure.
+
+Do not suppress ZEGO errors.
+
+===============================================================
+PHASE 40 — FINAL REPORT
+===============================================================
+
+Provide:
+
+1. FILES SCANNED
+2. FILES MODIFIED
+3. SECURITY ISSUES FOUND
+4. ENVIRONMENT VARIABLES REQUIRED
+5. BACKEND BUGS
+6. FRONTEND BUGS
+7. HANDLER BUGS
+8. VIDEO ENGINE BUGS
+9. ZEGO BUGS
+10. BIDDING BUGS
+11. SEO ISSUES
+12. PERFORMANCE ISSUES
+13. MEMORY LEAKS
+14. ACCESSIBILITY ISSUES
+15. DEPENDENCY ISSUES
+16. TESTS PERFORMED
+17. LIGHTHOUSE RESULTS
+18. VIDEO TEST RESULTS
+19. REMAINING ISSUES
+20. RECOMMENDED NEXT STEPS
+
+DO NOT reveal secret values.
+
+===============================================================
+ABSOLUTE NON-NEGOTIABLE RULES
+===============================================================
+
+1. DO NOT expose secrets.
+2. DO NOT expose ZEGO Server Secret.
+3. DO NOT place server secrets in frontend.
+4. DO NOT invent ZEGO APIs.
+5. DO NOT invent browser APIs.
+6. DO NOT fake successful publishing.
+7. DO NOT hide errors.
+8. DO NOT suppress exceptions just to make console clean.
+9. DO NOT create duplicate ZEGO engines.
+10. DO NOT create duplicate room login.
+11. DO NOT create duplicate publishing.
+12. DO NOT create duplicate event handlers.
+13. DO NOT leave handlers without cleanup.
+14. DO NOT leave timers without cleanup.
+15. DO NOT leave animation loops without cleanup.
+16. DO NOT destroy the same resource multiple times unsafely.
+17. DO NOT let bidding.html and videoEngine.js fight over ZEGO.
+18. DO NOT rewrite the entire project blindly.
+19. DO NOT remove working features without evidence.
+20. DO NOT claim something was tested when it wasn't.
+21. DO NOT claim SEO 100 without actual verification.
+22. DO NOT claim "10x better than Zoom" without benchmark evidence.
+23. DO NOT use fake network-quality values.
+24. DO NOT force 1080p on unsupported devices.
+25. DO NOT sacrifice stability for visual effects.
+26. DO NOT sacrifice security for convenience.
+27. DO NOT sacrifice existing Zamin Dekho functionality.
+28. ALWAYS trace bugs to root cause.
+29. ALWAYS search all callers before changing shared code.
+30. ALWAYS perform a second security scan after modifications.
+31. ALWAYS perform a final SEO verification.
+32. ALWAYS perform final video lifecycle verification.
+33. ALWAYS make initialization idempotent.
+34. ALWAYS make cleanup idempotent.
+35. ALWAYS keep subsystem ownership clear.
+36. ALWAYS prefer one authoritative source of truth for state.
+37. ALWAYS preserve audio when video effects are enabled.
+38. ALWAYS provide graceful fallbacks when advanced video effects fail.
+39. ALWAYS separate bidding state from video state.
+40. ALWAYS leave the project in a more maintainable state than before.
+
+===============================================================
+START
+===============================================================
+
+STEP 1:
+SCAN THE ENTIRE REPOSITORY.
+
+STEP 2:
+UNDERSTAND THE ARCHITECTURE.
+
+STEP 3:
+AUDIT SECURITY + ENVIRONMENT.
+
+STEP 4:
+AUDIT BACKEND.
+
+STEP 5:
+AUDIT FRONTEND.
+
+STEP 6:
+AUDIT ALL HANDLERS.
+
+STEP 7:
+AUDIT videoEngine.js COMPLETELY.
+
+STEP 8:
+AUDIT ZEGO COMPLETELY.
+
+STEP 9:
+AUDIT bidding.html COMPLETELY.
+
+STEP 10:
+AUDIT SEO COMPLETELY.
+
+STEP 11:
+AUDIT PERFORMANCE + MEMORY.
+
+STEP 12:
+IMPLEMENT SAFE FIXES.
+
+STEP 13:
+IMPLEMENT PROPER HANDLER/LIFECYCLE ARCHITECTURE.
+
+STEP 14:
+VERIFY VIDEO.
+
+STEP 15:
+VERIFY BIDDING.
+
+STEP 16:
+VERIFY SECURITY.
+
+STEP 17:
+VERIFY SEO AND TARGET LIGHTHOUSE SEO 100.
+
+STEP 18:
+RUN SECOND FULL SCAN.
+
+STEP 19:
+RUN REGRESSION CHECK.
+
+STEP 20:
+PROVIDE THE FINAL REPORT.
+
+DO NOT STOP AFTER THE FIRST ERROR.
+
+DO NOT STOP AFTER videoEngine.js.
+
+DO NOT STOP AFTER SEO.
+
+AUDIT THE ENTIRE PROJECT.

@@ -84,10 +84,29 @@ io.on("connection", (socket) => {
 // ==========================================
 // 🔐 FORCE HTTPS (VERY IMPORTANT)
 // ==========================================
+const isProd = process.env.NODE_ENV === 'production';
+const configuredBaseUrl = (process.env.BASE_URL || "").trim();
+let productionOrigin = "";
+
+if (isProd) {
+    try {
+        const parsedBaseUrl = new URL(configuredBaseUrl);
+        if (parsedBaseUrl.protocol !== "https:") {
+            throw new Error("BASE_URL must use HTTPS");
+        }
+        productionOrigin = parsedBaseUrl.origin;
+    } catch (error) {
+        console.error("❌ Invalid production BASE_URL configuration.");
+    }
+}
+
 app.use((req, res, next) => {
     if (process.env.NODE_ENV === "production") {
         if (req.headers['x-forwarded-proto'] !== 'https') {
-            return res.redirect(`https://${req.headers.host}${req.url}`);
+            if (!productionOrigin) {
+                return res.status(500).send("Secure redirect target is not configured.");
+            }
+            return res.redirect(308, `${productionOrigin}${req.originalUrl}`);
         }
     }
     next();
@@ -96,8 +115,6 @@ app.use((req, res, next) => {
 // ==========================================
 // 🛡️ HELMET (ENV-AWARE SECURE CONFIG FOR GRADE A+)
 // ==========================================
-const isProd = process.env.NODE_ENV === 'production';
-
 app.use(helmet({
     crossOriginResourcePolicy: false,
     frameguard: false,
@@ -137,6 +154,7 @@ app.use(helmet({
                 "https://accounts.google.com",    // Google Identity Services (GSI)
                 "https://checkout.razorpay.com",  // Razorpay payment gateway
                 "https://www.clarity.ms",         // Microsoft Clarity session recording
+                "https://scripts.clarity.ms",     // Microsoft Clarity runtime
                 "https://unpkg.com"               // Allowed Unpkg CDN just in case
             ],
 
@@ -161,6 +179,9 @@ app.use(helmet({
                 "https://upload.wikimedia.org",         // Google G logo on login page
                 "https://*.tile.openstreetmap.org",     // Leaflet OSM map tiles
                 "https://maps.gstatic.com",             // Google Maps static assets
+                "https://cdn.jsdelivr.net",              // intl-tel-input flag sprite
+                "https://c.clarity.ms",                  // Microsoft Clarity beacon
+                "https://c.bing.com",                    // Clarity's telemetry relay
 
                 // 🚀 SOCIAL LOGIN AVATAR WHITELIST ADDED HERE
                 "https://lh3.googleusercontent.com",    // Google Profile Avatars
@@ -173,7 +194,7 @@ app.use(helmet({
             // Fetch/XHR/WebSocket: own API + Clarity telemetry + deal-room WebSocket
             // In dev keep broad (Replit subdomains vary); in prod lock to self + known endpoints
             connectSrc: isProd
-                ? ["'self'", "https://www.clarity.ms", "wss:", "https://*"]
+                ? ["'self'", "https://www.clarity.ms", "https://scripts.clarity.ms", "https://c.clarity.ms", "https://c.bing.com", "wss:", "https://*"]
                 : ["'self'", "https:", "wss:", "http://localhost:*"], // Updated to allow localhost ws in dev
 
             // Web fonts: Google Fonts files + FontAwesome webfonts

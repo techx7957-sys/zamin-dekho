@@ -1,9 +1,12 @@
-const { BiddingParticipant, BidMessage } = require("../models/Bidding").default;
+const { BiddingParticipant, BidMessage } = require("../models/Bidding");
 const User = require("../models/User");
 
 // 🔥 Apni local ZegoCloud Token Generator file use kar rahe hain
 const { generateToken04 } = require("./zegoToken"); 
 const { getZegoConfig } = require("../config/zego");
+
+const BIDDING_ROOM_ID =
+    process.env.ZEGO_ROOM_ID || "zamin_room_1";
 
 // ==============================================
 // 🛡️ HELPER: Check User Access (DUAL WHITELIST)
@@ -28,11 +31,25 @@ async function getUserAccessDetails(userId, role) {
 
 // 🔥 HELPER: Safe User Finder (Regex Crash Fix)
 async function findUserSafely(accountId) {
-    if (accountId.length === 24) {
-        return await User.findById(accountId).lean();
+    const normalizedAccountId =
+        typeof accountId === "string"
+            ? accountId.trim()
+            : "";
+
+    if (!/^[a-fA-F0-9]{6,24}$/.test(normalizedAccountId)) {
+        return null;
+    }
+
+    if (
+        normalizedAccountId.length === 24 &&
+        /^[a-fA-F0-9]{24}$/.test(normalizedAccountId)
+    ) {
+        return await User.findById(normalizedAccountId).lean();
     } else {
         const allUsers = await User.find({}, "_id fullName email role").lean();
-        return allUsers.find(u => u._id.toString().endsWith(accountId));
+        return allUsers.find(u =>
+            u._id.toString().endsWith(normalizedAccountId)
+        );
     }
 }
 
@@ -296,9 +313,29 @@ exports.generateZegoToken = async (req, res) => {
             return res.status(403).json({ success: false, message: "Aapko video call ka access nahi hai." });
         }
 
-        const { room_id, user_id } = req.body;
+        const requestedRoomId =
+            typeof req.body?.room_id === "string"
+                ? req.body.room_id.trim()
+                : "";
+        const requestedUserId =
+            typeof req.body?.user_id === "string"
+                ? req.body.user_id.trim()
+                : "";
+        const authenticatedUserId =
+            String(req.user._id || req.user.id).slice(-6);
 
-        if (!room_id || !user_id) {
+        if (
+            requestedRoomId !== BIDDING_ROOM_ID ||
+            !requestedUserId ||
+            requestedUserId !== authenticatedUserId
+        ) {
+            return res.status(403).json({
+                success: false,
+                message: "Invalid bidding room or user identity."
+            });
+        }
+
+        if (!/^[A-Za-z0-9_-]{1,64}$/.test(requestedRoomId)) {
             return res.status(400).json({ success: false, message: "Missing required info." });
         }
 
@@ -308,7 +345,7 @@ exports.generateZegoToken = async (req, res) => {
 
         // Strict JSON privilege payload required by ZEGO Core SDK.
         const payloadObject = {
-            room_id: room_id,
+            room_id: requestedRoomId,
             privilege: {
                 1: 1,   // 1 means 'allowed' to login room
                 2: 1    // 1 means 'allowed' to publish video/audio stream
@@ -318,18 +355,41 @@ exports.generateZegoToken = async (req, res) => {
         const payload = JSON.stringify(payloadObject); 
 
         // Generate Token using the exact parameters
-        const token = generateToken04(appId, user_id, serverSecret, effectiveTimeInSeconds, payload);
+        console.log("🔐 ZEGO TOKEN INPUT CHECK:", {
+      appId,
+      userId: authenticatedUserId,
+      roomId: requestedRoomId,
+      secretPresent: !!serverSecret,
+      payloadFields: Object.keys(payloadObject)
+    });
+
+    const token = generateToken04(
+        appId,
+        authenticatedUserId,
+        serverSecret,
+        effectiveTimeInSeconds,
+        payload
+    );
+
+    console.log("🔐 ZEGO TOKEN OUTPUT CHECK:", {
+      tokenGenerated:
+          typeof token === "string" &&
+          token.startsWith("04")
+    });
 
         res.json({
             success: true,
             appId: appId,
-            token: token,
+            token,
             serverUrl
         });
 
     } catch (error) {
         console.error("Token Generation Error:", error);
-        res.status(500).json({ success: false, message: "Failed to create secure token.", details: error.message });
+        res.status(500).json({
+            success: false,
+            message: "Failed to create secure token."
+        });
     }
 };
 
