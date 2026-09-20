@@ -1,0 +1,508 @@
+ZEGO 200101 AUTH FAILURE — DEEP ROOT-CAUSE FIX
+DO NOT JUST ADD LOGS. DO NOT HIDE THE ERROR.
+
+My ZEGO Web SDK is v3.12.0.
+
+Current production/browser errors:
+
+[Violation] Permissions policy violation: unload is not allowed in this document.
+
+ZEGO:
+fail 20021
+
+LoginRoomReq:
+err_code: 200101
+err_message: "auth failure"
+
+Frontend:
+videoEngine.js
+❌ ZEGO room login failed
+
+bidding.html
+❌ Video Engine Launch Error
+
+Current identifiers:
+
+AppID:
+1771433844
+
+roomID:
+zamin_room_1
+
+userID:
+4af3dd
+
+The error is still happening after previous Token04 checks.
+
+IMPORTANT:
+Do not assume the token is correct merely because:
+- it starts with "04"
+- Base64 decoding works
+- AES structure looks valid
+- parameter order looks correct
+
+A syntactically valid Token04 can still be rejected by ZEGO.
+
+I want the ACTUAL authentication root cause fixed.
+
+==================================================
+PHASE 1 — INSPECT THE REAL ZEGO TOKEN IMPLEMENTATION
+==================================================
+
+Inspect:
+
+controllers/zegoToken.js
+config/zego.js
+package.json
+package-lock.json
+all Token04 helper/source files
+all ZEGO-related imports
+
+Determine exactly where generateToken04 comes from.
+
+If it is a custom/local implementation, compare its implementation against the official ZEGO Token04 Node.js implementation.
+
+DO NOT create a guessed Token04 implementation.
+
+Prefer the official ZEGO-supported Token04 generator/library implementation if the project currently uses an incorrect custom implementation.
+
+Verify all of these:
+
+- AppID encoding
+- ServerSecret handling
+- userID encoding
+- effectiveTimeInSeconds
+- payload encoding
+- IV generation
+- encryption
+- authentication/signature
+- final "04" packet construction
+- Base64 encoding
+
+Do not print ServerSecret or the complete token.
+
+==================================================
+PHASE 2 — VERIFY THE TOKEN PAYLOAD EXACTLY
+==================================================
+
+The current privilege payload must be checked against the official Token04 RTC format.
+
+For RTC room authentication, verify that the payload structure is exactly equivalent to:
+
+{
+  "room_id": "...",
+  "privilege": {
+    "1": 1,
+    "2": 1
+  },
+  "stream_id_list": null
+}
+
+Do NOT change numeric/string key types arbitrarily.
+
+Verify:
+
+Privilege 1 = room login
+Privilege 2 = publishing
+
+For the current test:
+
+room_id must exactly equal:
+
+zamin_room_1
+
+The token's userID must exactly equal:
+
+4af3dd
+
+Do not trim, hash, encode differently, or silently substitute the userID.
+
+==================================================
+PHASE 3 — ADD A TOKEN SELF-CHECK
+==================================================
+
+Create a SERVER-SIDE diagnostic function that validates the generated Token04 structure before returning it.
+
+It must check:
+
+- token exists
+- token is a string
+- token starts with "04"
+- token is Base64-compatible
+- effective time is valid
+- payload is generated for the expected room
+- payload is generated for the expected user
+- privilege 1 is enabled
+- privilege 2 is enabled
+
+NEVER log:
+- ServerSecret
+- complete Token
+- cookies
+- Authorization headers
+
+Safe diagnostics may contain:
+
+{
+  appId,
+  userId,
+  roomId,
+  tokenPrefix,
+  tokenLength,
+  hasServerSecret,
+  serverSecretLength
+}
+
+==================================================
+PHASE 4 — CRITICAL APPID/SERVERSECRET PROJECT TEST
+==================================================
+
+Do not merely check that both environment variables exist.
+
+Verify that:
+
+ZEGO_APP_ID
+and
+ZEGO_SERVER_SECRET
+
+are intended to belong to the SAME ZEGO project.
+
+Do not expose the secret.
+
+If the code cannot verify this automatically, clearly report:
+
+"Credential project identity cannot be verified from source code."
+
+Do not claim it is correct just because the variables exist.
+
+Also inspect whether Vercel/production environment variables can differ from the local Replit environment.
+
+The deployed endpoint is what matters.
+
+==================================================
+PHASE 5 — TEST THE ACTUAL PRODUCTION TOKEN ENDPOINT
+==================================================
+
+Trace:
+
+Browser
+→ /api/bidding/zego-token
+→ backend authentication
+→ zegoToken controller
+→ generateToken04
+→ response
+→ frontend
+→ loginRoom
+
+Add safe diagnostics around every step.
+
+The frontend must request a FRESH token for every login attempt.
+
+Do not use:
+- localStorage token
+- stale token
+- cached token
+- hardcoded token
+
+Verify the production response contains a fresh Token04.
+
+Do not print the token.
+
+==================================================
+PHASE 6 — VERIFY loginRoom SIGNATURE
+==================================================
+
+Inspect the EXACT v3.12.0 loginRoom call in videoEngine.js.
+
+Verify that:
+
+roomID
+userID
+userName
+token
+ZegoRoomConfig
+
+are passed according to the actual installed v3.12.0 Web SDK API.
+
+Do not copy an API signature from another SDK version.
+
+Verify that the token is actually inside the correct ZegoRoomConfig object.
+
+Conceptually the flow must be:
+
+const user = {
+  userID: exactUserID,
+  userName: exactUserName
+};
+
+const roomConfig = {
+  token: freshToken,
+  ...
+};
+
+loginRoom(
+  exactRoomID,
+  user,
+  roomConfig
+);
+
+Use the actual API signature found in the installed SDK.
+
+==================================================
+PHASE 7 — TEMPORARY ISOLATION TEST
+==================================================
+
+This is VERY IMPORTANT.
+
+Create a temporary DEBUG-ONLY authentication test path.
+
+The purpose is to determine whether the problem is:
+
+A. Token generation
+OR
+B. ZEGO project credentials/configuration
+OR
+C. frontend loginRoom integration.
+
+Do NOT expose any secret.
+
+If the ZEGO Admin Console provides a temporary/test token for the SAME AppID, allow a temporary DEBUG-only test using that token.
+
+Do NOT commit a real secret or permanent test token.
+
+If temporary ZEGO Console token login succeeds:
+
+→ frontend SDK/loginRoom/network is working
+→ custom backend Token04 generation/configuration is the problem.
+
+If temporary token also returns 200101:
+
+→ investigate AppID/project/environment/login configuration instead.
+
+Do not leave the temporary token in production.
+
+==================================================
+PHASE 8 — ROOM ID TEST
+==================================================
+
+Temporarily test with a simple controlled room ID:
+
+zamin_test_room
+
+while keeping:
+
+userID = 4af3dd
+
+If both:
+
+zamin_room_1
+
+and
+
+zamin_test_room
+
+return 200101,
+
+do not blame the room ID.
+
+If one works and one fails, inspect room-specific Token04 payload/configuration.
+
+Do not leave a test room hardcoded in production.
+
+==================================================
+PHASE 9 — ADD REAL ZEGO LOGIN HANDLERS
+==================================================
+
+Yes, add proper handlers if they are missing.
+
+Add safe handlers for the installed SDK's supported events:
+
+- onRoomStateChanged
+- loginRoom callback/result if supported
+- onRoomTokenWillExpire
+- error/disconnect handling
+
+For onRoomStateChanged, log only safe information:
+
+{
+  roomID,
+  state,
+  errorCode,
+  extendedData
+}
+
+Do not print tokens or secrets.
+
+The state machine should clearly distinguish:
+
+CONNECTING
+CONNECTED/LOGINED
+DISCONNECTED
+FAILED
+
+Do not call publishing before successful room login.
+
+==================================================
+PHASE 10 — STOP DUPLICATE LOGIN
+==================================================
+
+Inspect:
+
+initCustomVideoCall
+startCustomZegoEngine
+startCustomZegoEngineInternal
+
+Make sure they cannot call loginRoom multiple times simultaneously.
+
+Use an explicit state:
+
+idle
+initializing
+logging_in
+logged_in
+failed
+destroyed
+
+If already logging in, don't start another login.
+
+If already logged in to the same room, don't call loginRoom again.
+
+==================================================
+PHASE 11 — ERROR 20021
+==================================================
+
+Treat 20021 as a symptom until the actual 200101 authentication failure is resolved.
+
+Do not implement random retry loops.
+
+After authentication is fixed, verify whether 20021 disappears.
+
+If it remains after successful authentication, then investigate network/reconnect separately.
+
+==================================================
+PHASE 12 — UNLOAD WARNING
+==================================================
+
+The browser warning is:
+
+Permissions policy violation: unload is not allowed in this document.
+
+The stack points directly to:
+
+ZegoExpressEngine.v3.12.0.min.js
+
+Do NOT edit the minified ZEGO SDK.
+
+First search OUR application code for:
+
+beforeunload
+unload
+window.onunload
+addEventListener("unload"
+removeEventListener("unload"
+
+If our code has an unload handler, replace it with a modern lifecycle mechanism such as pagehide/visibilitychange where appropriate.
+
+If there is NO application-owned unload handler and the warning comes only from the third-party ZEGO SDK:
+
+leave the SDK file untouched.
+
+Do not create a fake handler merely to hide the console warning.
+
+The unload warning is NOT the authentication fix.
+
+==================================================
+PHASE 13 — CLEANUP
+==================================================
+
+When the user leaves the page:
+
+- stop publishing if active
+- stop local tracks if appropriate
+- logoutRoom if logged in
+- remove application listeners
+- destroy the engine if appropriate
+- reset engine state
+
+Do not call cleanup before login has completed unless the current lifecycle requires it.
+
+==================================================
+PHASE 14 — MOST IMPORTANT TEST MATRIX
+==================================================
+
+Run these tests and report actual results.
+
+TEST 1:
+Fresh backend Token04
++
+production AppID
++
+production userID
++
+zamin_room_1
+
+RESULT:
+
+login success/failure
+error code
+
+TEST 2:
+Same frontend
++
+temporary valid ZEGO console token for SAME AppID/project
+
+RESULT:
+
+login success/failure
+error code
+
+TEST 3:
+Fresh backend Token04
++
+same userID
++
+temporary test room
+
+RESULT:
+
+login success/failure
+error code
+
+Use these tests to isolate the root cause.
+
+==================================================
+SECURITY
+==================================================
+
+NEVER expose:
+
+- ZEGO ServerSecret
+- complete Token04
+- Authorization headers
+- cookies
+- private credentials
+
+NEVER put ServerSecret in frontend JavaScript.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Do not say "fixed" unless actual ZEGO room login succeeds.
+
+Return:
+
+1. EXACT ROOT CAUSE
+2. Whether custom Token04 generation is valid
+3. Whether production AppID/ServerSecret configuration can be verified
+4. Whether production token endpoint returns a fresh valid token
+5. Whether temporary ZEGO Console token login succeeds
+6. Whether room login succeeds
+7. Whether 200101 disappears
+8. Whether 20021 disappears
+9. Whether unload warning remains
+10. Files changed
+11. Exact code changes
+12. Any remaining issue
+
+Do not make unrelated UI, SEO, video-processing, WebGL, camera, zoom, beauty, blur, bitrate, or publishing changes until room authentication succeeds.
