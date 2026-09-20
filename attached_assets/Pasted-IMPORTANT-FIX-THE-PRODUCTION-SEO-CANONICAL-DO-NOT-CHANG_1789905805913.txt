@@ -1,0 +1,160 @@
+IMPORTANT: FIX THE PRODUCTION SEO CANONICAL — DO NOT CHANGE DEPLOYMENT ARCHITECTURE
+
+My deployment architecture is:
+
+GitHub
+→ git push
+→ Vercel automatic deployment
+→ Vercel default domain: zamin-dekho-m5iq.vercel.app
+→ custom production domain: https://www.zamindekho.tech/
+
+The Vercel domain MUST remain available as the deployment/default domain.
+
+DO NOT remove or break the Vercel deployment domain.
+
+However, the official public website domain is:
+
+https://www.zamindekho.tech/
+
+CURRENT PROBLEM:
+
+The LIVE homepage source currently contains:
+
+<meta name="robots" content="index, follow" />
+
+<link rel="canonical" href="https://zamin-dekho-m5iq.vercel.app/" />
+
+The robots directive is correct.
+
+The canonical is wrong for the public production homepage.
+
+FIX:
+
+Change the homepage canonical to exactly:
+
+<link rel="canonical" href="https://www.zamindekho.tech/" />
+
+IMPORTANT:
+This does NOT mean removing the Vercel deployment domain.
+
+Keep:
+https://zamin-dekho-m5iq.vercel.app/
+
+as the Vercel deployment/default domain.
+
+Only the SEO/public-domain signals should use:
+
+https://www.zamindekho.tech/
+
+CHECK THE ENTIRE PROJECT FOR SEO REFERENCES TO THE OLD VERCEL DOMAIN:
+
+zamin-dekho-m5iq.vercel.app
+
+Inspect:
+- public/index.html
+- all HTML files
+- server.js
+- frontend JavaScript
+- SEO metadata
+- Open Graph tags
+- Twitter metadata
+- sitemap.xml
+- robots.txt
+- JSON-LD / structured data
+- canonical tags
+- any SEO configuration
+- any environment-based public URL configuration
+
+For the PUBLIC HOMEPAGE, make sure:
+
+<title> remains present.
+
+<meta name="description"> remains present.
+
+<meta name="robots" content="index, follow"> remains present.
+
+Exactly ONE canonical exists:
+
+<link rel="canonical" href="https://www.zamindekho.tech/" />
+
+If an og:url exists for the homepage, it should use:
+
+https://www.zamindekho.tech/
+
+If JSON-LD represents the main website URL, it should use:
+
+https://www.zamindekho.tech/
+
+sitemap.xml should use the official public domain:
+
+https://www.zamindekho.tech/
+
+robots.txt sitemap reference should use:
+
+https://www.zamindekho.tech/sitemap.xml
+
+DO NOT:
+
+- remove the Vercel domain from Vercel
+- change Vercel configuration unnecessarily
+- change DNS
+- change the custom domain
+- change ZEGO
+- change authentication
+- change bidding
+- change backend APIs
+- change private-page access
+- remove noindex from private pages
+- add noindex to the homepage
+- make unrelated SEO changes
+
+VERY IMPORTANT:
+Do not blindly replace every occurrence of the Vercel URL.
+
+The Vercel URL may be required for deployment/configuration.
+
+Only change occurrences that are SEO/public canonical/domain signals.
+
+VERIFICATION:
+
+After the code changes:
+
+1. Run the project.
+2. Verify homepage source.
+3. Confirm there is exactly one canonical.
+4. Confirm it is:
+
+https://www.zamindekho.tech/
+
+5. Confirm homepage has:
+
+index, follow
+
+6. Confirm meta description exists.
+7. Confirm sitemap uses the official domain.
+8. Confirm robots.txt sitemap uses the official domain.
+9. Confirm private pages still have their intended noindex rules.
+
+DO NOT claim production is fixed merely because local source code changed.
+
+My normal deployment flow is:
+
+git push
+→ GitHub
+→ Vercel automatically deploys
+→ www.zamindekho.tech
+
+Therefore, after making the code changes, tell me exactly what I need to commit/push.
+
+FINAL REPORT:
+
+Tell me:
+
+1. Which files were changed.
+2. Which SEO references were changed.
+3. Whether Vercel deployment configuration was left untouched.
+4. Exact homepage canonical after the fix.
+5. Whether robots is still index, follow.
+6. Whether sitemap/robots use www.zamindekho.tech.
+7. Whether any old Vercel URL remains, and if yes, WHERE and WHY.
+8. Do not claim Google ranking recovery; only report technical SEO verification.
