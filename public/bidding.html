@@ -14,6 +14,7 @@
 
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta name="robots" content="noindex, nofollow" />
         <title>Live Bidding Room | Zamin Dekho</title>
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -637,7 +638,42 @@
                     if (!response.ok) throw new Error(`Server returned ${response.status}`);
 
                     const data = await response.json();
-                    if (!data.success) throw new Error(data.message || "Failed to retrieve secure video token.");
+                    if (!data.success) {
+                        throw new Error(
+                            data.message ||
+                            "Failed to retrieve secure video token."
+                        );
+                    }
+
+                    const tokenDiagnostics = {
+                        hasToken: Boolean(data.token),
+                        tokenType: typeof data.token,
+                        tokenLength:
+                            typeof data.token === 'string'
+                                ? data.token.length
+                                : 0,
+                        tokenPrefix:
+                            typeof data.token === 'string'
+                                ? data.token.slice(0, 2)
+                                : null,
+                        roomID: meetingRoomId,
+                        userID: myShortId
+                    };
+
+                    console.log(
+                        "🔐 ZEGO TOKEN RESPONSE CHECK:",
+                        tokenDiagnostics
+                    );
+
+                    if (
+                        typeof data.token !== 'string' ||
+                        !data.token.startsWith('04') ||
+                        data.token.length < 16
+                    ) {
+                        throw new Error(
+                            "Secure ZEGO token response is invalid."
+                        );
+                    }
 
                     if (typeof data.serverUrl === 'string' && data.serverUrl.trim()) {
                         window.ZEGO_SERVER_URL = data.serverUrl.trim();

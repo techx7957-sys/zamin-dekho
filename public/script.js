@@ -26,8 +26,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const isAuthPage = currentPath.includes('login.html') || currentPath.includes('register.html');
 
-    // RULE 1: Bina token ke aaye toh Register bhejo
-    if (!token && !isAuthPage) {
+    const isPublicHomepage =
+        currentPath === '/' ||
+        currentPath.endsWith('/index.html');
+
+    // Public homepage remains crawlable and usable without an account.
+    // Private application pages continue to require authentication.
+    if (!token && !isAuthPage && !isPublicHomepage) {
         window.location.replace('register.html');
         return;
     }

@@ -1766,19 +1766,26 @@ async function startCustomZegoEngineInternal(
 
         const serverUrl = String(window.ZEGO_SERVER_URL || "").trim();
 
-        if (!serverUrl) {
-            throw new Error(
-                "ZEGO server URL is missing. The secure token response must include ZEGO_SERVER_URL."
-            );
-        }
-
-        if (!/^wss?:\/\//i.test(serverUrl)) {
+        if (serverUrl && !/^wss?:\/\//i.test(serverUrl)) {
             throw new Error(
                 "ZEGO server URL is invalid. It must start with ws:// or wss://."
             );
         }
 
-        zg = new ZegoClass(appId, serverUrl);
+        console.log("🔧 ZEGO ENGINE CONFIG:", {
+            appId,
+            serverUrlConfigured: Boolean(serverUrl),
+            serverUrlProtocol: serverUrl
+                ? serverUrl.split(":")[0]
+                : null
+        });
+
+        // The v3.12 SDK supports its default routing when no custom server
+        // endpoint is configured. Only pass an explicit endpoint when the
+        // backend supplied one for this ZEGO project.
+        zg = serverUrl
+            ? new ZegoClass(appId, serverUrl)
+            : new ZegoClass(appId);
 
         const engine = zg;
         const thisSessionId = ++engineSessionId;
@@ -2379,8 +2386,22 @@ async function startCustomZegoEngineInternal(
         // =====================================================
 
         console.log(
-            "🔐 Logging into ZEGO room:",
-            roomID
+            "🔐 ZEGO LOGIN REQUEST:",
+            {
+                appId,
+                roomID,
+                userID,
+                hasToken: Boolean(token),
+                tokenType: typeof token,
+                tokenLength:
+                    typeof token === "string"
+                        ? token.length
+                        : 0,
+                tokenPrefix:
+                    typeof token === "string"
+                        ? token.slice(0, 2)
+                        : null
+            }
         );
 
         try {
@@ -2398,13 +2419,13 @@ async function startCustomZegoEngineInternal(
             roomConnectionState = "DISCONNECTED";
             roomConnectionError = {
                 errorCode: loginError?.code || loginError?.errorCode || null,
-                message: loginError?.message || String(loginError),
-                details: loginError
+                message: loginError?.message || String(loginError)
             };
 
             const serverErrorCode =
                 roomConnectionError.errorCode ||
-                roomConnectionError.details?.msg;
+                loginError?.msg ||
+                loginError?.errorCode;
             if (
                 serverErrorCode === 200101 ||
                 loginError?.code === 1002099
@@ -2421,7 +2442,7 @@ async function startCustomZegoEngineInternal(
                 {
                     roomID,
                     userID,
-                    errorCode: loginError?.code || loginError?.errorCode,
+                    errorCode: roomConnectionError.errorCode,
                     message: loginError?.message,
                     roomConnectionError
                 }

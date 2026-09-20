@@ -356,26 +356,50 @@ exports.generateZegoToken = async (req, res) => {
 
         // Generate Token using the exact parameters
         console.log("🔐 ZEGO TOKEN INPUT CHECK:", {
-      appId,
-      userId: authenticatedUserId,
-      roomId: requestedRoomId,
-      secretPresent: !!serverSecret,
-      payloadFields: Object.keys(payloadObject)
-    });
+            appId,
+            userId: authenticatedUserId,
+            roomId: requestedRoomId,
+            hasServerSecret: Boolean(serverSecret),
+            serverSecretLength: serverSecret.length,
+            serverUrlConfigured: Boolean(serverUrl),
+            payloadFields: Object.keys(payloadObject)
+        });
 
-    const token = generateToken04(
-        appId,
-        authenticatedUserId,
-        serverSecret,
-        effectiveTimeInSeconds,
-        payload
-    );
+        const token = generateToken04(
+            appId,
+            authenticatedUserId,
+            serverSecret,
+            effectiveTimeInSeconds,
+            payload
+        );
 
-    console.log("🔐 ZEGO TOKEN OUTPUT CHECK:", {
-      tokenGenerated:
-          typeof token === "string" &&
-          token.startsWith("04")
-    });
+        const tokenDiagnostics = {
+            hasToken: Boolean(token),
+            tokenType: typeof token,
+            tokenLength:
+                typeof token === "string"
+                    ? token.length
+                    : 0,
+            tokenPrefix:
+                typeof token === "string"
+                    ? token.slice(0, 2)
+                    : null,
+            roomId: requestedRoomId,
+            userId: authenticatedUserId
+        };
+
+        console.log(
+            "🔐 ZEGO TOKEN OUTPUT CHECK:",
+            tokenDiagnostics
+        );
+
+        if (
+            typeof token !== "string" ||
+            !token.startsWith("04") ||
+            token.length < 16
+        ) {
+            throw new Error("ZEGO Token04 generation returned an invalid token.");
+        }
 
         res.json({
             success: true,

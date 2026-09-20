@@ -1,16 +1,6 @@
 <!doctype html>
 <html lang="en">
     <head>
-        <!-- 🚨 STRICT NO-FLICKER AUTH SHIELD (UPDATED FOR GOOGLE LOGIN) 🚨 -->
-        <script>
-            // DOM paint hone se pehle check karega
-            // Par agar URL mein Google se token aa raha hai, toh VIP pass dega aur register pe nahi fekega!
-            const urlParams = new URLSearchParams(window.location.search);
-            if (!localStorage.getItem('zamin_token') && !urlParams.has('token')) {
-                window.location.replace('register.html');
-            }
-        </script>
-
         <!-- Facebook Domain Verification Meta Tag -->
         <meta name="facebook-domain-verification" content="qufh8vlxmupfyody5b2birp9owl23h" />
 
@@ -30,10 +20,10 @@
 
         <meta name="description" content="Zamin Dekho is India's most trusted real estate platform for buying, selling, and verifying land, farms, and property listings across India." />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://zamin-dekho-m5iq.vercel.app/" />
+        <link rel="canonical" href="https://www.zamindekho.tech/" />
 
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://zamin-dekho-m5iq.vercel.app/" />
+        <meta property="og:url" content="https://www.zamindekho.tech/" />
         <meta property="og:title" content="Zamin Dekho | India's Smartest Land Marketplace" />
         <meta property="og:description" content="India's most trusted platform for 100% verified properties, farms, and agricultural land." />
         <meta property="og:site_name" content="Zamin Dekho" />

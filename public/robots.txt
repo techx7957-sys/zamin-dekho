@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 Disallow: /uploads/
 
-Sitemap: https://zamin-dekho-m5iq.vercel.app/sitemap.xml
+Sitemap: https://www.zamindekho.tech/sitemap.xml

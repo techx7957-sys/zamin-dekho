@@ -314,13 +314,12 @@ app.use((req, res, next) => {
 });
 
 // ==========================================
-// 🚦 ROOT REDIRECT (New Users -> Register)
+// 🏠 PUBLIC HOMEPAGE
 // ==========================================
-// Ye redirect static files ke upar hona zaroori hai
+// Serve the public homepage at the canonical root. Authentication is handled
+// by the page's navigation/auth UI, not by redirecting crawlers to register.
 app.get('/', (req, res) => {
-    // 🔥 FIX: Google ke ?token= ko zinda rakhne ke liye query string pass karna zaroori hai
-    const queryString = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
-    res.redirect('/register.html' + queryString);
+    res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // ==========================================
@@ -382,11 +381,9 @@ app.get("*", (req, res) => {
         return res.status(403).send("🚨 Access Denied");
     }
 
-    // 🔥 BACKUP REDIRECT (Security layer 2)
+    // 🔥 BACKUP HOMEPAGE HANDLER (Security layer 2)
     if (req.path === "/") {
-        // 🔥 FIX: Backup redirect mein bhi query string (token) zinda rakhni hai
-        const queryString = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
-        return res.redirect("/register.html" + queryString);
+        return res.sendFile(path.join(__dirname, "public", "index.html"));
     }
 
     let filePath = path.join(__dirname, "public", req.path);

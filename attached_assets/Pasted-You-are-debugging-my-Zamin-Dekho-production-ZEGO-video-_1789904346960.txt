@@ -1,0 +1,408 @@
+You are debugging my Zamin Dekho production ZEGO video-call system.
+
+DO NOT rewrite the entire video engine blindly. First inspect the existing implementation and identify the exact root cause.
+
+Current SDK:
+ZegoExpressEngine v3.12.0
+
+Current runtime error:
+
+* Permissions policy violation: unload is not allowed in this document
+* ZEGO room disconnect
+* error code 20021
+* server error 200101
+* err_message: "auth failure"
+* LoginRoomReq fails
+* sessionid becomes "0"
+* videoEngine.js reports "ZEGO room login failed"
+* bidding.html reports "Video Engine Launch Error"
+
+Current runtime identifiers:
+
+* AppID: 1771433844
+* roomID: zamin_room_1
+* userID: 4af3dd
+
+IMPORTANT SECURITY RULE:
+Never print, expose, hardcode, or return the ZEGO ServerSecret/AppSign in frontend code, browser logs, GitHub, or generated source. Use environment variables on the backend.
+
+MAIN OBJECTIVE:
+Fix the actual ZEGO authentication/room-login failure first. Do not treat the unload warning as the root cause.
+
+STEP 1 — TRACE THE COMPLETE AUTH FLOW
+
+Inspect all relevant files, especially:
+
+* bidding.html
+* public/videoEngine.js
+* controllers/zegoToken.js
+* config/zego.js
+* routes related to ZEGO token generation
+* server.js/app.js
+* package.json
+* environment-variable configuration
+
+Trace this exact flow:
+
+bidding.html
+→ initCustomVideoCall
+→ videoEngine.js
+→ token API request
+→ backend token controller
+→ generateToken04
+→ returned token
+→ ZegoRoomConfig
+→ loginRoom(roomID, user, config)
+
+Do not assume any part is correct.
+
+STEP 2 — VERIFY TOKEN RESPONSE
+
+Inspect the frontend fetch/request that obtains:
+
+/api/bidding/zego-token
+
+Verify:
+
+1. HTTP status is successful.
+2. Response is actually JSON.
+3. Token field exists.
+4. Token is a string.
+5. Token begins with the expected Token04 format.
+6. Frontend does NOT accidentally pass undefined/null/empty token.
+7. Frontend does NOT pass an old cached token.
+8. Frontend does NOT generate a token itself.
+
+Add safe diagnostics such as:
+
+{
+hasToken: Boolean(token),
+tokenType: typeof token,
+tokenLength: typeof token === "string" ? token.length : 0,
+tokenPrefix: typeof token === "string" ? token.slice(0, 2) : null,
+roomID,
+userID
+}
+
+NEVER log the complete token.
+
+STEP 3 — VERIFY USER ID CONSISTENCY
+
+This is critical.
+
+Find the exact userID used in:
+
+A. generateToken04(...)
+B. frontend loginRoom(...)
+C. token API request
+D. authenticated application user/session
+
+They must match exactly.
+
+Do not silently convert, trim, hash, randomize, or replace the userID between these steps.
+
+If token is generated for:
+
+4af3dd
+
+then loginRoom must also use:
+
+4af3dd
+
+Do not generate the token using one userID and login with another.
+
+STEP 4 — VERIFY ROOM ID CONSISTENCY
+
+The roomID used to generate the token must match the roomID passed to loginRoom.
+
+Compare:
+
+Token payload room_id
+vs
+loginRoom(roomID)
+
+For this current test they should both be:
+
+zamin_room_1
+
+Do not accidentally use:
+
+* undefined
+* empty string
+* a different room
+* URL-decoded/encoded variant
+* stale room ID
+
+STEP 5 — VERIFY ZEGO CONFIG
+
+Inspect config/zego.js and all environment variables.
+
+Verify:
+
+* AppID comes from the correct ZEGO project.
+* ServerSecret comes from the SAME ZEGO project as the AppID.
+* No accidental whitespace/newline is included.
+* Production environment has the variables.
+* Local development and deployed environment are not using different ZEGO projects.
+* No frontend file contains the ServerSecret.
+
+DO NOT reveal the actual secret in logs.
+
+Add only safe diagnostics:
+
+{
+appId,
+hasServerSecret: Boolean(serverSecret),
+serverSecretLength: serverSecret ? serverSecret.length : 0,
+serverUrlConfigured: Boolean(serverUrl)
+}
+
+Never print serverSecret itself.
+
+STEP 6 — VERIFY generateToken04 IMPLEMENTATION
+
+Inspect the actual implementation/import of generateToken04.
+
+Confirm that the backend is actually calling the correct Token04 implementation.
+
+Verify:
+
+generateToken04(
+appId,
+userId,
+serverSecret,
+effectiveTimeInSeconds,
+payload
+)
+
+with the correct parameter order expected by the installed implementation.
+
+Do not assume parameter order.
+
+Inspect the source/package definition if necessary.
+
+Verify that the resulting token is a valid Token04 token.
+
+If there is an existing custom implementation, inspect its encoding/encryption/signature logic carefully before changing it.
+
+Do NOT replace working code with a guessed implementation.
+
+STEP 7 — VERIFY PAYLOAD FORMAT
+
+Inspect the Token04 payload.
+
+If room authentication is enabled, verify that the payload's room ID and privileges are in the exact format expected by the ZEGO Token04 implementation currently installed.
+
+Do not invent a new payload structure.
+
+If stream-level privileges are not required for this room-login test, temporarily use the minimum valid configuration supported by the existing ZEGO Token04 implementation.
+
+The first test should prove:
+
+backend token generation
+→ token accepted by ZEGO
+→ loginRoom succeeds
+
+Only after room login works should publishing/stream features be debugged.
+
+STEP 8 — VERIFY FRONTEND loginRoom CALL
+
+Inspect the exact loginRoom invocation.
+
+It must conceptually be:
+
+loginRoom(
+roomID,
+{
+userID: userID,
+userName: userName
+},
+{
+token: token
+}
+)
+
+Use the actual API signature required by the installed ZEGO Web SDK version.
+
+Do not mix API signatures from different ZEGO SDK versions.
+
+Confirm the token is supplied through the correct ZegoRoomConfig/config object.
+
+STEP 9 — CHECK TOKEN EXPIRATION/CACHING
+
+Make sure a stale token is not reused.
+
+For every new room-login attempt during debugging:
+
+* request a fresh token from backend
+* use the fresh token
+* don't store it permanently in localStorage
+* don't reuse an old token after changing userID or roomID
+
+After login works, implement proper token renewal according to the ZEGO SDK API.
+
+STEP 10 — CHECK SERVER URL
+
+Inspect the current serverUrl configuration.
+
+Do not invent a ZEGO WebSocket URL.
+
+Use the server address/configuration associated with the current ZEGO project and SDK documentation.
+
+If the SDK supports its default routing, do not override it with a guessed URL.
+
+The existing log:
+
+"ZEGO server URL is empty; using SDK/default routing"
+
+must be treated separately from the authentication failure unless the actual SDK documentation for v3.12.0 shows that this configuration is required.
+
+STEP 11 — FIX THE unload WARNING SEPARATELY
+
+The browser reports:
+
+"Permissions policy violation: unload is not allowed in this document."
+
+This appears inside ZegoExpressEngine.v3.12.0.min.js.
+
+Do NOT edit the minified ZEGO SDK.
+
+Search my own code for:
+
+* beforeunload
+* unload
+* window.onunload
+* addEventListener("unload"
+* removeEventListener("unload"
+
+If my application code uses unload, replace it with the appropriate modern lifecycle mechanism where possible, such as pagehide/visibilitychange, while preserving cleanup behavior.
+
+If the warning originates exclusively inside the third-party ZEGO SDK, do not hack the minified SDK just to hide the warning.
+
+The unload warning must NOT be allowed to distract from fixing error 200101.
+
+STEP 12 — PREVENT DUPLICATE ENGINE/LOGIN
+
+Inspect videoEngine.js and bidding.html for multiple calls to:
+
+* createEngine
+* loginRoom
+* initCustomVideoCall
+* startCustomZegoEngine
+* startCustomZegoEngineInternal
+
+Ensure one user action does not initialize/login the ZEGO engine multiple times.
+
+Add an initialization/login state guard if needed.
+
+Example states:
+
+idle
+initializing
+ready
+logging-in
+logged-in
+failed
+destroyed
+
+Do not create duplicate engines.
+
+STEP 13 — ADD SAFE DEBUGGING
+
+Add structured diagnostics around:
+
+1. token request start
+2. token response status
+3. token validation
+4. engine creation
+5. loginRoom start
+6. loginRoom result
+7. onRoomStateChanged
+8. onRoomLoginResult if supported
+9. token expiration
+10. engine destruction
+
+Never log:
+
+* ServerSecret
+* complete Token
+* cookies
+* authorization headers
+* private user information
+
+For failed login, log:
+
+{
+errorCode,
+errorMessage,
+roomID,
+userID,
+hasToken,
+tokenLength,
+tokenPrefix
+}
+
+STEP 14 — DO NOT TOUCH VIDEO PROCESSING YET
+
+Do not modify:
+
+* camera zoom
+* auto-frame
+* beauty
+* segmentation
+* background blur
+* canvas processing
+* bitrate adaptation
+* resolution adaptation
+* WebGL
+* MediaPipe
+
+until room login succeeds.
+
+The current blocker is authentication/login.
+
+STEP 15 — FINAL VALIDATION
+
+After changes, test in this order:
+
+TEST A:
+Request token from backend.
+
+Expected:
+HTTP success + non-empty Token04 string.
+
+TEST B:
+Use fresh token with:
+roomID = zamin_room_1
+userID = 4af3dd
+
+TEST C:
+Call loginRoom.
+
+Expected:
+login succeeds and room state becomes CONNECTED/LOGINED according to the SDK's actual callback/state values.
+
+TEST D:
+Only after successful room login, start local stream publishing.
+
+TEST E:
+Open a second browser/user and verify the second participant can join.
+
+TEST F:
+Refresh page and verify the old engine is cleaned up and a fresh login works.
+
+IMPORTANT:
+Do not tell me "fixed" unless you have verified the complete flow from backend token generation to successful loginRoom.
+
+At the end, provide:
+
+1. ROOT CAUSE
+2. FILES CHANGED
+3. EXACT CHANGES
+4. WHY error 200101 occurred
+5. WHETHER 20021 disappeared
+6. WHETHER unload warning remains
+7. TEST RESULTS
+8. Any remaining issue
+
+Do not make unrelated UI or video-engine changes.

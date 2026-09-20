@@ -1,0 +1,367 @@
+URGENT — FIX CURRENT LIGHTHOUSE SEO SCORE 54
+
+I have just run Lighthouse/PageSpeed Insights on:
+
+https://www.zamindekho.tech/
+
+Current SEO score is 54.
+
+I am providing the EXACT Lighthouse results below.
+
+FAILED SEO AUDITS:
+
+1. PAGE IS BLOCKED FROM INDEXING
+
+Lighthouse detected:
+
+<meta name="robots" content="noindex, nofollow" />
+
+This is currently blocking the page from appearing in search results.
+
+2. DOCUMENT DOES NOT HAVE A META DESCRIPTION
+
+Lighthouse says:
+
+"Document does not have a meta description."
+
+PASSED:
+
+- Document has a <title>
+- Page has successful HTTP status code
+- Links have descriptive text
+- Links are crawlable
+- robots.txt is valid
+- Document has valid hreflang
+
+IMPORTANT:
+
+DO NOT blindly rewrite the entire SEO system.
+
+First locate the EXACT source of:
+
+<meta name="robots" content="noindex, nofollow" />
+
+Search the ENTIRE repository for:
+
+noindex
+nofollow
+robots
+<meta name="robots"
+<meta
+robots.txt
+canonical
+description
+
+Find whether this directive exists in:
+
+- index.html
+- HTML templates
+- React/JS components
+- layout components
+- SEO components
+- Helmet
+- React Helmet
+- dynamic document head logic
+- server-rendered HTML
+- middleware
+- route-specific metadata
+- public files
+- generated build files
+- environment-dependent logic
+
+IMPORTANT:
+
+The PUBLIC Zamin Dekho homepage must be indexable.
+
+For the public homepage:
+
+REMOVE the accidental:
+
+<meta name="robots" content="noindex, nofollow" />
+
+and replace it with an appropriate indexable directive if needed, such as:
+
+<meta name="robots" content="index, follow" />
+
+However, do NOT blindly apply index/follow to private pages.
+
+PRIVATE pages MUST remain protected from search indexing, including where applicable:
+
+- admin
+- dashboard
+- private user pages
+- private deal room
+- authenticated-only pages
+- internal APIs
+- private bidding/session pages
+- private account information
+
+Therefore:
+
+PUBLIC PAGE:
+index, follow
+
+PRIVATE PAGE:
+noindex, nofollow where appropriate
+
+Do not globally replace every robots directive.
+
+Determine which pages are public and which are private before changing anything.
+
+===============================================================
+META DESCRIPTION
+===============================================================
+
+Add a proper unique meta description to the public homepage.
+
+Use the actual Zamin Dekho business/product positioning.
+
+Do NOT use generic filler text.
+
+The description should accurately describe the website.
+
+Example concept only:
+
+"Zamin Dekho is a trust-focused property platform helping buyers discover, evaluate and explore land and property opportunities with greater transparency."
+
+Improve this wording if the actual website content supports a better description.
+
+Make sure there is exactly ONE effective homepage meta description.
+
+Do not accidentally create duplicate descriptions.
+
+===============================================================
+TITLE
+===============================================================
+
+The title already passes Lighthouse.
+
+DO NOT unnecessarily replace the existing title.
+
+Inspect it first.
+
+Only improve it if it is genuinely poor, misleading, duplicated or inconsistent with the actual homepage.
+
+===============================================================
+CANONICAL
+===============================================================
+
+Lighthouse currently shows canonical as unscored/not applicable.
+
+Inspect whether the homepage has a canonical URL.
+
+For the public homepage, add an appropriate canonical if the architecture supports it.
+
+The canonical must represent the actual preferred public URL.
+
+Do not create conflicting canonical URLs.
+
+Check:
+
+https://www.zamindekho.tech/
+
+versus
+
+https://zamindekho.tech/
+
+Determine which is the actual canonical domain based on the current deployment/redirect configuration.
+
+Do not guess.
+
+Check the real redirect behavior and existing configuration.
+
+===============================================================
+ROBOTS.TXT
+===============================================================
+
+Lighthouse says robots.txt is valid.
+
+Do NOT break it.
+
+Inspect it and verify that it does not accidentally block the public homepage.
+
+Make sure sitemap configuration is correct if a sitemap exists.
+
+Do not expose private pages.
+
+===============================================================
+SITEMAP
+===============================================================
+
+Inspect sitemap.xml.
+
+Verify:
+
+- valid XML
+- correct canonical URLs
+- public pages only
+- no private pages
+- no broken URLs
+- no duplicate URLs
+- HTTPS URLs
+- correct domain
+
+Do not blindly include every route.
+
+===============================================================
+SEO HEAD ARCHITECTURE
+===============================================================
+
+Determine how metadata is currently generated.
+
+There must be one authoritative mechanism for the homepage SEO metadata.
+
+Avoid:
+
+- duplicate title tags
+- duplicate descriptions
+- conflicting robots directives
+- multiple canonical tags
+- server/client metadata conflicts
+
+Search the complete project before editing.
+
+===============================================================
+IMPORTANT — DO NOT BREAK PRIVATE PAGES
+===============================================================
+
+Do NOT remove noindex protection from pages that are intentionally private.
+
+The goal is:
+
+PUBLIC HOMEPAGE:
+crawlable + indexable
+
+PRIVATE APPLICATION:
+protected + not indexable where appropriate
+
+===============================================================
+AGENTIC ACCESSIBILITY ISSUE
+===============================================================
+
+Also fix this separate issue:
+
+Lighthouse Agentic Browsing reports:
+
+"Select element must have an accessible name"
+
+Failing element:
+
+<select class="form-select" id="role">
+
+with options:
+
+Buyer / Investor
+Seller (Owner)
+Broker / Agent
+
+Fix this properly.
+
+Prefer:
+
+<label for="role">Account type</label>
+
+<select
+  class="form-select"
+  id="role"
+  name="role"
+>
+...
+
+</select>
+
+If a visible label is not appropriate for the existing design, use an appropriate accessible name such as aria-label.
+
+Do NOT add meaningless ARIA.
+
+Make sure the select remains fully functional.
+
+===============================================================
+FINAL VERIFICATION
+===============================================================
+
+After making changes:
+
+1. Build the project.
+2. Start/run the project.
+3. Open the actual public homepage.
+4. Inspect the FINAL rendered <head>.
+5. Verify there is NO accidental:
+
+<meta name="robots" content="noindex, nofollow">
+
+on the public homepage.
+
+6. Verify there is exactly one valid meta description.
+7. Verify title exists.
+8. Verify canonical if appropriate.
+9. Verify robots.txt.
+10. Verify sitemap.
+11. Verify homepage returns HTTP 200.
+12. Verify homepage is crawlable.
+13. Verify private pages are still protected.
+14. Verify the role <select> has an accessible name.
+15. Check browser console for new errors.
+16. Do not break existing Zamin Dekho functionality.
+
+Then run Lighthouse/PageSpeed again.
+
+TARGET:
+
+SEO score = 100
+
+But DO NOT fake or manipulate the result.
+
+If Lighthouse is still below 100:
+
+- identify the exact remaining failed audit
+- explain its exact cause
+- fix it if technically possible
+- run Lighthouse again
+
+Do not stop at "the code looks correct".
+
+Verify the ACTUAL rendered website.
+
+===============================================================
+CRITICAL
+===============================================================
+
+The current evidence already identifies:
+
+FAIL #1:
+noindex,nofollow
+
+FAIL #2:
+missing meta description
+
+Therefore investigate these exact issues FIRST.
+
+Do not spend time randomly changing unrelated SEO code before resolving these.
+
+Also do not change working:
+
+- authentication
+- bidding
+- video engine
+- ZEGO
+- payments
+- dashboard
+- property listings
+- reels
+- broker system
+
+unless the SEO implementation is actually coupled to them.
+
+After fixing, report:
+
+- exact file(s) changed
+- exact reason for noindex
+- exact reason meta description was missing
+- exact SEO changes made
+- canonical status
+- robots.txt status
+- sitemap status
+- accessibility fix
+- final Lighthouse SEO score
+- any remaining issues
