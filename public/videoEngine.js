@@ -9,6 +9,7 @@ let zg;                   // Zego Engine Instance
 let localStream = null;   // Raw camera+mic stream from Zego
 let publishStream = null; // Final stream actually published (may be canvas-based)
 let publishStreamId = "";
+
 let canvasStream = null;      
 let customZegoStream = null;
 let originalPublishingStopped = false;
