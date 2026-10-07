@@ -34,6 +34,11 @@ passport.use(
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
             callbackURL: `${process.env.BASE_URL || 'https://www.zamindekho.tech'}/api/auth/google/callback`,
             proxy: true,
+
+            // Always ask Google to show the account chooser
+            authorizationParams: {
+                prompt: "select_account"
+            },
         },
         async (accessToken, refreshToken, profile, done) => {
             try {
