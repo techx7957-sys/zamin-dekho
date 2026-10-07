@@ -43,9 +43,10 @@ router.get(
         const safeDomain = process.env.BASE_URL || "http://localhost:5000";
         const returnAddress = req.query.clientUrl || safeDomain;
 
-        passport.authenticate("google", { 
+        passport.authenticate("google", {
             scope: ["profile", "email"],
-            state: returnAddress 
+            state: returnAddress,
+            prompt: "select_account"
         })(req, res, next);
     }
 );
